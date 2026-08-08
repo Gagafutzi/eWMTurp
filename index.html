@@ -486,9 +486,47 @@ function createPreloadedFaceImage(path, altText) {
   return img;
 }
 
+// Expanded High-Arousal Affective Word Bank for eWMT Engine
+// Used specifically for the spoken affective-word stimulus.
+const AFFECTIVE_WORD_BANK = {
+  threat: [
+    "TERROR", "PANIC", "AGONY", "HORROR", "SLAUGHTER",
+    "SUFFOCATION", "FATAL", "RAGE", "SCREAM", "TORTURE",
+    "SHELTERLESS", "EXECUTION", "EXPLOSION", "DISASTER", "AMBUSH",
+    "HOSTAGE", "CHAOS", "MUTILATION", "VIOLENCE", "CRUELTY"
+  ],
+  grief: [
+    "DESPAIR", "ANGUISH", "BETRAYAL", "ISOLATION", "ABANDONED",
+    "DEVASTATION", "TRAGEDY", "MISERY", "GRIEF", "HEARTBREAK",
+    "LONELINESS", "HOPELESS", "SHATTERED", "HELPLESS", "LOSS",
+    "REGRET", "CONDEMNED", "RUIN", "REJECTION", "MOURNING"
+  ],
+  visceral: [
+    "REVULSION", "DECAY", "CORRUPTION", "FOUL", "ROT",
+    "CONTAMINATION", "NAUSEA", "INFESTATION", "POISON", "SICKNESS",
+    "SEWAGE", "INFECTION", "MAGGOT", "FILTH", "SMEAR",
+    "DISEASE", "PUTRID", "TOXIC", "DRAIN", "CANCER"
+  ],
+  intensePositive: [
+    "ECSTASY", "EUPHORIA", "RAPTURE", "PASSION", "BLISS",
+    "TRIUMPH", "OBSESSION", "ADRENALINE", "EXHILARATION", "DEVOTION",
+    "PARADISE", "DELIGHT", "THRILL", "VICTORY", "BELOVED",
+    "INTOXICATION", "DESIRE", "CHERISH", "INFATUATION", "FEAST"
+  ],
+  ambiguousShock: [
+    "VOID", "UNHINGED", "HYSTERIA", "PARANOIA", "VULNERABLE",
+    "CONFESSION", "SURREAL", "JUDGMENT", "REVELATION", "FATUM",
+    "STALKER", "SECRETS", "HALLUCINATION", "OBSCURITY", "DELUSION",
+    "SHADOW", "ECHO", "SUSPITION", "INVASION", "CONTAGION"
+  ]
+};
+
+// Keep the original non-audio word pools for the visual/shape-word stimulus.
 const WORDS_NEGATIVE = ['Murder','Rape','Failure','Genocide','Retard','Hurt','Alone','Reject','Worthless','Disaster','Death','Pain','Trash','Loser','Betray'];
 const WORDS_POSITIVE = ['Success','Victory','Gift','Miracle','Money','Loved','Triumph','Joy','Peace','Winner','Glory','Hero','Champion','Blessing','Proud'];
 const WORDS_NEUTRAL  = ['Table','Chair','Paper','Pencil','Window','Door','Book','Cup','Phone','Computer','Lamp','Shoe','Clock','Plant','Bridge'];
+
+const AFFECTIVE_AUDIO_WORDS = Object.values(AFFECTIVE_WORD_BANK).flat();
 const COLORS = ['#FF453A','#30D158','#0A84FF','#FFD60A','#BF5AF2','#FF9F0A','#00F0FF','#FF006E'];
 const SHAPES_SVG = [
   '<circle cx="50" cy="50" r="42" fill="FILL" stroke="STROKE" stroke-width="4"/>',
@@ -820,6 +858,29 @@ class GameEngine {
     return WORDS_POSITIVE[Math.floor(Math.random() * WORDS_POSITIVE.length)];
   }
 
+  pickAffectiveAudioWord(emoLoad) {
+    // Higher emotional load favors threat/grief/visceral material while
+    // retaining some positive and ambiguous high-arousal words.
+    const load = Math.max(0, Math.min(100, Number(emoLoad) || 0)) / 100;
+    const r = Math.random();
+
+    let category;
+    if (r < 0.28 + load * 0.24) {
+      category = 'threat';
+    } else if (r < 0.50 + load * 0.22) {
+      category = 'grief';
+    } else if (r < 0.68 + load * 0.12) {
+      category = 'visceral';
+    } else if (r < 0.86) {
+      category = 'ambiguousShock';
+    } else {
+      category = 'intensePositive';
+    }
+
+    const words = AFFECTIVE_WORD_BANK[category];
+    return words[Math.floor(Math.random() * words.length)];
+  }
+
   generateBlock() {
     const s = this.getSettings();
     this.blockTrials = 20 + (this.currentN * this.currentN);
@@ -841,7 +902,7 @@ class GameEngine {
     for (let i = 0; i < this.blockTrials; i++) {
       const face = this.pickFace(s.emoLoad);
       const word = this.pickWord(s.emoLoad);
-      const audWord = this.pickWord(s.emoLoad);
+      const audWord = this.pickAffectiveAudioWord(s.emoLoad);
       this.trials.push({
         pos: posSeq[i], col: colSeq[i], aud: audSeq[i], shp: shpSeq[i],
         face: face.file, faceEmotion: face.emotion,
