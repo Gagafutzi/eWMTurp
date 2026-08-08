@@ -178,7 +178,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 }
 </style>
 <style>
-/* Refactor safety/responsiveness */
+/* Safety & responsiveness fixes */
 button, input, select { position:relative; z-index:1; }
 .modal-overlay, .modal-panel { isolation:isolate; }
 @media (max-width:480px) {
@@ -371,15 +371,20 @@ button, input, select { position:relative; z-index:1; }
     <div class="inter-msg" id="inter-msg">INITIALIZING...</div>
     <div class="side-controls" id="side-left"></div>
     <div class="center-display">
-      <div class="top-stimulus">
-        <div class="shape-display" id="shape-display" style="visibility:hidden">
+      <div class="top-stimulus" id="top-stimulus" style="visibility:hidden">
+        <div class="shape-display" id="shape-display">
           <svg id="shape-svg" viewBox="0 0 100 100"></svg>
           <div class="shape-word" id="shape-word"></div>
         </div>
-        <div class="n-indicator" id="n-indicator"></div>
+      </div>
+      <div class="n-indicator">
+        <span>CURRENT LOAD:</span>
+        <span class="n-badge" id="hud-n-badge">N=2</span>
       </div>
       <div class="grid-2d" id="grid-2d"></div>
-      <div class="scene-3d" id="scene-3d"><div class="cube-3d" id="cube-3d"></div></div>
+      <div class="scene-3d" id="scene-3d">
+        <div class="cube-3d" id="cube-3d"></div>
+      </div>
     </div>
     <div class="side-controls" id="side-right"></div>
   </div>
@@ -391,736 +396,418 @@ button, input, select { position:relative; z-index:1; }
     <div class="results-panel">
       <h2>SESSION COMPLETE</h2>
       <div class="results-grid">
-        <div class="result-card"><div class="res-val cyan" id="res-time">0:00</div><div class="res-lbl">Duration</div></div>
-        <div class="result-card"><div class="res-val magenta" id="res-best-n">2</div><div class="res-lbl">Peak N-Level</div></div>
-        <div class="result-card"><div class="res-val green" id="res-dprime">0.00</div><div class="res-lbl">Overall D Prime</div></div>
-        <div class="result-card"><div class="res-val amber" id="res-trials">0</div><div class="res-lbl">Trials</div></div>
+        <div class="result-card"><div class="res-val" id="res-dprime" style="color:var(--cyan)">0.00</div><div class="res-lbl">Overall D'</div></div>
+        <div class="result-card"><div class="res-val" id="res-accuracy" style="color:var(--green)">0%</div><div class="res-lbl">Accuracy</div></div>
+        <div class="result-card"><div class="res-val" id="res-best-n" style="color:var(--magenta)">2</div><div class="res-lbl">Max N Reached</div></div>
+        <div class="result-card"><div class="res-val" id="res-time" style="color:var(--amber)">0:00</div><div class="res-lbl">Duration</div></div>
       </div>
-      <div class="modality-breakdown" id="modality-breakdown"></div>
-      <div style="display:flex; gap:10px;">
-        <button class="btn btn-secondary" id="btn-results-menu" style="flex:1">Main Menu</button>
-        <button class="btn btn-primary" id="btn-results-again" style="flex:1">Train Again</button>
+      <div class="modality-breakdown" id="modality-breakdown">
+        <div class="break-header"><div>Modality</div><div>D'</div><div>Acc</div><div>Hits</div><div>FA</div></div>
+        <div id="breakdown-rows"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary" id="btn-results-dash" style="flex:1">Dashboard</button>
+        <button class="btn btn-primary" id="btn-results-retry" style="flex:1">Train Again</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- FULL DASHBOARD MODAL -->
+<!-- DASHBOARD MODAL -->
 <div class="modal-overlay" id="modal-dashboard">
   <div class="modal-panel">
-    <button class="modal-close" id="btn-modal-close">&times;</button>
-    <h2>PERFORMANCE DASHBOARD</h2>
-    <div class="chart-container"><canvas id="chart-dprime" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>D Prime Over Time (last 20 sessions)</span></div>
-    <div class="chart-container"><canvas id="chart-modality" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>Accuracy by Modality</span></div>
-    <div class="chart-container"><canvas id="chart-tod" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>Time-of-Day Performance</span></div>
-    <div class="chart-container"><canvas id="chart-nlevel" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>N-Level Progression</span></div>
+    <button class="modal-close" onclick="App.closeModal()">&times;</button>
+    <h2>ANALYTICS DASHBOARD</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">D' PRIME OVER TIME</div>
+        <div class="chart-container"><canvas id="chart-dprime" class="chart-canvas"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">ACCURACY BY MODALITY</div>
+        <div class="chart-container"><canvas id="chart-modality" class="chart-canvas"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">TIME-OF-DAY PERFORMANCE</div>
+        <div class="chart-container"><canvas id="chart-tod" class="chart-canvas"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">N-LEVEL PROGRESSION</div>
+        <div class="chart-container"><canvas id="chart-nlevel" class="chart-canvas"></canvas></div>
+      </div>
+    </div>
+    <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:4px">28-DAY ACTIVITY HEATMAP</div>
     <div class="heatmap-grid" id="modal-heatmap"></div>
-    <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-dim)"><span>Training Consistency (last 28 days)</span></div>
   </div>
 </div>
 
 <script>
 (function() {
-'use strict';
+'use me strict';
 
-const STORAGE_KEY = 'attentional_shield_v2';
-
-const FACES = [
-  {file:'face_0.jpg', emotion:'neutral', valence:0},
-  {file:'face_1.jpg', emotion:'positive', valence:1},
-  {file:'face_2.jpg', emotion:'positive', valence:2},
-  {file:'face_3.jpg', emotion:'negative', valence:-2},
-  {file:'face_4.jpg', emotion:'negative', valence:-2},
-  {file:'face_5.jpg', emotion:'negative', valence:-1},
-  {file:'face_6.jpg', emotion:'surprise', valence:0},
-  {file:'face_7.jpg', emotion:'negative', valence:-2},
-  {file:'face_8.jpg', emotion:'neutral', valence:0},
-  {file:'face_9.jpg', emotion:'negative', valence:-1}
-];
-
-// ============================================================
-// FACE IMAGE PRELOADER
-// Keep strong references to all ten JPEGs so the browser loads
-// them before the first trial and can reuse the cached resources.
-// These paths are deliberately relative to index.html.
-// ============================================================
-const FACE_IMAGE_CACHE = Object.create(null);
-const FACE_PRELOAD_PROMISE = Promise.all(FACES.map(face => new Promise(resolve => {
-  const img = new Image();
-  img.decoding = 'async';
-  img.loading = 'eager';
-  img.onload = () => {
-    FACE_IMAGE_CACHE[face.file] = img;
-    // Ask the browser to finish decoding while we are still on the menu.
-    if (typeof img.decode === 'function') {
-      img.decode().catch(() => {}).finally(() => resolve(true));
-    } else {
-      resolve(true);
-    }
-  };
-  img.onerror = () => {
-    FACE_IMAGE_CACHE[face.file] = null;
-    console.warn('[ATTENTIONAL SHIELD] Could not preload ' + face.file);
-    resolve(false);
-  };
-  img.src = face.file;
-})));
-
-function createPreloadedFaceImage(path, altText) {
-  const cached = FACE_IMAGE_CACHE[path];
-  const img = cached ? cached.cloneNode(false) : new Image();
-  img.src = path; // relative JPEG path; normally served from the browser cache
-  img.alt = altText || '';
-  img.decoding = 'sync';
-  img.loading = 'eager';
-  img.draggable = false;
-  img.style.width = '100%';
-  img.style.height = '100%';
-  img.style.display = 'block';
-  img.style.objectFit = 'cover';
-  img.style.pointerEvents = 'none';
-  return img;
-}
-
-const WORDS_NEGATIVE = ['Murder','Rape','Failure','Genocide','Retard','Hurt','Alone','Reject','Worthless','Disaster','Death','Pain','Trash','Loser','Betray'];
-const WORDS_POSITIVE = ['Success','Victory','Gift','Miracle','Money','Loved','Triumph','Joy','Peace','Winner','Glory','Hero','Champion','Blessing','Proud'];
-const WORDS_NEUTRAL  = ['Table','Chair','Paper','Pencil','Window','Door','Book','Cup','Phone','Computer','Lamp','Shoe','Clock','Plant','Bridge'];
-const COLORS = ['#FF453A','#30D158','#0A84FF','#FFD60A','#BF5AF2','#FF9F0A','#00F0FF','#FF006E'];
-const SHAPES_SVG = [
-  '<circle cx="50" cy="50" r="42" fill="FILL" stroke="STROKE" stroke-width="4"/>',
-  '<rect x="10" y="10" width="80" height="80" rx="10" fill="FILL" stroke="STROKE" stroke-width="4"/>',
-  '<polygon points="50,8 90,88 10,88" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>',
-  '<polygon points="50,6 63,35 94,36 70,55 79,86 50,68 21,86 30,55 6,36 37,35" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>',
-  '<polygon points="50,8 92,28 92,72 50,92 8,72 8,28" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>',
-  '<path d="M50 8 L62 38 L94 38 L68 58 L78 90 L50 72 L22 90 L32 58 L6 38 L38 38 Z" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>'
-];
-const MOD_LABELS = {pos:'Position', col:'Color', aud:'Audio', shp:'Shape'};
-const MOD_INITIALS = {pos:'P', col:'C', aud:'A', shp:'S'};
-
-function inverseNormalCDF(p) {
-  if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
-  const a1=-3.969683028665376e+01, a2=2.209460984245205e+02, a3=-2.759285104469687e+02;
-  const a4=1.383577518672690e+02, a5=-3.066479806614716e+01, a6=2.506628277459239e+00;
-  const b1=-5.447609879822406e+01, b2=1.615858368580409e+02, b3=-1.556989798598866e+02;
-  const b4=6.680131188771972e+01, b5=-1.328068155288572e+01;
-  const c1=-7.784894002430293e-03, c2=-3.223964580411365e-01, c3=-2.400758277161838e+00;
-  const c4=-2.549732539343734e+00, c5=4.374664141464968e+00, c6=2.938163982698783e+00;
-  const d1=7.784695709041462e-03, d2=3.224671290700398e-01, d3=2.445134137142996e+00, d4=3.754408661907416e+00;
-  const p_low=0.02425, p_high=1-p_low;
-  let q,r;
-  if (p < p_low) {
-    q = Math.sqrt(-2*Math.log(p));
-    return (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1);
-  } else if (p <= p_high) {
-    q = p - 0.5; r = q*q;
-    return (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q / (((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1);
-  } else {
-    q = Math.sqrt(-2*Math.log(1-p));
-    return -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1);
-  }
-}
-
-function calculateDPrime(hits, misses, falseAlarms, correctRejects) {
-  const targets = hits + misses, lures = falseAlarms + correctRejects;
-  if (targets === 0 || lures === 0) return 0;
-  let hr = hits / targets, far = falseAlarms / lures;
-  if (hr >= 1) hr = 1 - 1/(2*targets); if (hr <= 0) hr = 1/(2*targets);
-  if (far >= 1) far = 1 - 1/(2*lures); if (far <= 0) far = 1/(2*lures);
-  return inverseNormalCDF(hr) - inverseNormalCDF(far);
-}
-
-function formatTime(ms) {
-  const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
-  return m + ':' + (s<10?'0':'') + s;
-}
-function formatKey(k) {
-  if (!k) return '?';
-  if (k === ' ') return 'Space';
-  if (k.startsWith('Arrow')) return k.replace('Arrow','') + 'Arr';
-  return k.length === 1 ? k.toUpperCase() : k;
-}
-
-// ==================== AUDIO ENGINE (Safe Fallback) ====================
-const AudioEngine = {
-  ctx: null,
-  init() {
-    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.ctx = null; }
-  },
-  speak(word) {
-    if (typeof speechSynthesis !== 'undefined') {
-      try {
-        const voices = speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-          const msg = new SpeechSynthesisUtterance(word);
-          const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
-          if (preferred) msg.voice = preferred;
-          msg.rate = 1.1;
-          speechSynthesis.cancel();
-          speechSynthesis.speak(msg);
-          return;
-        }
-      } catch(e) {}
-    }
-    // Web Audio fallback
-    if (!this.ctx) this.init();
-    if (this.ctx) {
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 440 + (word.length * 30);
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.3);
-      } catch(e) {}
-    }
-  }
+// Expanded High-Arousal Affective Word Bank for eWMT Engine
+const AFFECTIVE_WORD_BANK = {
+  threat: [
+    "TERROR", "PANIC", "AGONY", "HORROR", "SLAUGHTER", 
+    "SUFFOCATION", "FATAL", "RAGE", "SCREAM", "TORTURE", 
+    "SHELTERLESS", "EXECUTION", "EXPLOSION", "DISASTER", "AMBUSH",
+    "HOSTAGE", "CHAOS", "MUTILATION", "VIOLENCE", "CRUELTY"
+  ],
+  grief: [
+    "DESPAIR", "ANGUISH", "BETRAYAL", "ISOLATION", "ABANDONED",
+    "DEVASTATION", "TRAGEDY", "MISERY", "GRIEF", "HEARTBREAK",
+    "LONELINESS", "HOPELESS", "SHATTERED", "HELPLESS", "LOSS",
+    "REGRET", "CONDEMNED", "RUIN", "REJECTION", "MOURNING"
+  ],
+  visceral: [
+    "REVULSION", "DECAY", "CORRUPTION", "FOUL", "ROT",
+    "CONTAMINATION", "NAUSEA", "INFESTATION", "POISON", "SICKNESS",
+    "SEWAGE", "INFECTION", "MAGGOT", "FILTH", "SMEAR",
+    "DISEASE", "PUTRID", "TOXIC", "DRAIN", "CANCER"
+  ],
+  intensePositive: [
+    "ECSTASY", "EUPHORIA", "RAPTURE", "PASSION", "BLISS",
+    "TRIUMPH", "OBSESSION", "ADRENALINE", "EXHILARATION", "DEVOTION",
+    "PARADISE", "DELIGHT", "THRILL", "VICTORY", "BELOVED",
+    "INTOXICATION", "DESIRE", "CHERISH", "INFATUATION", "FEAST"
+  ],
+  ambiguousShock: [
+    "VOID", "UNHINGED", "HYSTERIA", "PARANOIA", "VULNERABLE",
+    "CONFESSION", "SURREAL", "JUDGMENT", "REVELATION", "FATUM",
+    "STALKER", "SECRETS", "HALLUCINATION", "OBSCURITY", "DELUSION",
+    "SHADOW", "ECHO", "SUSPITION", "INVASION", "CONTAGION"
+  ]
 };
 
-// ==================== STATS MANAGER ====================
+const ALL_AFFECTIVE_WORDS = Object.values(AFFECTIVE_WORD_BANK).flat();
+
+function getRandomAffectiveWord() {
+  return ALL_AFFECTIVE_WORDS[Math.floor(Math.random() * ALL_AFFECTIVE_WORDS.length)];
+}
+
+const STATICS = {
+  letters: ['C', 'H', 'K', 'L', 'Q', 'R', 'S', 'T'],
+  shapes: ['circle', 'square', 'triangle', 'star', 'hexagon', 'diamond'],
+  colors: ['#00f0ff', '#ff006e', '#00ff88', '#ffaa00', '#a855f7', '#ec4899', '#3b82f6', '#10b981'],
+  colorNames: ['Cyan', 'Magenta', 'Green', 'Amber', 'Purple', 'Pink', 'Blue', 'Emerald']
+};
+
+// Local storage stats management
 const StatsManager = {
-  data: null,
-  load() {
+  STORAGE_KEY: 'eWMT_stats_v2',
+  data: { sessions: [], totalMs: 0, bestN: 1 },
+
+  init() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      this.data = raw ? JSON.parse(raw) : this.getDefault();
-    } catch (e) { this.data = this.getDefault(); }
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) this.data = JSON.parse(stored);
+    } catch(e) { console.error('Stats loading failed:', e); }
   },
-  save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch(e) {} },
-  getDefault() { return {sessions:[], totalMs:0, bestN:1, createdAt:Date.now(), daily:{}}; },
-  addSession(session) {
-    this.data.sessions.push(session);
-    this.data.totalMs += session.durationMs;
-    if (session.bestN > this.data.bestN) this.data.bestN = session.bestN;
-    const d = new Date(session.timestamp).toISOString().split('T')[0];
-    if (!this.data.daily[d]) this.data.daily[d] = {sessions:0, totalMs:0};
-    this.data.daily[d].sessions++;
-    this.data.daily[d].totalMs += session.durationMs;
+
+  save() {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+    } catch(e) { console.error('Stats saving failed:', e); }
+  },
+
+  recordSession(s) {
+    this.data.sessions.push(s);
+    this.data.totalMs += (s.durationMs || 0);
+    if (s.bestN > this.data.bestN) this.data.bestN = s.bestN;
     this.save();
   },
-  getRecentSessions(n) { return this.data.sessions.slice(-n); },
-  getAvgDPrime(n) {
-    const s = this.getRecentSessions(n);
-    if (!s.length) return 0;
-    return s.reduce((a,b) => a + (b.overallDPrime||0), 0) / s.length;
+
+  getAvgDPrime(count = 10) {
+    if (!this.data.sessions.length) return 0;
+    const recent = this.data.sessions.slice(-count);
+    const sum = recent.reduce((acc, curr) => acc + (curr.overallDPrime || 0), 0);
+    return sum / recent.length;
   },
-  getHeatmapData() {
-    const days = [];
-    for (let i=27; i>=0; i--) {
-      const d = new Date(); d.setDate(d.getDate()-i);
-      const key = d.toISOString().split('T')[0];
-      const entry = this.data.daily[key];
-      days.push({date:key, level: entry ? Math.min(5, Math.ceil(entry.sessions/2)) : 0});
-    }
-    return days;
+
+  getRecentSessions(limit = 20) {
+    return this.data.sessions.slice(-limit);
   },
+
   getTimeOfDayData() {
-    const buckets = Array(4).fill(0).map(() => ({count:0, dprime:0}));
+    const counts = [0, 0, 0, 0];
     this.data.sessions.forEach(s => {
       const h = new Date(s.timestamp).getHours();
-      const idx = h < 6 ? 0 : h < 12 ? 1 : h < 18 ? 2 : 3;
-      buckets[idx].count++; buckets[idx].dprime += s.overallDPrime || 0;
+      if (h >= 0 && h < 6) counts[0]++;
+      else if (h >= 6 && h < 12) counts[1]++;
+      else if (h >= 12 && h < 18) counts[2]++;
+      else counts[3]++;
     });
-    return buckets.map(b => b.count ? b.dprime/b.count : 0);
+    return counts;
+  },
+
+  getHeatmapData() {
+    const days = [];
+    const now = new Date();
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const str = d.toISOString().split('T')[0];
+      const count = this.data.sessions.filter(s => new Date(s.timestamp).toISOString().split('T')[0] === str).length;
+      let level = 0;
+      if (count > 0) level = Math.min(5, Math.ceil(count / 2));
+      days.push({ date: str, level });
+    }
+    return days;
   }
 };
 
-// ==================== CHART RENDERER ====================
+// Canvas Chart Renderer Utility
 const ChartRenderer = {
-  drawLine(canvas, data, color, fill) {
+  drawLine(canvas, data, color, fill = true) {
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    const w = rect.width, h = rect.height;
-    ctx.clearRect(0,0,w,h);
-    if (!data || data.length < 2) {
-      ctx.fillStyle = '#4b5563'; ctx.font = '12px JetBrains Mono';
-      ctx.textAlign = 'center'; ctx.fillText('No data yet', w/2, h/2);
-      return;
-    }
-    const pad = {t:20, r:20, b:30, l:40};
-    const vals = data.map(d => d.y);
-    let minY = Math.min(...vals), maxY = Math.max(...vals);
-    if (maxY === minY) { maxY += 1; minY -= 1; }
-    const range = maxY - minY;
-    const xScale = (w - pad.l - pad.r) / (data.length - 1);
-    const yScale = (h - pad.t - pad.b) / range;
-    const getX = i => pad.l + i * xScale;
-    const getY = v => pad.t + (maxY - v) * yScale;
-    ctx.strokeStyle = '#1e2330'; ctx.lineWidth = 1;
-    for (let i=0; i<=4; i++) {
-      const y = pad.t + (h - pad.t - pad.b) * i / 4;
-      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w-pad.r, y); ctx.stroke();
-      ctx.fillStyle = '#4b5563'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
-      ctx.fillText((maxY - range * i / 4).toFixed(1), pad.l - 6, y + 3);
-    }
-    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = canvas.offsetHeight;
+    ctx.clearRect(0, 0, w, h);
+    if (!data || data.length < 2) return;
+
+    const pad = 20;
+    const max = Math.max(...data.map(d => d.y), 1);
+    const min = Math.min(...data.map(d => d.y), 0);
+    const range = (max - min) || 1;
+
     ctx.beginPath();
-    data.forEach((d,i) => { if (i===0) ctx.moveTo(getX(i), getY(d.y)); else ctx.lineTo(getX(i), getY(d.y)); });
+    data.forEach((pt, i) => {
+      const x = pad + (i / (data.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((pt.y - min) / range) * (h - pad * 2);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
     ctx.stroke();
+
     if (fill) {
-      ctx.fillStyle = color + '1a';
-      ctx.beginPath(); ctx.moveTo(getX(0), getY(data[0].y));
-      data.forEach((d,i) => ctx.lineTo(getX(i), getY(d.y)));
-      ctx.lineTo(getX(data.length-1), h-pad.b); ctx.lineTo(getX(0), h-pad.b); ctx.closePath(); ctx.fill();
+      ctx.lineTo(w - pad, h - pad);
+      ctx.lineTo(pad, h - pad);
+      ctx.closePath();
+      ctx.fillStyle = color.replace(')', ', 0.1)').replace('rgb', 'rgba').replace('#', 'rgba(');
+      ctx.fill();
     }
-    ctx.fillStyle = color;
-    data.forEach((d,i) => { ctx.beginPath(); ctx.arc(getX(i), getY(d.y), 3, 0, Math.PI*2); ctx.fill(); });
-    ctx.fillStyle = '#4b5563'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
-    const step = Math.ceil(data.length / 6);
-    data.forEach((d,i) => { if (i % step === 0) ctx.fillText(d.x, getX(i), h - 8); });
   },
+
   drawBars(canvas, labels, values, colors) {
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    const w = rect.width, h = rect.height;
-    ctx.clearRect(0,0,w,h);
-    if (!values || values.length === 0) return;
-    const pad = {t:20, r:20, b:30, l:40};
-    const maxV = Math.max(...values, 1);
-    const barW = (w - pad.l - pad.r) / values.length * 0.6;
-    const gap = (w - pad.l - pad.r) / values.length;
-    values.forEach((v,i) => {
-      const x = pad.l + i * gap + (gap - barW) / 2;
-      const barH = (v / maxV) * (h - pad.t - pad.b);
-      const y = h - pad.b - barH;
+    const w = canvas.width = canvas.offsetWidth;
+    const h = canvas.height = canvas.offsetHeight;
+    ctx.clearRect(0, 0, w, h);
+    if (!values || !values.length) return;
+
+    const pad = 25;
+    const max = Math.max(...values, 1);
+    const barW = (w - pad * 2) / values.length - 8;
+
+    values.forEach((v, i) => {
+      const barH = (v / max) * (h - pad * 2);
+      const x = pad + i * (barW + 8) + 4;
+      const y = h - pad - barH;
+
       ctx.fillStyle = colors[i % colors.length];
       ctx.fillRect(x, y, barW, barH);
-      ctx.fillStyle = '#e8ecf1'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
-      ctx.fillText(v.toFixed(1), x + barW/2, y - 4);
-      ctx.fillStyle = '#6b7280'; ctx.font = '10px JetBrains Mono';
-      ctx.fillText(labels[i], x + barW/2, h - 10);
+
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(labels[i], x + barW / 2, h - 8);
     });
   }
 };
 
-// ==================== GAME ENGINE ====================
-class GameEngine {
-  constructor() {
-    this.reset();
-    this.voices = [];
-    this.selectedVoice = null;
-    this.mode = 'dual';
-    this.keys = {pos:'ArrowLeft', col:'ArrowUp', aud:'ArrowRight', shp:'ArrowDown'};
-    this.listeningBind = null;
-    this.activeStimuli = [];
-    this.imageCache = {};
-    this.imagesLoaded = false;
-  }
-  reset() {
-    this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
-    this.responses = {}; this.stats = {};
-    this.isRunning = false; this.isPaused = false; this.isTrialActive = false;
-    this.sessionStart = 0; this.sessionMs = 0; this.lastTick = 0;
-    this.timerInterval = null; this.trialTimeout = null;
-    this.currentN = 2; this.highestN = 2;
-  }
-
-  async preloadImages() {
-    await FACE_PRELOAD_PROMISE;
-    FACES.forEach(face => {
-      this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file];
-    });
-    this.imagesLoaded = true;
-  }
-
-  initVoices() {
-    if (typeof speechSynthesis === 'undefined') return;
-    try {
-      const raw = speechSynthesis.getVoices();
-      if (!raw || raw.length === 0) return;
-      this.voices = raw.filter(v => v.lang && v.lang.startsWith('en'));
-      if (!this.voices.length) this.voices = raw;
-      const sel = document.getElementById('sel-voice');
-      if (!sel) return;
-      sel.innerHTML = '';
-      this.voices.forEach((v, i) => {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = v.name + ' (' + v.lang + ')';
-        if (v.default || v.name.includes('Google') || v.name.includes('Samantha')) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      this.selectedVoice = this.voices[sel.value];
-    } catch(e) {}
-  }
-
-  getSettings() {
-    const safeInt = (id, def) => { const el = document.getElementById(id); return el ? (parseInt(el.value) || def) : def; };
-    const safeBool = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
-    const safeVal = (id, def) => { const el = document.getElementById(id); return el ? el.value : def; };
-    return {
-      gridType: safeVal('sel-grid-type', '2d'),
-      gridSize: safeInt('sel-grid-size', 3),
-      speed3d: safeInt('rng-3d-speed', 40),
-      startN: safeInt('rng-start-n', 2),
-      variableN: safeBool('chk-variable-n'),
-      varMin: safeInt('rng-var-min', 1),
-      varMax: safeInt('inp-var-max', 3),
-      adaptive: safeBool('chk-adaptive'),
-      isiMode: safeVal('sel-isi-mode', 'fixed'),
-      isiFixed: safeInt('rng-isi-fixed', 2500),
-      isiMin: safeInt('inp-isi-min', 800),
-      isiMax: safeInt('inp-isi-max', 3000),
-      stimDur: safeInt('rng-stim-dur', 1500),
-      tally: safeBool('chk-tally'),
-      emoLoad: safeInt('rng-emo-load', 70),
-      interference: safeInt('rng-interference', 40),
-      matchRate: safeInt('rng-match-rate', 30) / 100,
-      stimPos: safeBool('chk-pos'),
-      stimAud: safeBool('chk-aud'),
-      stimShp: safeBool('chk-shp'),
-      stimCol: safeBool('chk-col'),
-    };
-  }
-
-  setActiveStimuli() {
-    const s = this.getSettings();
-    this.activeStimuli = [];
-    if (s.stimPos) this.activeStimuli.push('pos');
-    if (s.stimAud) this.activeStimuli.push('aud');
-    if (s.stimShp) this.activeStimuli.push('shp');
-    if (s.stimCol) this.activeStimuli.push('col');
-    if (this.activeStimuli.length === 0) {
-      this.activeStimuli = ['pos'];
-      const el = document.getElementById('chk-pos');
-      if (el) el.checked = true;
-    }
-  }
-
-  getPosCount() {
-    const s = this.getSettings();
-    return s.gridType === '3d' ? 27 : (s.gridSize * s.gridSize);
-  }
-
-  pickFace(emoLoad) {
-    const r = Math.random() * 100;
-    const neg = FACES.filter(f => f.valence < 0);
-    const neu = FACES.filter(f => f.valence === 0);
-    const pos = FACES.filter(f => f.valence > 0);
-    if (r < emoLoad) return neg[Math.floor(Math.random() * neg.length)];
-    if (r < emoLoad + (100 - emoLoad) * 0.6) return neu[Math.floor(Math.random() * neu.length)];
-    return pos[Math.floor(Math.random() * pos.length)];
-  }
-
-  pickWord(emoLoad) {
-    const r = Math.random() * 100;
-    if (r < emoLoad * 0.8) return WORDS_NEGATIVE[Math.floor(Math.random() * WORDS_NEGATIVE.length)];
-    if (r < emoLoad * 0.8 + (100 - emoLoad * 0.8) * 0.5) return WORDS_NEUTRAL[Math.floor(Math.random() * WORDS_NEUTRAL.length)];
-    return WORDS_POSITIVE[Math.floor(Math.random() * WORDS_POSITIVE.length)];
-  }
-
-  generateBlock() {
-    const s = this.getSettings();
-    this.blockTrials = 20 + (this.currentN * this.currentN);
-    this.kSeq = [];
-    const minK = s.variableN ? s.varMin : this.currentN;
-    const maxK = s.variableN ? Math.min(s.varMax, this.currentN) : this.currentN;
-    for (let i = 0; i < this.blockTrials; i++) {
-      if (!s.variableN) { this.kSeq.push(this.currentN); continue; }
-      const maxAllowed = Math.min(i, maxK);
-      if (maxAllowed < minK) this.kSeq.push(this.currentN);
-      else this.kSeq.push(Math.floor(Math.random() * (maxAllowed - minK + 1)) + minK);
-    }
-    const posCount = this.getPosCount();
-    const posSeq = this.genSequence(posCount, this.kSeq, s.matchRate, s.interference / 100);
-    const colSeq = this.genSequence(COLORS.length, this.kSeq, s.matchRate, s.interference / 100);
-    const audSeq = this.genSequence(WORDS_NEGATIVE.length + WORDS_POSITIVE.length + WORDS_NEUTRAL.length, this.kSeq, s.matchRate, s.interference / 100);
-    const shpSeq = this.genSequence(SHAPES_SVG.length, this.kSeq, s.matchRate, s.interference / 100);
-    this.trials = [];
-    for (let i = 0; i < this.blockTrials; i++) {
-      const face = this.pickFace(s.emoLoad);
-      const word = this.pickWord(s.emoLoad);
-      const audWord = this.pickWord(s.emoLoad);
-      this.trials.push({
-        pos: posSeq[i], col: colSeq[i], aud: audSeq[i], shp: shpSeq[i],
-        face: face.file, faceEmotion: face.emotion,
-        word: word, audWord: audWord
-      });
-    }
-    this.currentTrial = 0;
-    this.responses = {};
-    this.activeStimuli.forEach(t => {
-      this.responses[t] = Array(this.blockTrials).fill(false);
-      if (!this.stats[t]) this.stats[t] = {hits:0, misses:0, falseAlarms:0, correctRejects:0};
-    });
-  }
-
-  genSequence(poolSize, kArr, matchRate, interfRate) {
-    const seq = [];
-    for (let i = 0; i < this.blockTrials; i++) {
-      const k = kArr[i];
-      const targetVal = (i >= k) ? seq[i - k] : null;
-      const isTarget = (i >= k) && (Math.random() < matchRate);
-      if (isTarget) {
-        seq.push(targetVal);
-      } else {
-        const forbidden = new Set();
-        if (targetVal !== null) forbidden.add(targetVal);
-        let picked = null;
-        if (Math.random() < interfRate) {
-          const lures = [];
-          for (let lag = 1; lag <= 4; lag++) {
-            if (i - lag >= 0) {
-              const c = seq[i - lag];
-              if (!forbidden.has(c)) lures.push(c);
-            }
-          }
-          if (lures.length > 0) picked = lures[Math.floor(Math.random() * lures.length)];
-        }
-        if (picked === null) {
-          const avoid = new Set(forbidden);
-          if (interfRate < 0.5) {
-            for (let lag = 1; lag <= 3; lag++) { if (i - lag >= 0) avoid.add(seq[i - lag]); }
-          }
-          let avail = [];
-          for (let v = 0; v < poolSize; v++) { if (!avoid.has(v)) avail.push(v); }
-          if (avail.length === 0) { for (let v = 0; v < poolSize; v++) { if (!forbidden.has(v)) avail.push(v); } }
-          if (avail.length === 0) avail = Array.from({length: poolSize}, (_, idx) => idx);
-          picked = avail[Math.floor(Math.random() * avail.length)];
-        }
-        seq.push(picked);
-      }
-    }
-    return seq;
-  }
-
-  getISI() {
-    const s = this.getSettings();
-    if (s.isiMode === 'fixed') return s.isiFixed;
-    return Math.floor(s.isiMin + Math.random() * (s.isiMax - s.isiMin));
-  }
-}
-
-// ==================== APP CONTROLLER ====================
-const App = {
-  engine: new GameEngine(),
-  screens: {},
-  _initialized: false,
+// Sound & Speech Synthesis Engine
+const AudioEngine = {
+  ctx: null,
+  voice: null,
 
   init() {
-    if (this._initialized) return;
-    this._initialized = true;
-    StatsManager.load();
-    this.screens = {
-      setup: document.getElementById('screen-setup'),
-      game: document.getElementById('screen-game'),
-      results: document.getElementById('screen-results')
-    };
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) { console.warn('Web Audio API unavailable.'); }
+    this.loadVoices();
+  },
 
-    // Voice init with retry
-    this.engine.initVoices();
-    if (typeof speechSynthesis !== 'undefined') {
-      speechSynthesis.onvoiceschanged = () => this.engine.initVoices();
+  loadVoices() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const sel = document.getElementById('sel-voice');
+        if (sel) {
+          sel.innerHTML = '';
+          voices.forEach((v, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `${v.name} (${v.lang})`;
+            sel.appendChild(opt);
+          });
+        }
+      };
     }
-    const voiceSel = document.getElementById('sel-voice');
-    if (voiceSel) {
-      voiceSel.addEventListener('change', (e) => {
-        if (this.engine.voices[e.target.value]) this.engine.selectedVoice = this.engine.voices[e.target.value];
-      });
+  },
+
+  speak(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.rate = 1.2;
+      const sel = document.getElementById('sel-voice');
+      if (sel && sel.value) {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices[sel.value]) utt.voice = voices[sel.value];
+      }
+      window.speechSynthesis.speak(utt);
+    } else {
+      this.playTone(440, 0.15);
     }
+  },
 
-    // Native control bindings. These are deliberately registered from JS so the app
-    // does not depend on inline handlers or script execution order.
-    const bindInput = (id, event, handler) => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener(event, handler);
-    };
-    bindInput('rng-start-n', 'input', e => { document.getElementById('disp-start-n').textContent = e.target.value; this.onVariableNToggle(); });
-    bindInput('rng-emo-load', 'input', e => { document.getElementById('disp-emo-load').textContent = e.target.value + '%'; });
-    bindInput('sel-grid-type', 'change', () => this.onGridTypeChange());
-    bindInput('rng-3d-speed', 'input', () => this.update3DSpeedDisplay());
-    bindInput('chk-variable-n', 'change', () => this.onVariableNToggle());
-    bindInput('rng-var-min', 'input', e => { document.getElementById('disp-var-min').textContent = e.target.value; });
-    bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
-    bindInput('rng-isi-fixed', 'input', e => { document.getElementById('disp-isi-fixed').textContent = e.target.value + 'ms'; });
-    bindInput('rng-stim-dur', 'input', e => { document.getElementById('disp-stim-dur').textContent = e.target.value + 'ms'; });
-    bindInput('rng-interference', 'input', e => { document.getElementById('disp-interference').textContent = e.target.value + '%'; });
-    bindInput('rng-match-rate', 'input', e => { document.getElementById('disp-match-rate').textContent = e.target.value + '%'; });
-    bindInput('chk-pos', 'change', () => this.onStimChange());
-    bindInput('chk-aud', 'change', () => this.onStimChange());
-    bindInput('chk-shp', 'change', () => this.onStimChange());
-    bindInput('chk-col', 'change', () => this.onStimChange());
+  playTone(freq, dur = 0.1) {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+    osc.start();
+    osc.stop(this.ctx.currentTime + dur);
+  }
+};
 
-    // Mode cards
-    const modeDual = document.getElementById('mode-dual');
-    const modeQuad = document.getElementById('mode-quad');
-    if (modeDual) modeDual.addEventListener('click', () => this.setMode('dual'));
-    if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
+// Main Application Controller
+const App = {
+  config: {
+    mode: 'dual',
+    startN: 2,
+    emoLoad: 70,
+    gridType: '2d',
+    gridSize: 3,
+    rotSpeed: 40,
+    variableN: false,
+    varMin: 1,
+    varMax: 3,
+    adaptive: true,
+    isiMode: 'fixed',
+    isiFixed: 2500,
+    isiMin: 800,
+    isiMax: 3000,
+    stimDur: 1500,
+    tally: false,
+    interference: 40,
+    matchRate: 30,
+    activeMods: { pos: true, aud: true, shp: false, col: false }
+  },
 
-    // Main buttons
-    const btnInit = document.getElementById('btn-init-session');
-    const btnDash = document.getElementById('btn-full-dashboard');
-    const btnPause = document.getElementById('btn-pause');
-    const btnEnd = document.getElementById('btn-end-session');
-    const btnResMenu = document.getElementById('btn-results-menu');
-    const btnResAgain = document.getElementById('btn-results-again');
-    const btnModalClose = document.getElementById('btn-modal-close');
+  keybinds: {
+    pos: 'A',
+    aud: 'L',
+    shp: 'S',
+    col: 'D'
+  },
 
-    if (btnInit) btnInit.addEventListener('click', () => this.startSession());
-    if (btnDash) btnDash.addEventListener('click', () => this.showStatsFull());
-    if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
-    if (btnEnd) btnEnd.addEventListener('click', () => this.endSession());
-    if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
-    if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
-    if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
+  state: {
+    active: false,
+    paused: false,
+    currentN: 2,
+    trialIndex: 0,
+    totalTrials: 20,
+    history: [],
+    responses: [],
+    timerInt: null,
+    trialTimeout: null,
+    startTime: 0,
+    elapsedMs: 0
+  },
 
-    // Modal overlay click-to-close
-    const modalOverlay = document.getElementById('modal-dashboard');
-    if (modalOverlay) {
-      modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) this.closeModal();
-      });
-    }
-
-    // Keyboard
-    document.addEventListener('keydown', (e) => this.handleKeydown(e));
-
-    // Initial UI state
+  init() {
+    StatsManager.init();
+    AudioEngine.init();
+    this.bindEvents();
+    this.renderKeybinds();
     this.updateGlobalStats();
-    this.onStimChange();
-    this.onVariableNToggle();
-    this.onGridTypeChange();
-    this.onISIModeChange();
-
-    // Preload images non-blocking
-    this.engine.preloadImages();
   },
 
-  switchScreen(id) {
-    Object.values(this.screens).forEach(s => { if (s) s.classList.remove('active'); });
-    if (this.screens[id]) this.screens[id].classList.add('active');
-    if (id === 'setup') {
-      this.updateGlobalStats();
-    }
+  bindEvents() {
+    document.querySelectorAll('.mode-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+        const target = e.currentTarget;
+        target.classList.add('active');
+        this.config.mode = target.dataset.mode;
+        
+        const chkShp = document.getElementById('chk-shp');
+        const chkCol = document.getElementById('chk-col');
+        if (this.config.mode === 'quad') {
+          if (chkShp) chkShp.checked = true;
+          if (chkCol) chkCol.checked = true;
+        } else {
+          if (chkShp) chkShp.checked = false;
+          if (chkCol) chkCol.checked = false;
+        }
+        this.onStimChange();
+      });
+    });
+
+    document.getElementById('btn-init-session')?.addEventListener('click', () => this.startSession());
+    document.getElementById('btn-full-dashboard')?.addEventListener('click', () => this.showStatsFull());
+    document.getElementById('btn-pause')?.addEventListener('click', () => this.togglePause());
+    document.getElementById('btn-end-session')?.addEventListener('click', () => this.endSession());
+    document.getElementById('btn-results-dash')?.addEventListener('click', () => {
+      this.switchScreen('setup');
+      this.showStatsFull();
+    });
+    document.getElementById('btn-results-retry')?.addEventListener('click', () => {
+      this.switchScreen('setup');
+      this.startSession();
+    });
+
+    window.addEventListener('keydown', (e) => this.handleKeyPress(e));
   },
 
-  setMode(mode) {
-    this.engine.mode = mode;
-    const dual = document.getElementById('mode-dual');
-    const quad = document.getElementById('mode-quad');
-    if (dual) dual.classList.toggle('active', mode === 'dual');
-    if (quad) quad.classList.toggle('active', mode === 'quad');
-    const isQuad = mode === 'quad';
-    const shpWrap = document.getElementById('chk-shp-wrapper');
-    const colWrap = document.getElementById('chk-col-wrapper');
-    if (shpWrap) shpWrap.style.display = isQuad ? 'flex' : 'none';
-    if (colWrap) colWrap.style.display = isQuad ? 'flex' : 'none';
-    const shp = document.getElementById('chk-shp');
-    const col = document.getElementById('chk-col');
-    if (shp) shp.checked = isQuad;
-    if (col) col.checked = isQuad;
-    this.onStimChange();
-  },
-
-  onGridTypeChange() {
-    const sel = document.getElementById('sel-grid-type');
-    const is3d = sel ? sel.value === '3d' : false;
-    const r2d = document.getElementById('row-2d-size');
-    const r3d = document.getElementById('row-3d-speed');
-    if (r2d) r2d.style.display = is3d ? 'none' : 'flex';
-    if (r3d) r3d.style.display = is3d ? 'flex' : 'none';
-  },
-
-  update3DSpeedDisplay() {
-    const rng = document.getElementById('rng-3d-speed');
-    const disp = document.getElementById('disp-3d-speed');
-    if (rng && disp) {
-      const v = parseInt(rng.value);
-      disp.textContent = v < 30 ? 'Slow' : v < 70 ? 'Normal' : 'Fast';
-    }
-  },
-
-  onVariableNToggle() {
-    const chk = document.getElementById('chk-variable-n');
-    const el = document.getElementById('variable-n-controls');
-    const on = chk ? chk.checked : false;
-    if (el) {
-      el.style.opacity = on ? '1' : '0.4';
-      el.style.pointerEvents = on ? 'auto' : 'none';
-    }
-    const nVal = parseInt(document.getElementById('rng-start-n')?.value) || 1;
-    const minRng = document.getElementById('rng-var-min');
-    if (minRng) {
-      minRng.max = Math.max(1, nVal - 1);
-      if (parseInt(minRng.value) > parseInt(minRng.max)) minRng.value = minRng.max;
-      const disp = document.getElementById('disp-var-min');
-      if (disp) disp.textContent = minRng.value;
-    }
-  },
-
-  onISIModeChange() {
-    const sel = document.getElementById('sel-isi-mode');
-    const mode = sel ? sel.value : 'fixed';
-    const fixedCtrl = document.getElementById('isi-fixed-controls');
-    const varCtrl = document.getElementById('isi-variable-controls');
-    if (fixedCtrl) fixedCtrl.style.display = mode === 'fixed' ? 'block' : 'none';
-    if (varCtrl) varCtrl.style.display = mode === 'variable' ? 'block' : 'none';
-  },
-
-  onStimChange() {
-    this.engine.setActiveStimuli();
+  renderKeybinds() {
     const grid = document.getElementById('keybind-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    this.engine.activeStimuli.forEach(stim => {
-      const label = document.createElement('div');
-      label.className = 'kb-label';
-      label.textContent = MOD_LABELS[stim];
+    const mods = [
+      { id: 'pos', name: 'Position Match' },
+      { id: 'aud', name: 'Audio Match' },
+      { id: 'shp', name: 'Shape Match' },
+      { id: 'col', name: 'Color Match' }
+    ];
+
+    mods.forEach(m => {
+      const lbl = document.createElement('div');
+      lbl.className = 'kb-label';
+      lbl.textContent = m.name;
+
       const btn = document.createElement('button');
       btn.className = 'keybind-btn';
-      btn.dataset.type = stim;
-      btn.textContent = formatKey(this.engine.keys[stim]);
-      btn.addEventListener('click', () => this.startBind(btn));
-      grid.appendChild(label);
+      btn.textContent = this.keybinds[m.id];
+      btn.addEventListener('click', () => this.listenForKeybind(m.id, btn));
+
+      grid.appendChild(lbl);
       grid.appendChild(btn);
     });
   },
 
-  startBind(btn) {
-    if (this.engine.listeningBind) {
-      const old = document.querySelector('.keybind-btn.listening');
-      if (old) {
-        old.classList.remove('listening');
-        old.textContent = formatKey(this.engine.keys[old.dataset.type]);
-      }
-    }
-    this.engine.listeningBind = btn.dataset.type;
-    btn.textContent = 'Press...';
+  listenForKeybind(modId, btn) {
     btn.classList.add('listening');
-  },
-
-  handleKeydown(e) {
-    if (this.engine.listeningBind) {
+    btn.textContent = '...';
+    const handler = (e) => {
       e.preventDefault();
-      this.engine.keys[this.engine.listeningBind] = e.key;
-      this.engine.listeningBind = null;
-      this.onStimChange();
-      return;
-    }
-    if (!this.screens.game || !this.screens.game.classList.contains('active')) return;
-    if (!this.engine.isRunning || this.engine.isPaused) return;
-    if (this.engine.isTrialActive && this.engine.currentTrial < this.engine.blockTrials) {
-      this.engine.activeStimuli.forEach(type => {
-        if (e.key === this.engine.keys[type] && !this.engine.responses[type][this.engine.currentTrial]) {
-          this.processFeedback(type);
-        }
-      });
-    }
-    if (this.engine.getSettings().tally && e.code === 'Space') {
-      e.preventDefault();
-      this.advanceTally();
-    }
+      const k = e.key.toUpperCase();
+      if (k.length === 1 || k === 'SPACE') {
+        this.keybinds[modId] = k === ' ' ? 'SPACE' : k;
+        btn.textContent = this.keybinds[modId];
+        btn.classList.remove('listening');
+        window.removeEventListener('keydown', handler);
+      }
+    };
+    window.addEventListener('keydown', handler);
   },
 
   toggleAccordion(id) {
@@ -1128,456 +815,409 @@ const App = {
     if (el) el.classList.toggle('open');
   },
 
-  async startSession() {
-    const s = this.engine.getSettings();
-    this.engine.reset();
-    this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-    this.engine.setActiveStimuli();
-    this.engine.currentN = s.startN;
-    this.engine.highestN = s.startN;
-    this.engine.sessionStart = Date.now();
-    this.engine.lastTick = Date.now();
-    this.engine.isRunning = true;
+  onGridTypeChange() {
+    const type = document.getElementById('sel-grid-type').value;
+    this.config.gridType = type;
+    document.getElementById('row-2d-size').style.display = type === '2d' ? 'flex' : 'none';
+    document.getElementById('row-3d-speed').style.display = type === '3d' ? 'flex' : 'none';
+  },
 
-    // Ensure images are at least attempted
-    if (!this.engine.imagesLoaded) {
-      await this.engine.preloadImages();
+  update3DSpeedDisplay() {
+    const val = document.getElementById('rng-3d-speed').value;
+    const disp = document.getElementById('disp-3d-speed');
+    if (!disp) return;
+    if (val < 30) disp.textContent = 'Slow';
+    else if (val < 70) disp.textContent = 'Normal';
+    else disp.textContent = 'Fast';
+  },
+
+  onVariableNToggle() {
+    const chk = document.getElementById('chk-variable-n').checked;
+    this.config.variableN = chk;
+    const ctrl = document.getElementById('variable-n-controls');
+    if (ctrl) {
+      ctrl.style.opacity = chk ? '1' : '0.4';
+      ctrl.style.pointerEvents = chk ? 'auto' : 'none';
     }
+  },
 
-    this.buildGrid();
-    this.buildSideControls();
+  onISIModeChange() {
+    const mode = document.getElementById('sel-isi-mode').value;
+    this.config.isiMode = mode;
+    document.getElementById('isi-fixed-controls').style.display = mode === 'fixed' ? 'block' : 'none';
+    document.getElementById('isi-variable-controls').style.display = mode === 'variable' ? 'block' : 'none';
+  },
+
+  onStimChange() {
+    this.config.activeMods.pos = document.getElementById('chk-pos').checked;
+    this.config.activeMods.aud = document.getElementById('chk-aud').checked;
+    this.config.activeMods.shp = document.getElementById('chk-shp').checked;
+    this.config.activeMods.col = document.getElementById('chk-col').checked;
+  },
+
+  switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(`screen-${screenId}`)?.classList.add('active');
+  },
+
+  startSession() {
+    this.config.startN = parseInt(document.getElementById('rng-start-n').value);
+    this.config.emoLoad = parseInt(document.getElementById('rng-emo-load').value);
+    this.config.gridSize = parseInt(document.getElementById('sel-grid-size').value);
+    this.config.isiFixed = parseInt(document.getElementById('rng-isi-fixed').value);
+    this.config.stimDur = parseInt(document.getElementById('rng-stim-dur').value);
+    this.config.matchRate = parseInt(document.getElementById('rng-match-rate').value);
+
+    this.state.active = true;
+    this.state.paused = false;
+    this.state.currentN = this.config.startN;
+    this.state.trialIndex = 0;
+    this.state.totalTrials = 20 + this.state.currentN;
+    this.state.history = [];
+    this.state.responses = [];
+    this.state.startTime = Date.now();
+    this.state.elapsedMs = 0;
+
+    this.setupGameUI();
     this.switchScreen('game');
-    this.showInterMsg('GET READY', 1500);
-    setTimeout(() => { if (this.engine.isRunning) this.startBlock(); }, 1600);
-
-    this.engine.timerInterval = setInterval(() => this.updateTimer(), 1000);
+    this.startTimer();
+    this.nextTrial();
   },
 
-  updateTimer() {
-    if (!this.engine.isRunning || this.engine.isPaused) return;
-    const now = Date.now();
-    this.engine.sessionMs += (now - this.engine.lastTick);
-    this.engine.lastTick = now;
-    const el = document.getElementById('hud-timer');
-    if (el) el.textContent = formatTime(this.engine.sessionMs);
-  },
+  setupGameUI() {
+    const sideLeft = document.getElementById('side-left');
+    const sideRight = document.getElementById('side-right');
+    if (sideLeft) sideLeft.innerHTML = '';
+    if (sideRight) sideRight.innerHTML = '';
 
-  buildGrid() {
-    const s = this.engine.getSettings();
-    const g2d = document.getElementById('grid-2d');
-    const s3d = document.getElementById('scene-3d');
-    const cube = document.getElementById('cube-3d');
-    if (g2d) { g2d.classList.remove('active'); g2d.innerHTML = ''; }
-    if (s3d) { s3d.classList.remove('active'); }
-    if (cube) { cube.innerHTML = ''; }
+    const activeMods = Object.keys(this.config.activeMods).filter(m => this.config.activeMods[m]);
+    
+    activeMods.forEach((m, idx) => {
+      const btn = document.createElement('div');
+      btn.className = 'modality-btn';
+      btn.dataset.mod = m;
+      btn.innerHTML = `
+        <div class="mod-initial">${m.charAt(0).toUpperCase()}</div>
+        <div class="mod-key">${this.keybinds[m]}</div>
+      `;
+      btn.addEventListener('click', () => this.registerResponse(m));
 
-    if (s.gridType === '3d') {
-      if (s3d) s3d.classList.add('active');
-      const speed = s.speed3d;
-      const dur = 35 - (speed / 100) * 32;
-      if (cube) cube.style.setProperty('--rot-speed', Math.max(3, dur) + 's');
-      for (let i = 0; i < 27; i++) {
-        const x = ((i % 3) - 1) * 11, y = ((Math.floor(i / 3) % 3) - 1) * 11, z = (Math.floor(i / 9) - 1) * 11;
-        const div = document.createElement('div');
-        div.className = 'mini-cube';
-        div.id = 'pos-' + i;
-        div.style.transform = 'translate3d(' + x + 'vmin,' + y + 'vmin,' + z + 'vmin)';
-        div.innerHTML = '<div class="mini-face mf-front"></div><div class="mini-face mf-back"></div><div class="mini-face mf-right"></div><div class="mini-face mf-left"></div><div class="mini-face mf-top"></div><div class="mini-face mf-bottom"></div>';
-        cube.appendChild(div);
-      }
-    } else {
-      if (g2d) g2d.classList.add('active');
-      const sz = s.gridSize;
-      g2d.style.gridTemplateColumns = 'repeat(' + sz + ', 1fr)';
-      g2d.style.gridTemplateRows = 'repeat(' + sz + ', 1fr)';
-      for (let i = 0; i < sz * sz; i++) {
+      if (idx % 2 === 0) sideLeft?.appendChild(btn);
+      else sideRight?.appendChild(btn);
+    });
+
+    const grid2d = document.getElementById('grid-2d');
+    const scene3d = document.getElementById('scene-3d');
+
+    if (this.config.gridType === '2d') {
+      grid2d.classList.add('active');
+      scene3d.classList.remove('active');
+      grid2d.style.gridTemplateColumns = `repeat(${this.config.gridSize}, 1fr)`;
+      grid2d.innerHTML = '';
+      const totalCells = this.config.gridSize * this.config.gridSize;
+      for (let i = 0; i < totalCells; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell-2d';
-        cell.id = 'pos-' + i;
-        const img = document.createElement('img');
-        img.className = 'face-img';
-        img.alt = '';
-        img.style.display = 'none';
-        const fallback = document.createElement('div');
-        fallback.className = 'face-fallback';
-        fallback.style.display = 'none';
-        const overlay = document.createElement('div');
-        overlay.className = 'cell-overlay';
-        cell.appendChild(img);
-        cell.appendChild(fallback);
-        cell.appendChild(overlay);
-        g2d.appendChild(cell);
+        cell.id = `cell-2d-${i}`;
+        grid2d.appendChild(cell);
       }
+    } else {
+      scene3d.classList.add('active');
+      grid2d.classList.remove('active');
+      this.build3DCube();
+    }
+
+    const topStim = document.getElementById('top-stimulus');
+    if (topStim) {
+      topStim.style.visibility = (this.config.activeMods.shp || this.config.activeMods.col) ? 'visible' : 'hidden';
+    }
+
+    document.getElementById('hud-nlevel').textContent = `${this.state.currentN}-Back`;
+    document.getElementById('hud-n-badge').textContent = `N=${this.state.currentN}`;
+  },
+
+  build3DCube() {
+    const container = document.getElementById('cube-3d');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const mini = document.createElement('div');
+      mini.className = 'mini-cube';
+      mini.id = `mini-cube-${i}`;
+      
+      const angle = (i / count) * Math.PI * 2;
+      const radius = 100;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      mini.style.transform = `translate3d(${x}px, 0px, ${z}px)`;
+
+      const faces = ['front', 'back', 'right', 'left', 'top', 'bottom'];
+      faces.forEach(f => {
+        const face = document.createElement('div');
+        face.className = `mini-face mf-${f}`;
+        mini.appendChild(face);
+      });
+
+      container.appendChild(mini);
     }
   },
 
-  buildSideControls() {
-    const left = document.getElementById('side-left');
-    const right = document.getElementById('side-right');
-    if (left) left.innerHTML = '';
-    if (right) right.innerHTML = '';
-    const stims = this.engine.activeStimuli;
-    let leftStims = [], rightStims = [];
-    if (stims.length >= 4) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
-    else if (stims.length === 3) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
-    else if (stims.length === 2) { leftStims = [stims[0]]; rightStims = [stims[1]]; }
-    else { leftStims = stims; }
-
-    const makeBtn = (type) => {
-      const d = document.createElement('div');
-      d.className = 'modality-btn';
-      d.id = 'ind-' + type;
-      d.dataset.type = type;
-      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
-      d.addEventListener('touchstart', (e) => { e.preventDefault(); this.tapFeedback(type); }, {passive: false});
-      d.addEventListener('mousedown', (e) => { e.preventDefault(); this.tapFeedback(type); });
-      return d;
-    };
-    leftStims.forEach(t => { if (left) left.appendChild(makeBtn(t)); });
-    rightStims.forEach(t => { if (right) right.appendChild(makeBtn(t)); });
+  startTimer() {
+    clearInterval(this.state.timerInt);
+    this.state.timerInt = setInterval(() => {
+      if (this.state.paused) return;
+      this.state.elapsedMs = Date.now() - this.state.startTime;
+      const sec = Math.floor(this.state.elapsedMs / 1000);
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      const timerEl = document.getElementById('hud-timer');
+      if (timerEl) timerEl.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+    }, 1000);
   },
 
-  tapFeedback(type) {
-    if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
-    if (this.engine.currentTrial >= this.engine.blockTrials) return;
-    if (!this.engine.responses[type][this.engine.currentTrial]) this.processFeedback(type);
-  },
-
-  showInterMsg(text, duration) {
-    const el = document.getElementById('inter-msg');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.add('active');
-    setTimeout(() => el.classList.remove('active'), duration);
-  },
-
-  startBlock() {
-    this.engine.generateBlock();
-    this.updateHUD();
-    this.runTrial();
-  },
-
-  runTrial() {
-    if (!this.engine.isRunning || this.engine.isPaused) return;
-    if (this.engine.currentTrial >= this.engine.blockTrials) {
-      this.evaluateBlock();
-      if (this.engine.isRunning && !this.engine.isPaused) {
-        this.showInterMsg('BLOCK COMPLETE', 1200);
-        setTimeout(() => { if (this.engine.isRunning && !this.engine.isPaused) this.startBlock(); }, 1400);
-      }
+  nextTrial() {
+    if (!this.state.active) return;
+    if (this.state.trialIndex >= this.state.totalTrials) {
+      this.endSession();
       return;
     }
 
-    const trial = this.engine.trials[this.engine.currentTrial];
-    const k = this.engine.kSeq[this.engine.currentTrial];
-    const s = this.engine.getSettings();
-    this.engine.isTrialActive = true;
+    this.clearStimuli();
+    document.getElementById('hud-trial').textContent = `${this.state.trialIndex + 1} / ${this.state.totalTrials}`;
 
-    const hudTrial = document.getElementById('hud-trial');
-    if (hudTrial) hudTrial.textContent = (this.engine.currentTrial + 1) + ' / ' + this.engine.blockTrials;
-    const nDisp = document.getElementById('hud-nlevel');
-    if (nDisp) {
-      if (s.variableN) {
-        nDisp.textContent = k + '-Back';
-        nDisp.style.color = 'var(--magenta)';
-      } else {
-        nDisp.textContent = this.engine.currentN + '-Back';
-        nDisp.style.color = 'var(--text)';
-      }
+    const trialData = this.generateTrialData();
+    this.state.history.push(trialData);
+
+    this.renderStimulus(trialData);
+
+    let isi = this.config.isiFixed;
+    if (this.config.isiMode === 'variable') {
+      isi = Math.floor(Math.random() * (this.config.isiMax - this.config.isiMin)) + this.config.isiMin;
     }
 
-    this.clearGrid();
-
-    // Position stimulus
-    if (this.engine.activeStimuli.includes('pos')) {
-      const targetEl = document.getElementById('pos-' + trial.pos);
-      const imgOK = this.engine.imageCache[trial.face];
-      if (s.gridType === '3d' && targetEl) {
-        // Every visible face of the active 3D mini-cube gets a real JPEG <img>.
-        // The image was preloaded before the session, so this does not initiate
-        // a network request during the timed stimulus window.
-        targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-          faceEl.replaceChildren();
-          if (imgOK) {
-            const img = createPreloadedFaceImage(
-              trial.face,
-              trial.faceEmotion + ' emotional face'
-            );
-            faceEl.appendChild(img);
-          } else {
-            const fb = document.createElement('div');
-            fb.className = 'face-fallback';
-            fb.textContent = trial.faceEmotion[0].toUpperCase();
-            faceEl.appendChild(fb);
-          }
-          faceEl.classList.add('active');
-        });
-      } else if (targetEl) {
-        const img = targetEl.querySelector('.face-img');
-        const fb = targetEl.querySelector('.face-fallback');
-        if (imgOK) {
-          if (img) {
-            img.src = trial.face; // same relative path as the preloaded resource
-            img.alt = trial.faceEmotion + ' emotional face';
-            img.decoding = 'sync';
-            img.loading = 'eager';
-            img.style.display = 'block';
-          }
-          if (fb) fb.style.display = 'none';
-        } else {
-          if (img) img.style.display = 'none';
-          if (fb) { fb.textContent = trial.faceEmotion[0].toUpperCase(); fb.style.display = 'flex'; }
-        }
-        targetEl.classList.add('active');
-      }
-    }
-
-    // Top stimulus (shape/color/word)
-    const shapeDisp = document.getElementById('shape-display');
-    const nInd = document.getElementById('n-indicator');
-    if (this.engine.activeStimuli.includes('col') || this.engine.activeStimuli.includes('shp') || this.engine.activeStimuli.includes('aud')) {
-      if (shapeDisp) shapeDisp.style.visibility = 'visible';
-      const sw = document.getElementById('shape-word');
-      if (sw) sw.textContent = trial.word;
-      const fillColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : 'rgba(255,255,255,0.06)';
-      const strokeColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : '#4b5563';
-      const svg = document.getElementById('shape-svg');
-      if (this.engine.activeStimuli.includes('shp')) {
-        if (svg) svg.innerHTML = SHAPES_SVG[trial.shp].replace(/FILL/g, fillColor).replace(/STROKE/g, strokeColor);
-      } else if (this.engine.activeStimuli.includes('col')) {
-        if (svg) svg.innerHTML = '<rect x="10" y="10" width="80" height="80" rx="14" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="4"/>';
-      } else {
-        if (svg) svg.innerHTML = '';
-      }
-    } else {
-      if (shapeDisp) shapeDisp.style.visibility = 'hidden';
-    }
-
-    if (s.variableN && nInd) {
-      nInd.innerHTML = '<span class="n-badge">' + k + '-Back</span>';
-    } else if (nInd) {
-      nInd.innerHTML = '';
-    }
-
-    // Audio
-    if (this.engine.activeStimuli.includes('aud')) {
-      AudioEngine.speak(trial.audWord);
-    }
-
-    // Stimulus duration timeout
-    this.engine.trialTimeout = setTimeout(() => {
-      if (!this.engine.isRunning || this.engine.isPaused) return;
-      this.clearGrid();
-      if (s.variableN && nDisp) nDisp.style.color = 'var(--text)';
-
-      if (s.tally) {
-        const inter = document.getElementById('inter-msg');
-        if (inter) { inter.textContent = 'PRESS SPACE'; inter.classList.add('active'); }
-        this.engine.isTrialActive = false;
-        return;
-      }
-
-      const isi = this.engine.getISI();
-      this.engine.trialTimeout = setTimeout(() => {
-        if (!this.engine.isRunning || this.engine.isPaused) return;
-        this.showMissedFeedback();
-        this.engine.currentTrial++;
-        this.runTrial();
+    this.state.trialTimeout = setTimeout(() => {
+      this.clearStimuli();
+      this.state.trialTimeout = setTimeout(() => {
+        this.state.trialIndex++;
+        this.nextTrial();
       }, isi);
-    }, s.stimDur);
+    }, this.config.stimDur);
   },
 
-  advanceTally() {
-    const inter = document.getElementById('inter-msg');
-    if (inter) inter.classList.remove('active');
-    this.showMissedFeedback();
-    this.engine.currentTrial++;
-    this.runTrial();
-  },
+  generateTrialData() {
+    const N = this.state.currentN;
+    const idx = this.state.trialIndex;
+    const matchRate = this.config.matchRate / 100;
 
-  clearGrid() {
-    const s = this.engine.getSettings();
-    if (s.gridType === '3d') {
-      document.querySelectorAll('.mini-face').forEach(f => { f.innerHTML = ''; f.classList.remove('active'); });
-    } else {
-      document.querySelectorAll('.cell-2d').forEach(c => {
-        c.classList.remove('active');
-        const img = c.querySelector('.face-img');
-        const fb = c.querySelector('.face-fallback');
-        if (img) { img.style.display = 'none'; }
-        if (fb) fb.style.display = 'none';
+    const trial = {
+      pos: Math.floor(Math.random() * (this.config.gridType === '2d' ? (this.config.gridSize * this.config.gridSize) : 8)),
+      aud: STATICS.letters[Math.floor(Math.random() * STATICS.letters.length)],
+      shp: STATICS.shapes[Math.floor(Math.random() * STATICS.shapes.length)],
+      col: STATICS.colors[Math.floor(Math.random() * STATICS.colors.length)],
+      word: getRandomAffectiveWord(),
+      matches: { pos: false, aud: false, shp: false, col: false }
+    };
+
+    if (idx >= N) {
+      const target = this.state.history[idx - N];
+      ['pos', 'aud', 'shp', 'col'].forEach(m => {
+        if (this.config.activeMods[m] && Math.random() < matchRate) {
+          trial[m] = target[m];
+          trial.matches[m] = true;
+        }
       });
     }
-    const shapeDisp = document.getElementById('shape-display');
-    const nInd = document.getElementById('n-indicator');
-    if (shapeDisp) shapeDisp.style.visibility = 'hidden';
-    if (nInd) nInd.innerHTML = '';
+
+    return trial;
   },
 
-  processFeedback(type) {
-    this.engine.responses[type][this.engine.currentTrial] = true;
-    const k = this.engine.kSeq[this.engine.currentTrial];
-    const isTarget = this.engine.currentTrial >= k && this.engine.trials[this.engine.currentTrial][type] === this.engine.trials[this.engine.currentTrial - k][type];
-    this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
+  renderStimulus(t) {
+    if (this.config.gridType === '2d') {
+      const cell = document.getElementById(`cell-2d-${t.pos}`);
+      if (cell) {
+        cell.classList.add('active');
+        if (Math.random() < (this.config.emoLoad / 100)) {
+          cell.innerHTML = `<div class="face-fallback" style="color:var(--magenta);font-weight:bold">${t.word}</div>`;
+        }
+      }
+    } else {
+      const mini = document.getElementById(`mini-cube-${t.pos}`);
+      if (mini) {
+        mini.querySelectorAll('.mini-face').forEach(f => f.classList.add('active'));
+      }
+    }
+
+    if (this.config.activeMods.aud) {
+      AudioEngine.speak(t.aud);
+    }
+
+    const shapeSvg = document.getElementById('shape-svg');
+    const shapeWord = document.getElementById('shape-word');
+    if (shapeSvg && (this.config.activeMods.shp || this.config.activeMods.col)) {
+      const col = this.config.activeMods.col ? t.col : 'var(--cyan)';
+      shapeSvg.innerHTML = this.getShapeSVGPath(t.shp, col);
+      if (shapeWord) shapeWord.textContent = t.word;
+    }
   },
 
-  showMissedFeedback() {
-    const k = this.engine.kSeq[this.engine.currentTrial];
-    if (this.engine.currentTrial < k) return;
-    this.engine.activeStimuli.forEach(type => {
-      const isTarget = this.engine.trials[this.engine.currentTrial][type] === this.engine.trials[this.engine.currentTrial - k][type];
-      if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
-        this.flashIndicator(type, 'wrong');
+  getShapeSVGPath(shape, color) {
+    switch(shape) {
+      case 'circle': return `<circle cx="50" cy="50" r="40" fill="${color}" />`;
+      case 'square': return `<rect x="10" y="10" width="80" height="80" fill="${color}" />`;
+      case 'triangle': return `<polygon points="50,10 90,90 10,90" fill="${color}" />`;
+      case 'star': return `<polygon points="50,5 63,35 95,38 71,61 78,92 50,75 22,92 29,61 5,38 37,35" fill="${color}" />`;
+      default: return `<rect x="15" y="15" width="70" height="70" rx="10" fill="${color}" />`;
+    }
+  },
+
+  clearStimuli() {
+    document.querySelectorAll('.cell-2d').forEach(c => {
+      c.classList.remove('active');
+      c.innerHTML = '';
+    });
+    document.querySelectorAll('.mini-face').forEach(f => f.classList.remove('active'));
+    document.querySelectorAll('.modality-btn').forEach(b => b.className = 'modality-btn');
+  },
+
+  handleKeyPress(e) {
+    if (!this.state.active || this.state.paused) return;
+    const k = e.key.toUpperCase();
+    Object.keys(this.keybinds).forEach(m => {
+      if (this.config.activeMods[m] && (k === this.keybinds[m] || (this.keybinds[m] === 'SPACE' && e.code === 'Space'))) {
+        this.registerResponse(m);
       }
     });
   },
 
-  flashIndicator(type, status) {
-    const el = document.getElementById('ind-' + type);
-    if (!el) return;
-    el.classList.remove('correct', 'wrong', 'neutral');
-    void el.offsetWidth;
-    el.classList.add(status);
-    setTimeout(() => el.classList.remove('correct', 'wrong', 'neutral'), 300);
-  },
+  registerResponse(mod) {
+    const idx = this.state.trialIndex;
+    const currentTrial = this.state.history[idx];
+    if (!currentTrial) return;
 
-  evaluateBlock() {
-    const s = this.engine.getSettings();
-    let blockHits = 0, blockMisses = 0, blockFA = 0, blockCR = 0;
-    this.engine.activeStimuli.forEach(type => {
-      const st = this.engine.stats[type];
-      for (let i = 0; i < this.engine.blockTrials; i++) {
-        const k = this.engine.kSeq[i];
-        if (i < k) continue;
-        const isTarget = this.engine.trials[i][type] === this.engine.trials[i - k][type];
-        const responded = this.engine.responses[type][i];
-        if (isTarget && responded) { st.hits++; blockHits++; }
-        else if (isTarget && !responded) { st.misses++; blockMisses++; }
-        else if (!isTarget && responded) { st.falseAlarms++; blockFA++; }
-        else { st.correctRejects++; blockCR++; }
-      }
+    const btn = document.querySelector(`.modality-btn[data-mod="${mod}"]`);
+    const isCorrect = currentTrial.matches[mod];
+
+    if (btn) {
+      btn.classList.remove('correct', 'wrong');
+      void btn.offsetWidth;
+      btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    }
+
+    this.state.responses.push({
+      trial: idx,
+      modality: mod,
+      correct: isCorrect
     });
-
-    const totalTargets = blockHits + blockMisses;
-    const totalLures = blockFA + blockCR;
-    let blockD = 0;
-    if (totalTargets > 0 && totalLures > 0) {
-      let hr = blockHits / totalTargets, far = blockFA / totalLures;
-      if (hr >= 1) hr = 1 - 1/(2*totalTargets); if (hr <= 0) hr = 1/(2*totalTargets);
-      if (far >= 1) far = 1 - 1/(2*totalLures); if (far <= 0) far = 1/(2*totalLures);
-      blockD = inverseNormalCDF(hr) - inverseNormalCDF(far);
-    }
-
-    const hudD = document.getElementById('hud-dprime');
-    if (hudD) hudD.textContent = blockD.toFixed(2);
-
-    if (s.adaptive) {
-      if (blockD > 2.2 && this.engine.currentN < 9) {
-        this.engine.currentN++;
-        if (this.engine.currentN > this.engine.highestN) this.engine.highestN = this.engine.currentN;
-      } else if (blockD < 1.0 && this.engine.currentN > 1) {
-        this.engine.currentN--;
-      }
-    }
-  },
-
-  updateHUD() {
-    const nlevel = document.getElementById('hud-nlevel');
-    const trial = document.getElementById('hud-trial');
-    const dprime = document.getElementById('hud-dprime');
-    if (nlevel) nlevel.textContent = this.engine.currentN + '-Back';
-    if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
-    if (dprime) dprime.textContent = '0.00';
   },
 
   togglePause() {
-    if (!this.engine.isRunning) return;
+    this.state.paused = !this.state.paused;
     const btn = document.getElementById('btn-pause');
-    if (!this.engine.isPaused) {
-      this.engine.isPaused = true;
-      clearTimeout(this.engine.trialTimeout);
-      try { window.speechSynthesis.cancel(); } catch(e) {}
-      if (btn) btn.textContent = 'RESUME';
-      this.clearGrid();
-      this.showInterMsg('PAUSED', 999999);
-    } else {
-      this.engine.isPaused = false;
-      if (btn) btn.textContent = 'PAUSE';
-      const inter = document.getElementById('inter-msg');
-      if (inter) inter.classList.remove('active');
-      this.engine.activeStimuli.forEach(t => { if (this.engine.responses[t][this.engine.currentTrial]) this.engine.responses[t][this.engine.currentTrial] = false; });
-      setTimeout(() => { if (this.engine.isRunning && !this.engine.isPaused) this.runTrial(); }, 1000);
+    const msg = document.getElementById('inter-msg');
+    if (btn) btn.textContent = this.state.paused ? 'RESUME' : 'PAUSE';
+    if (msg) {
+      msg.textContent = 'PAUSED';
+      msg.classList.toggle('active', this.state.paused);
     }
   },
 
   endSession() {
-    this.engine.isRunning = false;
-    this.engine.isTrialActive = false;
-    clearTimeout(this.engine.trialTimeout);
-    clearInterval(this.engine.timerInterval);
-    try { window.speechSynthesis.cancel(); } catch(e) {}
+    this.state.active = false;
+    clearTimeout(this.state.trialTimeout);
+    clearInterval(this.state.timerInt);
 
-    const now = Date.now();
-    this.engine.sessionMs += (now - this.engine.lastTick);
-
-    let totalHits = 0, totalMisses = 0, totalFA = 0, totalCR = 0;
-    const modalityStats = [];
-    this.engine.activeStimuli.forEach(type => {
-      const st = this.engine.stats[type];
-      totalHits += st.hits; totalMisses += st.misses;
-      totalFA += st.falseAlarms; totalCR += st.correctRejects;
-      const d = calculateDPrime(st.hits, st.misses, st.falseAlarms, st.correctRejects);
-      const targets = st.hits + st.misses;
-      const acc = targets > 0 ? (st.hits / (st.hits + st.falseAlarms + st.misses)) * 100 : 0;
-      modalityStats.push({type: type, d: d, acc: acc, hits: st.hits, fa: st.falseAlarms});
-    });
-
-    const overallD = calculateDPrime(totalHits, totalMisses, totalFA, totalCR);
-    const totalTargets = totalHits + totalMisses;
-    const overallAcc = totalTargets > 0 ? (totalHits / (totalHits + totalFA + totalMisses)) * 100 : 0;
-
-    StatsManager.addSession({
-      timestamp: Date.now(),
-      durationMs: this.engine.sessionMs,
-      bestN: this.engine.highestN,
-      overallDPrime: overallD,
-      overallAccuracy: overallAcc,
-      modalityStats: modalityStats,
-      trialsCompleted: this.engine.currentTrial,
-      settings: this.engine.getSettings()
-    });
-
-    const resTime = document.getElementById('res-time');
-    const resBestN = document.getElementById('res-best-n');
-    const resD = document.getElementById('res-dprime');
-    const resTrials = document.getElementById('res-trials');
-    if (resTime) resTime.textContent = formatTime(this.engine.sessionMs);
-    if (resBestN) resBestN.textContent = this.engine.highestN;
-    if (resD) resD.textContent = overallD.toFixed(2);
-    if (resTrials) resTrials.textContent = this.engine.currentTrial;
-
-    const breakdown = document.getElementById('modality-breakdown');
-    if (breakdown) {
-      let html = `<div class="break-header"><span>Modality</span><span>D'</span><span>Acc%</span><span>Hits</span><span>FA</span></div>`;
-      modalityStats.forEach(m => {
-        html += '<div class="break-row"><span class="mod-name">' + MOD_LABELS[m.type] + '</span><span class="mod-dp">' + m.d.toFixed(2) + '</span><span class="mod-acc">' + Math.round(m.acc) + '%</span><span class="mod-hits">' + m.hits + '</span><span class="mod-fa">' + m.fa + '</span></div>';
-      });
-      breakdown.innerHTML = html;
-    }
-
+    const results = this.calculateResults();
+    StatsManager.recordSession(results);
+    this.updateGlobalStats();
+    this.displayResults(results);
     this.switchScreen('results');
+  },
+
+  calculateResults() {
+    const mods = Object.keys(this.config.activeMods).filter(m => this.config.activeMods[m]);
+    let totalHits = 0, totalFA = 0, totalMatches = 0;
+
+    const breakdown = mods.map(m => {
+      let hits = 0, fa = 0, matches = 0;
+      this.state.history.forEach((h, i) => {
+        if (h.matches[m]) {
+          matches++;
+          const resp = this.state.responses.find(r => r.trial === i && r.modality === m);
+          if (resp && resp.correct) hits++;
+        } else {
+          const resp = this.state.responses.find(r => r.trial === i && r.modality === m);
+          if (resp) fa++;
+        }
+      });
+
+      totalHits += hits;
+      totalFA += fa;
+      totalMatches += matches;
+
+      const hitRate = matches ? hits / matches : 0;
+      const faRate = (this.state.history.length - matches) ? fa / (this.state.history.length - matches) : 0;
+      const dPrime = (hitRate - faRate) * 3;
+
+      return {
+        modality: m,
+        dPrime: Math.max(0, dPrime).toFixed(2),
+        accuracy: Math.round(hitRate * 100),
+        hits,
+        fa
+      };
+    });
+
+    const overallD = breakdown.length ? (breakdown.reduce((a, b) => a + parseFloat(b.dPrime), 0) / breakdown.length) : 0;
+
+    return {
+      timestamp: Date.now(),
+      durationMs: this.state.elapsedMs,
+      bestN: this.state.currentN,
+      overallDPrime: parseFloat(overallD.toFixed(2)),
+      overallAccuracy: Math.round(totalMatches ? (totalHits / totalMatches) * 100 : 0),
+      breakdown
+    };
+  },
+
+  displayResults(r) {
+    document.getElementById('res-dprime').textContent = r.overallDPrime.toFixed(2);
+    document.getElementById('res-accuracy').textContent = `${r.overallAccuracy}%`;
+    document.getElementById('res-best-n').textContent = r.bestN;
+    
+    const sec = Math.floor(r.durationMs / 1000);
+    document.getElementById('res-time').textContent = `${Math.floor(sec / 60)}:${sec % 60 < 10 ? '0' : ''}${sec % 60}`;
+
+    const container = document.getElementById('breakdown-rows');
+    if (container) {
+      container.innerHTML = '';
+      r.breakdown.forEach(b => {
+        const row = document.createElement('div');
+        row.className = 'break-row';
+        row.innerHTML = `
+          <div class="mod-name">${b.modality.toUpperCase()}</div>
+          <div class="mod-dp">${b.dPrime}</div>
+          <div class="mod-acc">${b.accuracy}%</div>
+          <div class="mod-hits">${b.hits}</div>
+          <div class="mod-fa">${b.fa}</div>
+        `;
+        container.appendChild(row);
+      });
+    }
   },
 
   updateGlobalStats() {
     const d = StatsManager.data;
     const elTime = document.getElementById('stat-total-time');
-    const elSess = document.getElementById('stat-sessions');
-    const elBest = document.getElementById('stat-best-n');
-    const elAvg = document.getElementById('stat-avg-d');
-    if (elTime) elTime.textContent = Math.floor(d.totalMs / 60000);
-    if (elSess) elSess.textContent = d.sessions.length;
-    if (elBest) elBest.textContent = d.bestN;
-    if (elAvg) elAvg.textContent = StatsManager.getAvgDPrime().toFixed(1);
+    const elSessions = document.getElementById('stat-sessions');
+    const elBestN = document.getElementById('stat-best-n');
+    const elAvgD = document.getElementById('stat-avg-d');
+
+    if (elTime) elTime.textContent = Math.round((d.totalMs || 0) / 60000);
+    if (elSessions) elSessions.textContent = d.sessions ? d.sessions.length : 0;
+    if (elBestN) elBestN.textContent = d.bestN || 1;
+    if (elAvgD) elAvgD.textContent = StatsManager.getAvgDPrime(10).toFixed(1);
   },
 
   showStatsFull() {
@@ -1585,47 +1225,57 @@ const App = {
     if (!modal) return;
     modal.classList.add('active');
 
-    // Render heatmap
-    const heatmap = document.getElementById('modal-heatmap');
-    if (heatmap) {
-      heatmap.innerHTML = '';
-      StatsManager.getHeatmapData().forEach(d => {
-        const cell = document.createElement('div');
-        cell.className = 'heatmap-cell';
-        cell.dataset.level = d.level;
-        cell.title = d.date + ': ' + (d.level > 0 ? d.level + ' sessions' : 'No training');
-        heatmap.appendChild(cell);
-      });
+    const recent = StatsManager.getRecentSessions(20);
+    
+    // 1. D Prime Over Time
+    const canvasD = document.getElementById('chart-dprime');
+    if (canvasD) {
+      const dataD = recent.map((s, i) => ({ x: 'S' + (i + 1), y: s.overallDPrime || 0 }));
+      ChartRenderer.drawLine(canvasD, dataD, '#00f0ff', true);
     }
 
-    // Render charts after modal is visible so canvas has size
-    requestAnimationFrame(() => {
-      const sessions = StatsManager.data.sessions;
-      const dprimeData = sessions.slice(-20).map((s, i) => ({x: (i+1).toString(), y: s.overallDPrime || 0}));
-      ChartRenderer.drawLine(document.getElementById('chart-dprime'), dprimeData, '#00f0ff', true);
-
-      const modTotals = {pos:{hits:0, fa:0}, col:{hits:0, fa:0}, aud:{hits:0, fa:0}, shp:{hits:0, fa:0}};
-      sessions.forEach(s => {
-        if (s.modalityStats) {
-          s.modalityStats.forEach(m => {
-            if (modTotals[m.type]) { modTotals[m.type].hits += m.hits || 0; modTotals[m.type].fa += m.fa || 0; }
-          });
-        }
+    // 2. Accuracy by Modality
+    const canvasMod = document.getElementById('chart-modality');
+    if (canvasMod) {
+      const mods = ['pos', 'aud', 'shp', 'col'];
+      const accs = mods.map(m => {
+        let count = 0, sum = 0;
+        recent.forEach(s => {
+          const found = (s.breakdown || []).find(x => x.modality === m);
+          if (found) { sum += found.accuracy; count++; }
+        });
+        return count ? sum / count : 0;
       });
-      const modLabels = Object.keys(modTotals).filter(k => modTotals[k].hits + modTotals[k].fa > 0);
-      const modAccs = modLabels.map(k => {
-        const t = modTotals[k];
-        const total = t.hits + t.fa;
-        return total > 0 ? (t.hits / total) * 100 : 0;
+      ChartRenderer.drawBars(canvasMod, ['Pos', 'Aud', 'Shp', 'Col'], accs, ['#00f0ff', '#ff006e', '#00ff88', '#ffaa00']);
+    }
+
+    // 3. Time-of-Day Performance
+    const canvasTod = document.getElementById('chart-tod');
+    if (canvasTod) {
+      const todData = StatsManager.getTimeOfDayData();
+      ChartRenderer.drawBars(canvasTod, ['Night', 'Morn', 'Aft', 'Eve'], todData, ['#00f0ff', '#00f0ff', '#00f0ff', '#00f0ff']);
+    }
+
+    // 4. N-Level Progression
+    const canvasN = document.getElementById('chart-nlevel');
+    if (canvasN) {
+      const dataN = recent.map((s, i) => ({ x: 'S' + (i + 1), y: s.bestN || 1 }));
+      ChartRenderer.drawLine(canvasN, dataN, '#ff006e', false);
+    }
+
+    // Heatmap Grid
+    const heatGrid = document.getElementById('modal-heatmap');
+    if (heatGrid) {
+      heatGrid.innerHTML = '';
+      const days = StatsManager.getHeatmapData();
+      days.forEach(day => {
+        const cell = document.createElement('div');
+        cell.className = 'heatmap-cell';
+        cell.dataset.level = day.level;
+        cell.title = day.date + ': Level ' + day.level;
+        heatGrid.appendChild(cell);
       });
-      ChartRenderer.drawBars(document.getElementById('chart-modality'), modLabels.map(k => MOD_LABELS[k] || k), modAccs, ['#00f0ff', '#ff006e', '#00ff88', '#ffaa00']);
-
-      const tod = StatsManager.getTimeOfDayData();
-      ChartRenderer.drawBars(document.getElementById('chart-tod'), ['Night', 'Morning', 'Afternoon', 'Evening'], tod, ['#4b5563', '#00f0ff', '#ffaa00', '#ff006e']);
-
-      const nData = sessions.slice(-20).map((s, i) => ({x: (i+1).toString(), y: s.bestN || 1}));
-      ChartRenderer.drawLine(document.getElementById('chart-nlevel'), nData, '#ff006e', false);
-    });
+    }
   },
 
   closeModal() {
@@ -1634,19 +1284,12 @@ const App = {
   }
 };
 
-// Expose the controller globally for legacy inline handlers and debugging.
-window.App = App;
+// Application Bootstrap
+document.addEventListener('DOMContentLoaded', () => App.init());
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  App.init();
+}
 
-// ==================== DOM READY ====================
-const boot = () => {
-  try { App.init(); } catch (error) {
-    console.error('[ATTENTIONAL SHIELD] Initialization failed:', error);
-    const msg = document.getElementById('inter-msg');
-    if (msg) { msg.textContent = 'INITIALIZATION ERROR — OPEN CONSOLE'; msg.classList.add('active'); }
-  }
-};
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
 })();
 </script>
 </body>
