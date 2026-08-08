@@ -144,7 +144,8 @@ select:focus, input:focus { border-color:var(--cyan); }
 .mini-cube { position:absolute; width:clamp(24px,7.5vmin,50px); height:clamp(24px,7.5vmin,50px); left:clamp(-26px,-3.75vmin,-12px); top:clamp(-26px,-3.75vmin,-12px); transform-style:preserve-3d; }
 .mini-face { position:absolute; width:100%; height:100%; background:rgba(19,22,31,0.7); border:1px solid rgba(107,114,128,0.4); border-radius:3px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; }
 .mini-face.active { border-color:var(--cyan); box-shadow:0 0 12px rgba(0,240,255,0.2); background:rgba(0,240,255,0.08); }
-.mini-face img, .mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
+.mini-face img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+.mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
 .mini-face .face-fallback { display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.5rem; color:var(--text-dim); }
 .mf-front { transform:translateZ(clamp(12px,3.75vmin,25px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(12px,3.75vmin,25px)); }
 .mf-right { transform:rotateY(90deg) translateZ(clamp(12px,3.75vmin,25px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(12px,3.75vmin,25px)); }
@@ -441,6 +442,50 @@ const FACES = [
   {file:'face_9.jpg', emotion:'negative', valence:-1}
 ];
 
+// ============================================================
+// FACE IMAGE PRELOADER
+// Keep strong references to all ten JPEGs so the browser loads
+// them before the first trial and can reuse the cached resources.
+// These paths are deliberately relative to index.html.
+// ============================================================
+const FACE_IMAGE_CACHE = Object.create(null);
+const FACE_PRELOAD_PROMISE = Promise.all(FACES.map(face => new Promise(resolve => {
+  const img = new Image();
+  img.decoding = 'async';
+  img.loading = 'eager';
+  img.onload = () => {
+    FACE_IMAGE_CACHE[face.file] = img;
+    // Ask the browser to finish decoding while we are still on the menu.
+    if (typeof img.decode === 'function') {
+      img.decode().catch(() => {}).finally(() => resolve(true));
+    } else {
+      resolve(true);
+    }
+  };
+  img.onerror = () => {
+    FACE_IMAGE_CACHE[face.file] = null;
+    console.warn('[ATTENTIONAL SHIELD] Could not preload ' + face.file);
+    resolve(false);
+  };
+  img.src = face.file;
+})));
+
+function createPreloadedFaceImage(path, altText) {
+  const cached = FACE_IMAGE_CACHE[path];
+  const img = cached ? cached.cloneNode(false) : new Image();
+  img.src = path; // relative JPEG path; normally served from the browser cache
+  img.alt = altText || '';
+  img.decoding = 'sync';
+  img.loading = 'eager';
+  img.draggable = false;
+  img.style.width = '100%';
+  img.style.height = '100%';
+  img.style.display = 'block';
+  img.style.objectFit = 'cover';
+  img.style.pointerEvents = 'none';
+  return img;
+}
+
 const WORDS_NEGATIVE = ['Murder','Rape','Failure','Genocide','Retard','Hurt','Alone','Reject','Worthless','Disaster','Death','Pain','Trash','Loser','Betray'];
 const WORDS_POSITIVE = ['Success','Victory','Gift','Miracle','Money','Loved','Triumph','Joy','Peace','Winner','Glory','Hero','Champion','Blessing','Proud'];
 const WORDS_NEUTRAL  = ['Table','Chair','Paper','Pencil','Window','Door','Book','Cup','Phone','Computer','Lamp','Shoe','Clock','Plant','Bridge'];
@@ -682,24 +727,11 @@ class GameEngine {
   }
 
   async preloadImages() {
-    // The app is intentionally self-contained: faces are generated as inline SVGs.
-    FACES.forEach(f => { this.imageCache[f.file] = true; });
+    await FACE_PRELOAD_PROMISE;
+    FACES.forEach(face => {
+      this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file];
+    });
     this.imagesLoaded = true;
-  }
-
-  makeFaceDataUrl(emotion) {
-    const palette = {
-      positive: ['#00ff88','#06251a'],
-      negative: ['#ff3366','#260812'],
-      surprise: ['#ffaa00','#261b05'],
-      neutral: ['#00f0ff','#071d21']
-    };
-    const pair = palette[emotion] || palette.neutral;
-    const [accent, bg] = pair;
-    const eyes = emotion === 'surprise' ? 'r=6' : 'r=4';
-    const mouth = emotion === 'positive' ? 'M35 67 Q50 82 65 67' : emotion === 'negative' ? 'M35 77 Q50 62 65 77' : emotion === 'surprise' ? 'M42 70 Q50 78 58 70' : 'M37 71 Q50 73 63 71';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="12" fill="${bg}"/><circle cx="50" cy="50" r="39" fill="#0c0e14" stroke="${accent}" stroke-width="3"/><circle cx="36" cy="47" ${eyes} fill="${accent}"/><circle cx="64" cy="47" ${eyes} fill="${accent}"/><path d="${mouth}" fill="none" stroke="${accent}" stroke-width="4" stroke-linecap="round"/><path d="M28 36 Q36 30 44 34 M56 34 Q64 30 72 36" fill="none" stroke="${accent}" stroke-width="3" stroke-linecap="round"/></svg>`;
-    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
   initVoices() {
@@ -1261,25 +1293,36 @@ const App = {
       const targetEl = document.getElementById('pos-' + trial.pos);
       const imgOK = this.engine.imageCache[trial.face];
       if (s.gridType === '3d' && targetEl) {
-        targetEl.querySelectorAll('.mini-face').forEach(f => {
-          f.innerHTML = '';
+        // Every visible face of the active 3D mini-cube gets a real JPEG <img>.
+        // The image was preloaded before the session, so this does not initiate
+        // a network request during the timed stimulus window.
+        targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
+          faceEl.replaceChildren();
           if (imgOK) {
-            const img = document.createElement('img');
-            img.src = this.engine.makeFaceDataUrl(trial.faceEmotion); img.alt = trial.faceEmotion + ' emotional face';
-            f.appendChild(img);
+            const img = createPreloadedFaceImage(
+              trial.face,
+              trial.faceEmotion + ' emotional face'
+            );
+            faceEl.appendChild(img);
           } else {
             const fb = document.createElement('div');
             fb.className = 'face-fallback';
             fb.textContent = trial.faceEmotion[0].toUpperCase();
-            f.appendChild(fb);
+            faceEl.appendChild(fb);
           }
-          f.classList.add('active');
+          faceEl.classList.add('active');
         });
       } else if (targetEl) {
         const img = targetEl.querySelector('.face-img');
         const fb = targetEl.querySelector('.face-fallback');
         if (imgOK) {
-          if (img) { img.src = trial.face; img.style.display = 'block'; }
+          if (img) {
+            img.src = trial.face; // same relative path as the preloaded resource
+            img.alt = trial.faceEmotion + ' emotional face';
+            img.decoding = 'sync';
+            img.loading = 'eager';
+            img.style.display = 'block';
+          }
           if (fb) fb.style.display = 'none';
         } else {
           if (img) img.style.display = 'none';
@@ -1361,7 +1404,7 @@ const App = {
         c.classList.remove('active');
         const img = c.querySelector('.face-img');
         const fb = c.querySelector('.face-fallback');
-        if (img) { img.style.display = 'none'; img.src = ''; }
+        if (img) { img.style.display = 'none'; }
         if (fb) fb.style.display = 'none';
       });
     }
