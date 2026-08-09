@@ -54,6 +54,15 @@ select:focus, input:focus { border-color:var(--cyan); }
 .mode-card.active { border-color:var(--cyan); background:var(--cyan-dim); box-shadow:0 0 16px rgba(0,240,255,0.08); }
 .mode-card .mode-name { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:2px; }
 .mode-card .mode-desc { font-size:0.65rem; color:var(--text-muted); line-height:1.3; }
+.stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0 14px; padding:14px 16px; border:1px solid rgba(255,0,110,0.55); border-radius:10px; background:linear-gradient(135deg,rgba(255,0,110,0.10),rgba(0,240,255,0.06)); cursor:pointer; transition:all .2s ease; box-shadow:0 0 18px rgba(255,0,110,0.06); }
+.stimulus-feature-card:hover { border-color:var(--magenta); box-shadow:0 0 24px rgba(255,0,110,0.14); transform:translateY(-1px); }
+.stimulus-feature-card.active { border-color:var(--cyan); background:linear-gradient(135deg,rgba(0,240,255,0.13),rgba(255,0,110,0.09)); box-shadow:0 0 22px rgba(0,240,255,0.13), inset 0 0 18px rgba(255,0,110,0.04); }
+.stimulus-feature-main { display:flex; align-items:center; gap:12px; min-width:0; }
+.stimulus-feature-icon { width:42px; height:42px; flex:0 0 42px; border-radius:8px; display:grid; place-items:center; font-size:1.25rem; background:rgba(0,240,255,0.10); border:1px solid rgba(0,240,255,0.32); }
+.stimulus-feature-title { font-family:var(--font-mono); font-size:.78rem; font-weight:800; letter-spacing:.4px; }
+.stimulus-feature-desc { font-size:.62rem; color:var(--text-muted); margin-top:3px; line-height:1.35; }
+.stimulus-feature-badge { align-self:flex-start; flex:0 0 auto; padding:3px 7px; border-radius:999px; font-family:var(--font-mono); font-size:.55rem; font-weight:800; letter-spacing:1px; color:#fff; background:linear-gradient(90deg,var(--magenta),#ff3b9d); box-shadow:0 0 12px rgba(255,0,110,.22); }
+.stimulus-type-status { font-family:var(--font-mono); font-size:.58rem; color:var(--text-dim); margin:-6px 0 12px; }
 .accordion { max-width:600px; margin:0 auto 12px; width:100%; }
 .accordion-header { background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:12px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; }
 .accordion-header:hover { border-color:var(--border-hover); }
@@ -249,6 +258,17 @@ button, input, select { position:relative; z-index:1; }
           <div class="mode-desc">Pos + Aud + Shape + Color</div>
         </div>
       </div>
+      <div class="stimulus-feature-card" id="stimulus-anime-card" role="button" tabindex="0" aria-pressed="false" onclick="App.setStimulusType('anime_faces')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.setStimulusType('anime_faces')}">
+        <div class="stimulus-feature-main">
+          <div class="stimulus-feature-icon">◉</div>
+          <div>
+            <div class="stimulus-feature-title">Anime Faces</div>
+            <div class="stimulus-feature-desc">Featured visual stimulus set • preloaded for low-latency trials</div>
+          </div>
+        </div>
+        <span class="stimulus-feature-badge">NEW</span>
+      </div>
+      <div class="stimulus-type-status" id="stimulus-type-status">Standard affective faces</div>
       <div class="control-row">
         <div class="control-label">Starting N-Level</div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -513,6 +533,20 @@ const FACES = [
   {file:'face_9.jpg', emotion:'negative', valence:-1}
 ];
 
+// Featured Anime Faces stimulus manifest. Keep these paths relative to index.html.
+const ANIME_FACE_ASSET_MANIFEST = Object.freeze([
+  'assets/stimuli/anime/10234.png',
+  'assets/stimuli/anime/10228.png',
+  'assets/stimuli/anime/10224.png',
+  'assets/stimuli/anime/10223.png',
+  'assets/stimuli/anime/1020.png',
+  'assets/stimuli/anime/1018.png',
+  'assets/stimuli/anime/10174.png',
+  'assets/stimuli/anime/10170.png',
+  'assets/stimuli/anime/10171.png',
+  'assets/stimuli/anime/10154.png'
+]);
+
 // ============================================================
 // FACE IMAGE PRELOADER
 // Keep strong references to all ten JPEGs so the browser loads
@@ -541,8 +575,27 @@ const FACE_PRELOAD_PROMISE = Promise.all(FACES.map(face => new Promise(resolve =
   img.src = face.file;
 })));
 
+const ANIME_IMAGE_CACHE = Object.create(null);
+const ANIME_FACE_PRELOAD_PROMISE = Promise.all(ANIME_FACE_ASSET_MANIFEST.map(path => new Promise(resolve => {
+  const img = new Image();
+  img.decoding = 'async';
+  img.loading = 'eager';
+  img.onload = () => {
+    ANIME_IMAGE_CACHE[path] = img;
+    const done = () => resolve(true);
+    if (typeof img.decode === 'function') img.decode().catch(() => {}).finally(done);
+    else done();
+  };
+  img.onerror = () => {
+    ANIME_IMAGE_CACHE[path] = null;
+    console.warn('[ATTENTIONAL SHIELD] Could not preload anime stimulus ' + path);
+    resolve(false);
+  };
+  img.src = path;
+})));
+
 function createPreloadedFaceImage(path, altText) {
-  const cached = FACE_IMAGE_CACHE[path];
+  const cached = FACE_IMAGE_CACHE[path] || ANIME_IMAGE_CACHE[path];
   const img = cached ? cached.cloneNode(false) : new Image();
   img.src = path; // relative JPEG path; normally served from the browser cache
   img.alt = altText || '';
@@ -850,7 +903,10 @@ class GameEngine {
     this.listeningBind = null;
     this.activeStimuli = [];
     this.imageCache = {};
+    this.animeImageCache = {};
     this.imagesLoaded = false;
+    this.animeImagesLoaded = false;
+    this.stimulusType = 'standard_faces';
   }
   reset() {
     this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
@@ -862,11 +918,15 @@ class GameEngine {
   }
 
   async preloadImages() {
-    await FACE_PRELOAD_PROMISE;
+    await Promise.all([FACE_PRELOAD_PROMISE, ANIME_FACE_PRELOAD_PROMISE]);
     FACES.forEach(face => {
       this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file];
     });
+    ANIME_FACE_ASSET_MANIFEST.forEach(path => {
+      this.animeImageCache[path] = !!ANIME_IMAGE_CACHE[path];
+    });
     this.imagesLoaded = true;
+    this.animeImagesLoaded = true;
   }
 
   initVoices() {
@@ -901,6 +961,7 @@ class GameEngine {
     return {
       gridType: safeVal('sel-grid-type', '2d'),
       gridSize: safeInt('sel-grid-size', 3),
+      stimulusType: this.stimulusType === 'anime_faces' ? 'anime_faces' : 'standard_faces',
       speed3d: safeInt('rng-3d-speed', 40),
       startN: safeInt('rng-start-n', 2),
       variableN: safeBool('chk-variable-n'),
@@ -954,6 +1015,24 @@ class GameEngine {
     return pos[Math.floor(Math.random() * pos.length)];
   }
 
+  pickAnimeFace() {
+    const available = ANIME_FACE_ASSET_MANIFEST.filter(path => this.animeImageCache[path]);
+    if (!available.length) return null;
+    return available[Math.floor(Math.random() * available.length)];
+  }
+
+  pickVisualStimulus(emoLoad) {
+    if (this.stimulusType === 'anime_faces') {
+      const animePath = this.pickAnimeFace();
+      if (animePath) return { type: 'anime_faces', path: animePath, emotion: 'anime' };
+      // Graceful degradation if the optional anime asset bundle is unavailable.
+      const fallback = this.pickFace(emoLoad);
+      return { type: 'standard_faces', path: fallback.file, emotion: fallback.emotion, fallbackFromAnime: true };
+    }
+    const face = this.pickFace(emoLoad);
+    return { type: 'standard_faces', path: face.file, emotion: face.emotion, fallbackFromAnime: false };
+  }
+
   pickWord(emoLoad) {
     const r = Math.random() * 100;
     if (r < emoLoad * 0.8) return WORDS_NEGATIVE[Math.floor(Math.random() * WORDS_NEGATIVE.length)];
@@ -1005,12 +1084,13 @@ class GameEngine {
     const shpSeq = this.genSequence(SHAPES_SVG.length, this.kSeq, s.matchRate, s.interference / 100);
     this.trials = [];
     for (let i = 0; i < this.blockTrials; i++) {
-      const face = this.pickFace(s.emoLoad);
+      const visual = this.pickVisualStimulus(s.emoLoad);
       const word = this.pickWord(s.emoLoad);
       const audWord = AFFECTIVE_AUDIO_WORDS[audSeq[i]];
       this.trials.push({
         pos: posSeq[i], col: colSeq[i], aud: audSeq[i], shp: shpSeq[i],
-        face: face.file, faceEmotion: face.emotion,
+        face: visual.path, faceEmotion: visual.emotion, visualType: visual.type,
+        animeAsset: visual.type === 'anime_faces' ? visual.path : null,
         word: word, audWord: audWord
       });
     }
@@ -1169,6 +1249,7 @@ const App = {
 
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
+    this.setStimulusType(this._savedStimulusType || 'standard_faces', false);
     this.refreshSettingDisplays();
     this.updateGlobalStats();
     this.onStimChange();
@@ -1204,6 +1285,7 @@ const App = {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
         values,
         mode: modeCard?.dataset.mode || this.engine.mode || 'dual',
+        stimulusType: this.engine.stimulusType || 'standard_faces',
         keys: this.engine.keys,
         voiceName: voice?.name || null
       }));
@@ -1224,9 +1306,10 @@ const App = {
       });
       if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
+      this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'standard_faces';
       this._savedVoiceName = saved?.voiceName || null;
     } catch(e) {
-      this._savedMode = 'dual'; this._savedVoiceName = null;
+      this._savedMode = 'dual'; this._savedStimulusType = 'standard_faces'; this._savedVoiceName = null;
     }
   },
 
@@ -1277,6 +1360,22 @@ const App = {
     if (shp) shp.checked = isQuad;
     if (col) col.checked = isQuad;
     this.onStimChange();
+    if (persist) this.saveSettings();
+  },
+
+  setStimulusType(type, persist = true) {
+    const normalized = type === 'anime_faces' ? 'anime_faces' : 'standard_faces';
+    this.engine.stimulusType = normalized;
+    const card = document.getElementById('stimulus-anime-card');
+    const status = document.getElementById('stimulus-type-status');
+    if (card) {
+      const active = normalized === 'anime_faces';
+      card.classList.toggle('active', active);
+      card.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+    if (status) status.textContent = normalized === 'anime_faces'
+      ? 'Anime Faces • featured visual stimulus'
+      : 'Standard affective faces';
     if (persist) this.saveSettings();
   },
 
@@ -1391,6 +1490,7 @@ const App = {
     const s = this.engine.getSettings();
     this.engine.reset();
     this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
+    this.engine.stimulusType = s.stimulusType;
     this.engine.setActiveStimuli();
     this.engine.currentN = s.startN;
     this.engine.highestN = s.startN;
@@ -1562,7 +1662,8 @@ const App = {
     // Position stimulus
     if (this.engine.activeStimuli.includes('pos')) {
       const targetEl = document.getElementById('pos-' + trial.pos);
-      const imgOK = this.engine.imageCache[trial.face];
+      const imageCache = trial.visualType === 'anime_faces' ? this.engine.animeImageCache : this.engine.imageCache;
+      const imgOK = !!imageCache[trial.face];
       if (s.gridType === '3d' && targetEl) {
         // Every visible face of the active 3D mini-cube gets a real JPEG <img>.
         // The image was preloaded before the session, so this does not initiate
