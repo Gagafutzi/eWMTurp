@@ -142,19 +142,20 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; opacity:0.85; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
-.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 200px),calc(100vh - 200px)); max-height:min(calc(100vw - 200px),calc(100vh - 200px)); aspect-ratio:1/1; perspective:1200px; align-items:center; justify-content:center; }
+.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 150px),calc(100vh - 80px)); max-height:min(calc(100vw - 150px),calc(100vh - 80px)); aspect-ratio:1/1; perspective:1500px; align-items:center; justify-content:center; overflow:visible; }
 .scene-3d.active { display:flex; }
 .cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
-@keyframes rotate3d { 0%{transform:rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
-.mini-cube { position:absolute; width:clamp(24px,7.5vmin,50px); height:clamp(24px,7.5vmin,50px); left:clamp(-26px,-3.75vmin,-12px); top:clamp(-26px,-3.75vmin,-12px); transform-style:preserve-3d; }
-.mini-face { position:absolute; width:100%; height:100%; background:rgba(19,22,31,0.7); border:1px solid rgba(107,114,128,0.4); border-radius:3px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; }
-.mini-face.active { border-color:var(--cyan); box-shadow:0 0 12px rgba(0,240,255,0.2); background:rgba(0,240,255,0.08); }
+@keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
+@keyframes rotate3dMobile { 0%{transform:scale(1.02) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.02) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
+.mini-cube { position:absolute; width:clamp(46px,9vmin,86px); height:clamp(46px,9vmin,86px); left:clamp(-43px,-4.5vmin,-23px); top:clamp(-43px,-4.5vmin,-23px); transform-style:preserve-3d; }
+.mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; box-shadow:0 0 4px rgba(190,220,255,0.08); }
+.mini-face.active { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,240,255,0.45),inset 0 0 18px rgba(0,240,255,0.12); background:rgba(0,240,255,0.10); }
 .mini-face img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
 .mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
 .mini-face .face-fallback { display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.5rem; color:var(--text-dim); }
-.mf-front { transform:translateZ(clamp(12px,3.75vmin,25px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(12px,3.75vmin,25px)); }
-.mf-right { transform:rotateY(90deg) translateZ(clamp(12px,3.75vmin,25px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(12px,3.75vmin,25px)); }
-.mf-top { transform:rotateX(90deg) translateZ(clamp(12px,3.75vmin,25px)); } .mf-bottom { transform:rotateX(-90deg) translateZ(clamp(12px,3.75vmin,25px)); }
+.mf-front { transform:translateZ(clamp(23px,4.5vmin,43px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(23px,4.5vmin,43px)); }
+.mf-right { transform:rotateY(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
+.mf-top { transform:rotateX(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-bottom { transform:rotateX(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
 .inter-msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:var(--font-mono); font-size:1.2rem; font-weight:700; color:var(--cyan); text-align:center; z-index:100; display:none; text-shadow:0 0 16px rgba(0,240,255,0.4); letter-spacing:2px; }
 .inter-msg.active { display:block; animation:fadeIn 0.4s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translate(-50%,-40%);} to{opacity:1;transform:translate(-50%,-50%);} }
@@ -175,7 +176,8 @@ select:focus, input:focus { border-color:var(--cyan); }
   .side-controls { width:55px; min-width:50px; gap:6px; }
   .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
-  .grid-2d,.scene-3d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
+  .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
+  .scene-3d { max-width:min(calc(100vw - 120px),calc(100vh - 90px)); max-height:min(calc(100vw - 120px),calc(100vh - 90px)); perspective:1250px; }
   .results-grid { grid-template-columns:1fr 1fr; }
   .setup-wrap { padding:12px; }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
@@ -196,7 +198,8 @@ button, input, select { position:relative; z-index:1; }
   .game-stage { gap:6px; padding:5px; }
   .side-controls { width:52px; min-width:46px; }
   .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
+  .scene-3d { max-width:calc(100vw - 108px); max-height:calc(100vh - 125px); perspective:1000px; }
+  .cube-3d { animation-name:rotate3dMobile; }
   .hud-stat .hud-lbl { display:none; }
   .hud-btn { padding:5px 8px; }
 }
@@ -301,14 +304,26 @@ button, input, select { position:relative; z-index:1; }
             <div class="control-row">
               <div class="control-label">ISI Duration</div>
               <div style="display:flex;align-items:center;gap:8px">
-                <input type="range" id="rng-isi-fixed" min="0" max="2000" step="50" value="1500" style="width:100px" oninput="document.getElementById('disp-isi-fixed').textContent=this.value+'ms'">
-                <span class="range-display" id="disp-isi-fixed">1500ms</span>
+                <input type="range" id="rng-isi-fixed" min="500" max="5000" step="50" value="1800" style="width:120px" oninput="document.getElementById('disp-isi-fixed').textContent=this.value+'ms'">
+                <span class="range-display" id="disp-isi-fixed">1800ms</span>
               </div>
             </div>
           </div>
           <div id="isi-variable-controls" style="display:none">
-            <div class="control-row"><div class="control-label">Min ISI</div><input type="number" id="inp-isi-min" value="1300" min="0" max="2000" step="50" style="width:70px"></div>
-            <div class="control-row"><div class="control-label">Max ISI</div><input type="number" id="inp-isi-max" value="1800" min="0" max="2000" step="50" style="width:70px"></div>
+            <div class="control-row">
+              <div class="control-label">Min ISI</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="range" id="rng-isi-min" value="1300" min="500" max="5000" step="50" style="width:100px" oninput="document.getElementById('disp-isi-min').textContent=this.value+'ms'">
+                <span class="range-display" id="disp-isi-min">1300ms</span>
+              </div>
+            </div>
+            <div class="control-row">
+              <div class="control-label">Max ISI</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="range" id="rng-isi-max" value="3000" min="500" max="5000" step="50" style="width:100px" oninput="document.getElementById('disp-isi-max').textContent=this.value+'ms'">
+                <span class="range-display" id="disp-isi-max">3000ms</span>
+              </div>
+            </div>
           </div>
           <div class="control-row">
             <div class="control-label">Stimulus Duration</div>
@@ -318,8 +333,19 @@ button, input, select { position:relative; z-index:1; }
             </div>
           </div>
           <div class="control-row">
+            <div class="control-label">Session Duration</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="rng-session-duration" min="5" max="60" step="5" value="10" style="width:120px" oninput="document.getElementById('disp-session-duration').textContent=this.value+' min'">
+              <span class="range-display" id="disp-session-duration">10 min</span>
+            </div>
+          </div>
+          <div class="control-row">
             <div class="control-label">Tally Mode</div>
             <label class="toggle-switch"><input type="checkbox" id="chk-tally"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="control-row">
+            <div class="control-label">Buzzer Sound on Miss</div>
+            <label class="toggle-switch"><input type="checkbox" id="chk-buzzer"><span class="toggle-slider"></span></label>
           </div>
           <div class="panel-title" style="margin-top:16px;color:var(--magenta)">Affective Parameters</div>
           <div class="control-row">
@@ -434,11 +460,15 @@ button, input, select { position:relative; z-index:1; }
 'use strict';
 
 const STORAGE_KEY = 'attentional_shield_v2';
+const SETTINGS_STORAGE_KEY = STORAGE_KEY + '_settings_v3';
 
-// ==================== TRIAL TIMING ====================
-// Balanced default: 700ms stimulus + 1500ms response window = 2200ms/trial.
-// Adjust these values to tune pacing without changing the trial engine.
-const TRIAL_TIMING = Object.freeze({ stimulusMs:700, totalMs:2200, minTotalMs:2000, maxTotalMs:2500 });
+// ==================== SESSION / TRIAL DEFAULTS ====================
+const DEFAULT_ISI = 1800;
+const DEFAULT_SESSION_DURATION_MIN = 10;
+
+// Stimulus presentation is intentionally unchanged.
+// ISI is the blank/response interval after the stimulus.
+const TRIAL_TIMING = Object.freeze({ stimulusMs:700 });
 
 const FACES = [
   {file:'face_0.jpg', emotion:'neutral', valence:0},
@@ -632,6 +662,24 @@ const AudioEngine = {
         osc.start(); osc.stop(this.ctx.currentTime + 0.3);
       } catch(e) {}
     }
+  },
+  buzzMiss() {
+    if (!this.ctx) this.init();
+    if (!this.ctx) return;
+    try {
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(170, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+      osc.connect(gain); gain.connect(this.ctx.destination);
+      osc.start(now); osc.stop(now + 0.15);
+    } catch(e) {}
   }
 };
 
@@ -804,6 +852,10 @@ class GameEngine {
         if (v.default || v.name.includes('Google') || v.name.includes('Samantha')) opt.selected = true;
         sel.appendChild(opt);
       });
+      if (this._savedVoiceName) {
+        const savedIndex = this.voices.findIndex(v => v.name === this._savedVoiceName);
+        if (savedIndex >= 0) sel.value = String(savedIndex);
+      }
       this.selectedVoice = this.voices[sel.value];
     } catch(e) {}
   }
@@ -822,11 +874,13 @@ class GameEngine {
       varMax: safeInt('inp-var-max', 3),
       adaptive: safeBool('chk-adaptive'),
       isiMode: safeVal('sel-isi-mode', 'fixed'),
-      isiFixed: safeInt('rng-isi-fixed', 50),
-      isiMin: safeInt('inp-isi-min', 0),
-      isiMax: safeInt('inp-isi-max', 100),
+      isiFixed: safeInt('rng-isi-fixed', DEFAULT_ISI),
+      isiMin: safeInt('rng-isi-min', 1300),
+      isiMax: safeInt('rng-isi-max', 3000),
       stimDur: safeInt('rng-stim-dur', TRIAL_TIMING.stimulusMs),
+      sessionDurationMin: safeInt('rng-session-duration', DEFAULT_SESSION_DURATION_MIN),
       tally: safeBool('chk-tally'),
+      buzzerOnMiss: safeBool('chk-buzzer'),
       emoLoad: safeInt('rng-emo-load', 70),
       interference: safeInt('rng-interference', 40),
       matchRate: safeInt('rng-match-rate', 30) / 100,
@@ -973,18 +1027,11 @@ class GameEngine {
 
   getISI() {
     const s = this.getSettings();
-    const stim = Math.max(500, Math.min(800, s.stimDur || TRIAL_TIMING.stimulusMs));
-    const minISI = Math.max(0, TRIAL_TIMING.minTotalMs - stim);
-    const maxISI = Math.max(minISI, TRIAL_TIMING.maxTotalMs - stim);
-    if (s.isiMode === 'fixed') {
-      const requested = Number.isFinite(s.isiFixed) ? s.isiFixed : (TRIAL_TIMING.totalMs - stim);
-      return Math.max(minISI, Math.min(maxISI, requested));
-    }
-    const requestedMin = Number.isFinite(s.isiMin) ? s.isiMin : minISI;
-    const requestedMax = Number.isFinite(s.isiMax) ? s.isiMax : maxISI;
-    const min = Math.max(minISI, Math.min(maxISI, requestedMin));
-    const max = Math.max(min, Math.min(maxISI, requestedMax));
-    return Math.floor(min + Math.random() * (max - min + 1));
+    const fixed = Number.isFinite(s.isiFixed) ? s.isiFixed : DEFAULT_ISI;
+    if (s.isiMode === 'fixed') return Math.max(500, Math.min(5000, fixed));
+    const min = Math.max(500, Math.min(5000, Number.isFinite(s.isiMin) ? s.isiMin : 1300));
+    const max = Math.max(min, Math.min(5000, Number.isFinite(s.isiMax) ? s.isiMax : 3000));
+    return Math.round(min + Math.random() * (max - min));
   }
 }
 
@@ -998,6 +1045,7 @@ const App = {
     if (this._initialized) return;
     this._initialized = true;
     StatsManager.load();
+    this.loadSettings();
     this.screens = {
       setup: document.getElementById('screen-setup'),
       game: document.getElementById('screen-game'),
@@ -1013,6 +1061,7 @@ const App = {
     if (voiceSel) {
       voiceSel.addEventListener('change', (e) => {
         if (this.engine.voices[e.target.value]) this.engine.selectedVoice = this.engine.voices[e.target.value];
+        this.saveSettings();
       });
     }
 
@@ -1030,6 +1079,9 @@ const App = {
     bindInput('rng-var-min', 'input', e => { document.getElementById('disp-var-min').textContent = e.target.value; });
     bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
     bindInput('rng-isi-fixed', 'input', e => { document.getElementById('disp-isi-fixed').textContent = e.target.value + 'ms'; });
+    bindInput('rng-isi-min', 'input', e => { document.getElementById('disp-isi-min').textContent = e.target.value + 'ms'; });
+    bindInput('rng-isi-max', 'input', e => { document.getElementById('disp-isi-max').textContent = e.target.value + 'ms'; });
+    bindInput('rng-session-duration', 'input', e => { document.getElementById('disp-session-duration').textContent = e.target.value + ' min'; });
     bindInput('rng-stim-dur', 'input', e => { document.getElementById('disp-stim-dur').textContent = e.target.value + 'ms'; });
     bindInput('rng-interference', 'input', e => { document.getElementById('disp-interference').textContent = e.target.value + '%'; });
     bindInput('rng-match-rate', 'input', e => { document.getElementById('disp-match-rate').textContent = e.target.value + '%'; });
@@ -1037,6 +1089,9 @@ const App = {
     bindInput('chk-aud', 'change', () => this.onStimChange());
     bindInput('chk-shp', 'change', () => this.onStimChange());
     bindInput('chk-col', 'change', () => this.onStimChange());
+
+    // Persist every user-facing configuration control.
+    this.bindSettingsPersistence();
 
     // Mode cards
     const modeDual = document.getElementById('mode-dual');
@@ -1073,14 +1128,89 @@ const App = {
     document.addEventListener('keydown', (e) => this.handleKeydown(e));
 
     // Initial UI state
+    this.setMode(this._savedMode || 'dual', false);
+    this.refreshSettingDisplays();
     this.updateGlobalStats();
     this.onStimChange();
     this.onVariableNToggle();
     this.onGridTypeChange();
     this.onISIModeChange();
+    this.saveSettings();
 
     // Preload images non-blocking
     this.engine.preloadImages();
+  },
+
+  getPersistentControlIds() {
+    return [
+      'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed',
+      'chk-variable-n','rng-var-min','inp-var-max','chk-adaptive','sel-isi-mode',
+      'rng-isi-fixed','rng-isi-min','rng-isi-max','rng-stim-dur','rng-session-duration',
+      'chk-tally','chk-buzzer','rng-interference','rng-match-rate','sel-voice',
+      'chk-pos','chk-aud','chk-shp','chk-col'
+    ];
+  },
+
+  saveSettings() {
+    try {
+      const values = {};
+      this.getPersistentControlIds().forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        values[id] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      const modeCard = document.querySelector('.mode-card.active');
+      const voice = this.engine.selectedVoice || this.engine.voices[document.getElementById('sel-voice')?.value];
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
+        values,
+        mode: modeCard?.dataset.mode || this.engine.mode || 'dual',
+        keys: this.engine.keys,
+        voiceName: voice?.name || null
+      }));
+    } catch(e) {}
+  },
+
+  loadSettings() {
+    try {
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const values = saved?.values || {};
+      this.getPersistentControlIds().forEach(id => {
+        const el = document.getElementById(id);
+        if (!el || !(id in values)) return;
+        if (el.type === 'checkbox') el.checked = !!values[id];
+        else el.value = values[id];
+      });
+      if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
+      this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
+      this._savedVoiceName = saved?.voiceName || null;
+    } catch(e) {
+      this._savedMode = 'dual'; this._savedVoiceName = null;
+    }
+  },
+
+  bindSettingsPersistence() {
+    this.getPersistentControlIds().forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.persistenceBound === '1') return;
+      const save = () => this.saveSettings();
+      el.addEventListener('change', save);
+      el.addEventListener('input', save);
+      el.dataset.persistenceBound = '1';
+    });
+  },
+
+  refreshSettingDisplays() {
+    const map = {
+      'disp-start-n':['rng-start-n',v=>v], 'disp-emo-load':['rng-emo-load',v=>v+'%'],
+      'disp-3d-speed':['rng-3d-speed',v=>v<30?'Slow':v<70?'Normal':'Fast'], 'disp-var-min':['rng-var-min',v=>v],
+      'disp-isi-fixed':['rng-isi-fixed',v=>v+'ms'], 'disp-isi-min':['rng-isi-min',v=>v+'ms'],
+      'disp-isi-max':['rng-isi-max',v=>v+'ms'], 'disp-stim-dur':['rng-stim-dur',v=>v+'ms'],
+      'disp-session-duration':['rng-session-duration',v=>v+' min'], 'disp-interference':['rng-interference',v=>v+'%'],
+      'disp-match-rate':['rng-match-rate',v=>v+'%']
+    };
+    Object.entries(map).forEach(([out,[id,fmt]]) => { const input=document.getElementById(id), display=document.getElementById(out); if(input&&display) display.textContent=fmt(input.value); });
   },
 
   switchScreen(id) {
@@ -1091,7 +1221,7 @@ const App = {
     }
   },
 
-  setMode(mode) {
+  setMode(mode, persist = true) {
     this.engine.mode = mode;
     const dual = document.getElementById('mode-dual');
     const quad = document.getElementById('mode-quad');
@@ -1107,6 +1237,7 @@ const App = {
     if (shp) shp.checked = isQuad;
     if (col) col.checked = isQuad;
     this.onStimChange();
+    if (persist) this.saveSettings();
   },
 
   onGridTypeChange() {
@@ -1192,6 +1323,7 @@ const App = {
       this.engine.keys[this.engine.listeningBind] = e.key;
       this.engine.listeningBind = null;
       this.onStimChange();
+      this.saveSettings();
       return;
     }
     if (!this.screens.game || !this.screens.game.classList.contains('active')) return;
@@ -1223,7 +1355,10 @@ const App = {
     this.engine.highestN = s.startN;
     this.engine.sessionStart = Date.now();
     this.engine.lastTick = Date.now();
+    this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
     this.engine.isRunning = true;
+    AudioEngine.init();
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
 
     // Ensure images are at least attempted
     if (!this.engine.imagesLoaded) {
@@ -1236,7 +1371,7 @@ const App = {
     this.showInterMsg('GET READY', 800);
     setTimeout(() => { if (this.engine.isRunning) this.startBlock(); }, 850);
 
-    this.engine.timerInterval = setInterval(() => this.updateTimer(), 1000);
+    this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
   },
 
   updateTimer() {
@@ -1244,6 +1379,14 @@ const App = {
     const now = Date.now();
     this.engine.sessionMs += (now - this.engine.lastTick);
     this.engine.lastTick = now;
+    const limit = this.engine.sessionLimitMs || 0;
+    if (limit > 0 && this.engine.sessionMs >= limit) {
+      this.engine.sessionMs = limit;
+      const el = document.getElementById('hud-timer');
+      if (el) el.textContent = formatTime(this.engine.sessionMs);
+      this.endSession('duration');
+      return;
+    }
     const el = document.getElementById('hud-timer');
     if (el) el.textContent = formatTime(this.engine.sessionMs);
   },
@@ -1263,7 +1406,8 @@ const App = {
       const dur = 35 - (speed / 100) * 32;
       if (cube) cube.style.setProperty('--rot-speed', Math.max(3, dur) + 's');
       for (let i = 0; i < 27; i++) {
-        const x = ((i % 3) - 1) * 11, y = ((Math.floor(i / 3) % 3) - 1) * 11, z = (Math.floor(i / 9) - 1) * 11;
+        const spacing = 14.5;
+        const x = ((i % 3) - 1) * spacing, y = ((Math.floor(i / 3) % 3) - 1) * spacing, z = (Math.floor(i / 9) - 1) * spacing;
         const div = document.createElement('div');
         div.className = 'mini-cube';
         div.id = 'pos-' + i;
@@ -1454,7 +1598,7 @@ const App = {
     // scheduled from the same trial start. Audio playback never controls timing.
     const stimulusMs = Math.max(500, Math.min(800, s.stimDur || TRIAL_TIMING.stimulusMs));
     const isiMs = this.engine.getISI();
-    const totalMs = Math.max(TRIAL_TIMING.minTotalMs, Math.min(TRIAL_TIMING.maxTotalMs, stimulusMs + isiMs));
+    const totalMs = stimulusMs + isiMs;
     const trialStartedAt = performance.now();
 
     const hideStimulus = () => {
@@ -1526,12 +1670,15 @@ const App = {
   showMissedFeedback() {
     const k = this.engine.kSeq[this.engine.currentTrial];
     if (this.engine.currentTrial < k) return;
+    let missedTarget = false;
     this.engine.activeStimuli.forEach(type => {
       const isTarget = this.engine.trials[this.engine.currentTrial][type] === this.engine.trials[this.engine.currentTrial - k][type];
       if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
+        missedTarget = true;
         this.flashIndicator(type, 'wrong');
       }
     });
+    if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
   },
 
   flashIndicator(type, status) {
@@ -1597,6 +1744,7 @@ const App = {
     const btn = document.getElementById('btn-pause');
     if (!this.engine.isPaused) {
       this.engine.isPaused = true;
+      this.engine.lastTick = Date.now();
       clearTimeout(this.engine.trialTimeout);
       clearTimeout(this.engine.trialAdvanceTimeout);
       try { window.speechSynthesis.cancel(); } catch(e) {}
@@ -1605,6 +1753,7 @@ const App = {
       this.showInterMsg('PAUSED', 999999);
     } else {
       this.engine.isPaused = false;
+      this.engine.lastTick = Date.now();
       if (btn) btn.textContent = 'PAUSE';
       const inter = document.getElementById('inter-msg');
       if (inter) inter.classList.remove('active');
@@ -1613,7 +1762,7 @@ const App = {
     }
   },
 
-  endSession() {
+  endSession(reason = 'manual') {
     this.engine.isRunning = false;
     this.engine.isTrialActive = false;
     clearTimeout(this.engine.trialTimeout);
@@ -1670,6 +1819,10 @@ const App = {
     }
 
     this.switchScreen('results');
+    if (reason === 'duration') {
+      const title = document.querySelector('#screen-results .results-panel h2');
+      if (title) title.textContent = 'SESSION COMPLETE // TIME LIMIT';
+    }
   },
 
   updateGlobalStats() {
