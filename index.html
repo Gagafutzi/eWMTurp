@@ -64,6 +64,9 @@ select:focus, input:focus { border-color:var(--cyan); }
 .anime-submode-btn small { display:block; margin-top:4px; color:var(--text-dim); font-size:.52rem; text-transform:uppercase; letter-spacing:.6px; }
 .anime-submode-btn:hover { border-color:rgba(0,240,255,.45); transform:translateY(-1px); }
 .anime-submode-btn.active { border-color:var(--cyan); background:rgba(0,240,255,.08); box-shadow:0 0 14px rgba(0,240,255,.1), inset 0 0 12px rgba(0,240,255,.03); }
+.anime-submode-btn:disabled { cursor:not-allowed; opacity:.48; border-color:rgba(255,255,255,.10); transform:none !important; box-shadow:none; }
+.anime-submode-btn:disabled:hover { border-color:rgba(255,255,255,.10); transform:none; }
+.anime-coming-soon { display:inline-block; margin-left:6px; padding:2px 5px; border-radius:999px; font-size:.46rem; letter-spacing:.6px; color:var(--text-dim); border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.035); }
 @media (max-width:720px) { .stimulus-primary-grid,.anime-submode-grid { grid-template-columns:1fr 1fr; } }
 .stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0 14px; padding:14px 16px; border:1px solid rgba(255,0,110,0.55); border-radius:10px; background:linear-gradient(135deg,rgba(255,0,110,0.10),rgba(0,240,255,0.06)); cursor:pointer; transition:all .2s ease; box-shadow:0 0 18px rgba(255,0,110,0.06); }
 .stimulus-feature-card:hover { border-color:var(--magenta); box-shadow:0 0 24px rgba(255,0,110,0.14); transform:translateY(-1px); }
@@ -270,9 +273,9 @@ button, input, select { position:relative; z-index:1; }
           <div class="anime-submode-heading"><span>Anime Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
           <div class="anime-submode-grid" role="group" aria-label="Anime stimulus subtype">
             <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime Faces</strong><small>Standard</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false"><strong>Anime Waifu Faces</strong><small>Waifu</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false"><strong>Hentai Faces</strong><small>Hentai</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false"><strong>Anime Gore</strong><small>Gore</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Waifu Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Waifu</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false" disabled aria-disabled="true"><strong>Hentai Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Hentai</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Gore <span class="anime-coming-soon">COMING SOON</span></strong><small>Gore</small></button>
           </div>
         </div>
       </div>
@@ -983,19 +986,28 @@ class GameEngine {
   }
 
   pickAnimeFace(mode = this.animeMode) {
-    const paths = ANIME_FACE_ASSET_MANIFEST[mode] || [];
-    const cache = ANIME_IMAGE_CACHE[mode] || {};
+    // Only Standard Anime Faces is currently enabled. Locked sub-modes are
+    // normalized before this method is reached, so they can never silently
+    // route into the human-face asset pool.
+    const safeMode = mode === 'standard' ? 'standard' : 'standard';
+    const paths = ANIME_FACE_ASSET_MANIFEST[safeMode] || [];
+    const cache = ANIME_IMAGE_CACHE[safeMode] || {};
     const available = paths.filter(path => cache[path]);
-    if (!available.length) return null;
-    return available[Math.floor(Math.random() * available.length)];
+    if (available.length) return available[Math.floor(Math.random() * available.length)];
+
+    // If preloading is still pending, return a manifest path and let the DOM
+    // image loader resolve it. If an asset truly fails, the renderer shows a
+    // neutral visual fallback rather than substituting a human face.
+    if (paths.length) return paths[Math.floor(Math.random() * paths.length)];
+    return null;
   }
 
   pickVisualStimulus(emoLoad) {
     if (this.stimulusType === 'anime_faces') {
-      const animePath = this.pickAnimeFace(this.animeMode);
-      if (animePath) return { type: 'anime_faces', path: animePath, emotion: 'anime', animeMode: this.animeMode };
-      const fallback = this.pickFace(emoLoad);
-      return { type: 'standard_faces', path: fallback.file, emotion: fallback.emotion, fallbackFromAnime: true, animeMode: this.animeMode };
+      const animePath = this.pickAnimeFace('standard');
+      if (animePath) return { type: 'anime_faces', path: animePath, emotion: 'anime', animeMode: 'standard', fallbackFromAnime: false };
+      // No human fallback: preserve the selected stimulus family.
+      return { type: 'anime_faces', path: null, emotion: 'anime', animeMode: 'standard', fallbackFromAnime: false };
     }
     const face = this.pickFace(emoLoad);
     return { type: 'standard_faces', path: face.file, emotion: face.emotion, fallbackFromAnime: false, animeMode: null };
@@ -1188,7 +1200,10 @@ const App = {
       card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
     });
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
-      btn.addEventListener('click', () => this.setAnimeMode(btn.dataset.animeMode));
+      btn.addEventListener('click', () => {
+        if (btn.disabled || btn.dataset.locked === 'true') return;
+        this.setAnimeMode(btn.dataset.animeMode);
+      });
     });
 
     // Main buttons
@@ -1280,7 +1295,7 @@ const App = {
       if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
       this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this._savedAnimeMode = ['standard','waifu','hentai','gore'].includes(saved?.animeMode) ? saved.animeMode : 'standard';
+      this._savedAnimeMode = saved?.animeMode === 'standard' ? 'standard' : 'standard';
       this._savedVoiceName = saved?.voiceName || null;
     } catch(e) {
       this._savedMode = 'dual'; this._savedStimulusType = 'human_faces'; this._savedAnimeMode = 'standard'; this._savedVoiceName = null;
@@ -1338,40 +1353,64 @@ const App = {
   },
 
   setStimulusType(type, persist = true) {
-    const normalized = (type === 'anime_faces' || type === 'anime_standard' || type === 'anime_waifu' || type === 'hentai' || type === 'anime_gore') ? 'anime_faces' : 'human_faces';
-    if (type === 'anime_standard') this.animeMode = 'standard';
-    else if (type === 'anime_waifu') this.animeMode = 'waifu';
-    else if (type === 'hentai') this.animeMode = 'hentai';
-    else if (type === 'anime_gore') this.animeMode = 'gore';
+    const normalized = type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces';
+
+    // Standard Anime Faces is the only active anime subtype. Any attempt to
+    // select a locked subtype is safely coerced to Standard instead of
+    // entering a fallback loop or changing the underlying stimulus family.
+    if (normalized === 'anime_faces') this.animeMode = 'standard';
+
     this.engine.stimulusType = normalized;
+    this.engine.animeMode = this.animeMode || 'standard';
+
     const human = document.getElementById('stimulus-human-card');
     const anime = document.getElementById('stimulus-anime-card');
     const panel = document.getElementById('anime-submode-panel');
     const humanActive = normalized === 'human_faces';
-    if (human) { human.classList.toggle('active', humanActive); human.setAttribute('aria-pressed', humanActive ? 'true' : 'false'); }
-    if (anime) { anime.classList.toggle('active', !humanActive); anime.setAttribute('aria-pressed', humanActive ? 'false' : 'true'); }
+
+    if (human) {
+      human.classList.toggle('active', humanActive);
+      human.setAttribute('aria-pressed', humanActive ? 'true' : 'false');
+    }
+    if (anime) {
+      anime.classList.toggle('active', !humanActive);
+      anime.setAttribute('aria-pressed', humanActive ? 'false' : 'true');
+    }
     if (panel) panel.hidden = humanActive;
-    this.setAnimeMode(this.animeMode || 'standard', false);
+
+    this.setAnimeMode('standard', false);
+
     const status = document.getElementById('stimulus-type-status');
-    const labels = {standard:'Anime Faces • Standard', waifu:'Anime Waifu Faces', hentai:'Hentai Faces', gore:'Anime Gore'};
-    if (status) status.textContent = humanActive ? 'Human Faces • Standard affective faces' : (labels[this.animeMode] || labels.standard);
+    if (status) status.textContent = humanActive
+      ? 'Human Faces • Standard affective faces'
+      : 'Anime Faces • Standard';
+
     if (persist) this.saveSettings();
   },
 
   setAnimeMode(mode, persist = true) {
-    const normalized = ['standard','waifu','hentai','gore'].includes(mode) ? mode : 'standard';
+    // waifu/hentai/gore are intentionally locked until their asset manifests
+    // are supplied. They cannot become the active engine state.
+    const normalized = mode === 'standard' ? 'standard' : 'standard';
     this.engine.animeMode = normalized;
     this.animeMode = normalized;
+
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
       const active = btn.dataset.animeMode === normalized;
+      const locked = btn.dataset.animeMode !== 'standard';
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (locked) {
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+      }
     });
+
     const status = document.getElementById('stimulus-type-status');
     if (status && this.engine.stimulusType === 'anime_faces') {
-      const labels = {standard:'Anime Faces • Standard', waifu:'Anime Waifu Faces', hentai:'Hentai Faces', gore:'Anime Gore'};
-      status.textContent = labels[normalized];
+      status.textContent = 'Anime Faces • Standard';
     }
+
     if (persist) this.saveSettings();
   },
 
@@ -1658,44 +1697,61 @@ const App = {
     // Position stimulus
     if (this.engine.activeStimuli.includes('pos')) {
       const targetEl = document.getElementById('pos-' + trial.pos);
-      const imageCache = trial.visualType === 'anime_faces' ? (ANIME_IMAGE_CACHE[trial.animeMode] || {}) : this.engine.imageCache;
-      const imgOK = !!imageCache[trial.face];
+      const isAnime = trial.visualType === 'anime_faces';
+      const imageCache = isAnime
+        ? (ANIME_IMAGE_CACHE.standard || {})
+        : this.engine.imageCache;
+      const imagePath = trial.face;
+      const imgOK = !!(imagePath && imageCache[imagePath]);
+
       if (s.gridType === '3d' && targetEl) {
-        // Every visible face of the active 3D mini-cube gets a real JPEG <img>.
-        // The image was preloaded before the session, so this does not initiate
-        // a network request during the timed stimulus window.
         targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
           faceEl.replaceChildren();
-          if (imgOK) {
-            const img = createPreloadedFaceImage(
-              trial.face,
-              trial.faceEmotion + ' visual stimulus',
-              imageCache
-            );
-            faceEl.appendChild(img);
-          } else {
+          faceEl.classList.add('active');
+
+          if (!imagePath) {
             const fb = document.createElement('div');
             fb.className = 'face-fallback';
-            fb.textContent = trial.faceEmotion[0].toUpperCase();
+            fb.textContent = isAnime ? 'ANIME' : trial.faceEmotion[0].toUpperCase();
             faceEl.appendChild(fb);
+            return;
           }
-          faceEl.classList.add('active');
+
+          const img = createPreloadedFaceImage(imagePath, isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' visual stimulus', imageCache);
+          img.classList.add('stimulus-image');
+          img.addEventListener('error', () => {
+            img.remove();
+            const fb = document.createElement('div');
+            fb.className = 'face-fallback';
+            fb.textContent = isAnime ? 'ANIME' : trial.faceEmotion[0].toUpperCase();
+            faceEl.appendChild(fb);
+          }, {once:true});
+          faceEl.appendChild(img);
         });
       } else if (targetEl) {
         const img = targetEl.querySelector('.face-img');
         const fb = targetEl.querySelector('.face-fallback');
-        if (imgOK) {
-          if (img) {
-            img.src = trial.face; // same relative path as the preloaded resource
-            img.alt = trial.faceEmotion + ' emotional face';
-            img.decoding = 'sync';
-            img.loading = 'eager';
-            img.style.display = 'block';
-          }
+        if (imagePath && img) {
+          img.className = 'face-img stimulus-image';
+          img.alt = isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' emotional face';
+          img.decoding = 'sync';
+          img.loading = 'eager';
+          img.style.display = 'block';
+          img.onerror = () => {
+            img.style.display = 'none';
+            if (fb) {
+              fb.textContent = isAnime ? 'ANIME' : trial.faceEmotion[0].toUpperCase();
+              fb.style.display = 'flex';
+            }
+          };
+          // Use the preloaded image object when available; otherwise the same
+          // manifest path is allowed to resolve naturally.
+          img.src = imagePath;
           if (fb) fb.style.display = 'none';
-        } else {
+        } else if (fb) {
           if (img) img.style.display = 'none';
-          if (fb) { fb.textContent = trial.faceEmotion[0].toUpperCase(); fb.style.display = 'flex'; }
+          fb.textContent = isAnime ? 'ANIME' : trial.faceEmotion[0].toUpperCase();
+          fb.style.display = 'flex';
         }
         targetEl.classList.add('active');
       }
