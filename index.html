@@ -54,6 +54,17 @@ select:focus, input:focus { border-color:var(--cyan); }
 .mode-card.active { border-color:var(--cyan); background:var(--cyan-dim); box-shadow:0 0 16px rgba(0,240,255,0.08); }
 .mode-card .mode-name { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:2px; }
 .mode-card .mode-desc { font-size:0.65rem; color:var(--text-muted); line-height:1.3; }
+.stimulus-primary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 8px; }
+.stimulus-primary-card { width:100%; text-align:left; font:inherit; color:inherit; }
+.anime-submode-panel { margin:8px 0 10px; padding:10px; border:1px solid rgba(0,240,255,.22); border-radius:10px; background:rgba(0,240,255,.035); }
+.anime-submode-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.8px; color:var(--text-muted); text-transform:uppercase; }
+.anime-submode-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
+.anime-submode-btn { min-height:58px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.025); color:var(--text-muted); cursor:pointer; padding:8px; text-align:left; transition:.18s ease; }
+.anime-submode-btn strong { display:block; color:var(--text); font-size:.65rem; line-height:1.15; }
+.anime-submode-btn small { display:block; margin-top:4px; color:var(--text-dim); font-size:.52rem; text-transform:uppercase; letter-spacing:.6px; }
+.anime-submode-btn:hover { border-color:rgba(0,240,255,.45); transform:translateY(-1px); }
+.anime-submode-btn.active { border-color:var(--cyan); background:rgba(0,240,255,.08); box-shadow:0 0 14px rgba(0,240,255,.1), inset 0 0 12px rgba(0,240,255,.03); }
+@media (max-width:720px) { .stimulus-primary-grid,.anime-submode-grid { grid-template-columns:1fr 1fr; } }
 .stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0 14px; padding:14px 16px; border:1px solid rgba(255,0,110,0.55); border-radius:10px; background:linear-gradient(135deg,rgba(255,0,110,0.10),rgba(0,240,255,0.06)); cursor:pointer; transition:all .2s ease; box-shadow:0 0 18px rgba(255,0,110,0.06); }
 .stimulus-feature-card:hover { border-color:var(--magenta); box-shadow:0 0 24px rgba(255,0,110,0.14); transform:translateY(-1px); }
 .stimulus-feature-card.active { border-color:var(--cyan); background:linear-gradient(135deg,rgba(0,240,255,0.13),rgba(255,0,110,0.09)); box-shadow:0 0 22px rgba(0,240,255,0.13), inset 0 0 18px rgba(255,0,110,0.04); }
@@ -97,22 +108,6 @@ select:focus, input:focus { border-color:var(--cyan); }
 .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,240,255,0.35); }
 .btn-secondary { background:var(--bg-elevated); color:var(--text); border:1px solid var(--border); }
 .btn-secondary:hover { border-color:var(--text-muted); }
-.camera-check-panel { max-width:600px; margin:0 auto 14px; padding:14px; border:1px solid var(--border); border-radius:10px; background:rgba(10,15,24,0.72); }
-.camera-optional { float:right; font-size:0.55rem; letter-spacing:1px; color:var(--text-dim); border:1px solid var(--border); padding:3px 6px; border-radius:4px; }
-.camera-check-body { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,0.8fr); gap:14px; align-items:center; }
-.camera-preview { position:relative; width:100%; aspect-ratio:16/10; min-height:150px; overflow:hidden; border-radius:8px; border:1px solid var(--border); background:#05070b; box-shadow:inset 0 0 25px rgba(0,240,255,0.04); }
-.camera-preview video { width:100%; height:100%; display:block; object-fit:cover; object-position:center center; transform:scaleX(-1); background:#05070b; }
-.camera-guide { position:absolute; left:50%; top:50%; width:42%; height:72%; transform:translate(-50%,-50%); border:2px solid rgba(0,240,255,0.85); border-radius:50%; box-shadow:0 0 18px rgba(0,240,255,0.16), inset 0 0 18px rgba(0,240,255,0.05); pointer-events:none; }
-.camera-guide::before { content:""; position:absolute; left:50%; top:0; bottom:0; border-left:1px dashed rgba(0,240,255,0.25); transform:translateX(-50%); }
-.camera-guide::after { content:""; position:absolute; left:8%; right:8%; top:42%; border-top:1px dashed rgba(0,240,255,0.25); }
-.camera-guide-label { position:absolute; left:8px; right:8px; bottom:7px; text-align:center; font-family:var(--font-mono); font-size:0.5rem; letter-spacing:1px; color:rgba(232,236,241,0.72); pointer-events:none; text-shadow:0 1px 4px #000; }
-.camera-check-actions { display:flex; flex-direction:column; gap:10px; }
-.camera-status { min-height:58px; padding:10px; border-radius:7px; border:1px solid var(--border); background:var(--bg-elevated); color:var(--text-muted); font-size:0.68rem; line-height:1.45; }
-.camera-status.good { color:var(--green); border-color:rgba(0,255,136,0.45); box-shadow:0 0 12px rgba(0,255,136,0.08); }
-.camera-status.warn { color:var(--amber); border-color:rgba(255,170,0,0.45); }
-.camera-status.error { color:var(--red); border-color:rgba(255,51,51,0.45); }
-.camera-btn { width:100%; padding:9px 12px; font-size:0.72rem; }
-@media (max-width:640px) { .camera-check-body { grid-template-columns:1fr; } .camera-preview { min-height:180px; } }
 .btn-row { display:flex; gap:10px; max-width:600px; margin:0 auto 30px; width:100%; }
 .modal-overlay { display:none; pointer-events:none; position:fixed; inset:0; background:rgba(6,7,10,0.85); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:20px; }
 .modal-overlay.active { display:flex; pointer-events:auto; }
@@ -164,7 +159,10 @@ select:focus, input:focus { border-color:var(--cyan); }
 .grid-2d.active { display:grid; }
 .cell-2d { background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; transition:all 0.15s ease; display:flex; align-items:center; justify-content:center; }
 .cell-2d.active { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,240,255,0.15),inset 0 0 16px rgba(0,240,255,0.05); }
-.cell-2d .face-img { width:100%; height:100%; object-fit:cover; opacity:0.85; }
+.cell-2d .face-img,
+.stimulus-image,
+.mini-face img { width:100%; height:100%; object-fit:cover; opacity:0.92; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
+.cell-2d .face-img { object-position:center; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
 .scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 150px),calc(100vh - 80px)); max-height:min(calc(100vw - 150px),calc(100vh - 80px)); aspect-ratio:1/1; perspective:1500px; align-items:center; justify-content:center; overflow:visible; }
@@ -258,17 +256,27 @@ button, input, select { position:relative; z-index:1; }
           <div class="mode-desc">Pos + Aud + Shape + Color</div>
         </div>
       </div>
-      <div class="stimulus-feature-card" id="stimulus-anime-card" role="button" tabindex="0" aria-pressed="false" onclick="App.setStimulusType('anime_faces')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.setStimulusType('anime_faces')}">
-        <div class="stimulus-feature-main">
-          <div class="stimulus-feature-icon">◉</div>
-          <div>
-            <div class="stimulus-feature-title">Anime Faces</div>
-            <div class="stimulus-feature-desc">Featured visual stimulus set • preloaded for low-latency trials</div>
+      <div class="stimulus-selector" id="stimulus-selector" aria-label="Visual stimulus type">
+        <div class="stimulus-primary-grid">
+          <button type="button" class="stimulus-feature-card stimulus-primary-card active" id="stimulus-human-card" aria-pressed="true" data-stimulus-type="human_faces">
+            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◎</span><span><span class="stimulus-feature-title">Human Faces</span><span class="stimulus-feature-desc">Standard affective face stimuli</span></span></span>
+          </button>
+          <button type="button" class="stimulus-feature-card stimulus-primary-card" id="stimulus-anime-card" aria-pressed="false" data-stimulus-type="anime_faces">
+            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◉</span><span><span class="stimulus-feature-title">Anime Faces</span><span class="stimulus-feature-desc">Featured visual stimulus family</span></span></span>
+            <span class="stimulus-feature-badge">NEW</span>
+          </button>
+        </div>
+        <div class="anime-submode-panel" id="anime-submode-panel" hidden>
+          <div class="anime-submode-heading"><span>Anime Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
+          <div class="anime-submode-grid" role="group" aria-label="Anime stimulus subtype">
+            <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime Faces</strong><small>Standard</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false"><strong>Anime Waifu Faces</strong><small>Waifu</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false"><strong>Hentai Faces</strong><small>Hentai</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false"><strong>Anime Gore</strong><small>Gore</small></button>
           </div>
         </div>
-        <span class="stimulus-feature-badge">NEW</span>
       </div>
-      <div class="stimulus-type-status" id="stimulus-type-status">Standard affective faces</div>
+      <div class="stimulus-type-status" id="stimulus-type-status">Human Faces • Standard affective faces</div>
       <div class="control-row">
         <div class="control-label">Starting N-Level</div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -414,21 +422,6 @@ button, input, select { position:relative; z-index:1; }
         </div>
       </div>
     </div>
-    <div class="camera-check-panel" id="camera-check-panel">
-      <div class="panel-title cyan">Camera Positioning Check <span class="camera-optional">OPTIONAL</span></div>
-      <div class="camera-check-body">
-        <div class="camera-preview" id="camera-preview">
-          <video id="camera-video" playsinline muted autoplay></video>
-          <div class="camera-guide" aria-hidden="true"></div>
-          <div class="camera-guide-label">CENTER FACE • EYES LEVEL • SHOULDERS VISIBLE</div>
-        </div>
-        <div class="camera-check-actions">
-          <div class="camera-status" id="camera-status">Camera check not started. Position your face inside the guide before training.</div>
-          <button class="btn btn-secondary camera-btn" id="btn-camera-check" type="button">START CAMERA CHECK</button>
-          <button class="btn btn-secondary camera-btn" id="btn-camera-stop" type="button" style="display:none">STOP CAMERA</button>
-        </div>
-      </div>
-    </div>
     <div class="btn-row">
       <button class="btn btn-secondary" id="btn-full-dashboard" style="flex:0.4">Dashboard</button>
       <button class="btn btn-primary" id="btn-init-session">INITIALIZE SESSION</button>
@@ -533,79 +526,56 @@ const FACES = [
   {file:'face_9.jpg', emotion:'negative', valence:-1}
 ];
 
-// Featured Anime Faces stimulus manifest. Keep these paths relative to index.html.
-const ANIME_FACE_ASSET_MANIFEST = Object.freeze([
-  'assets/stimuli/anime/10234.png',
-  'assets/stimuli/anime/10228.png',
-  'assets/stimuli/anime/10224.png',
-  'assets/stimuli/anime/10223.png',
-  'assets/stimuli/anime/1020.png',
-  'assets/stimuli/anime/1018.png',
-  'assets/stimuli/anime/10174.png',
-  'assets/stimuli/anime/10170.png',
-  'assets/stimuli/anime/10171.png',
-  'assets/stimuli/anime/10154.png'
-]);
+// Nested visual stimulus manifests. Each sub-mode has its own asset folder.
+const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
+  standard: Object.freeze([
+    'assets/stimuli/anime_standard/10234.png','assets/stimuli/anime_standard/10228.png','assets/stimuli/anime_standard/10224.png',
+    'assets/stimuli/anime_standard/10223.png','assets/stimuli/anime_standard/1020.png','assets/stimuli/anime_standard/1018.png',
+    'assets/stimuli/anime_standard/10174.png','assets/stimuli/anime_standard/10170.png','assets/stimuli/anime_standard/10171.png','assets/stimuli/anime_standard/10154.png'
+  ]),
+  waifu: Object.freeze([]),
+  hentai: Object.freeze([]),
+  gore: Object.freeze([])
+});
 
-// ============================================================
-// FACE IMAGE PRELOADER
-// Keep strong references to all ten JPEGs so the browser loads
-// them before the first trial and can reuse the cached resources.
-// These paths are deliberately relative to index.html.
-// ============================================================
 const FACE_IMAGE_CACHE = Object.create(null);
-const FACE_PRELOAD_PROMISE = Promise.all(FACES.map(face => new Promise(resolve => {
-  const img = new Image();
-  img.decoding = 'async';
-  img.loading = 'eager';
-  img.onload = () => {
-    FACE_IMAGE_CACHE[face.file] = img;
-    // Ask the browser to finish decoding while we are still on the menu.
-    if (typeof img.decode === 'function') {
-      img.decode().catch(() => {}).finally(() => resolve(true));
-    } else {
-      resolve(true);
-    }
-  };
-  img.onerror = () => {
-    FACE_IMAGE_CACHE[face.file] = null;
-    console.warn('[ATTENTIONAL SHIELD] Could not preload ' + face.file);
-    resolve(false);
-  };
-  img.src = face.file;
-})));
-
 const ANIME_IMAGE_CACHE = Object.create(null);
-const ANIME_FACE_PRELOAD_PROMISE = Promise.all(ANIME_FACE_ASSET_MANIFEST.map(path => new Promise(resolve => {
-  const img = new Image();
-  img.decoding = 'async';
-  img.loading = 'eager';
-  img.onload = () => {
-    ANIME_IMAGE_CACHE[path] = img;
-    const done = () => resolve(true);
-    if (typeof img.decode === 'function') img.decode().catch(() => {}).finally(done);
-    else done();
-  };
-  img.onerror = () => {
-    ANIME_IMAGE_CACHE[path] = null;
-    console.warn('[ATTENTIONAL SHIELD] Could not preload anime stimulus ' + path);
-    resolve(false);
-  };
-  img.src = path;
-})));
+Object.keys(ANIME_FACE_ASSET_MANIFEST).forEach(mode => { ANIME_IMAGE_CACHE[mode] = Object.create(null); });
 
-function createPreloadedFaceImage(path, altText) {
-  const cached = FACE_IMAGE_CACHE[path] || ANIME_IMAGE_CACHE[path];
+function preloadImage(path, targetCache) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.onload = () => {
+      targetCache[path] = img;
+      const done = () => resolve(true);
+      if (typeof img.decode === 'function') img.decode().catch(() => {}).finally(done); else done();
+    };
+    img.onerror = () => { targetCache[path] = null; console.warn('[ATTENTIONAL SHIELD] Could not preload ' + path); resolve(false); };
+    img.src = path;
+  });
+}
+
+const FACE_PRELOAD_PROMISE = Promise.all(FACES.map(face => preloadImage(face.file, FACE_IMAGE_CACHE)));
+const ANIME_FACE_PRELOAD_PROMISES = Object.fromEntries(Object.entries(ANIME_FACE_ASSET_MANIFEST).map(([mode, paths]) => [
+  mode, Promise.all(paths.map(path => preloadImage(path, ANIME_IMAGE_CACHE[mode])))
+]));
+
+function createPreloadedFaceImage(path, altText, cache) {
+  const cached = cache?.[path] || FACE_IMAGE_CACHE[path] || null;
   const img = cached ? cached.cloneNode(false) : new Image();
-  img.src = path; // relative JPEG path; normally served from the browser cache
+  img.src = path;
   img.alt = altText || '';
   img.decoding = 'sync';
   img.loading = 'eager';
   img.draggable = false;
+  img.className = 'stimulus-image';
   img.style.width = '100%';
   img.style.height = '100%';
   img.style.display = 'block';
   img.style.objectFit = 'cover';
+  img.style.imageRendering = 'pixelated';
   img.style.pointerEvents = 'none';
   return img;
 }
@@ -903,10 +873,10 @@ class GameEngine {
     this.listeningBind = null;
     this.activeStimuli = [];
     this.imageCache = {};
-    this.animeImageCache = {};
     this.imagesLoaded = false;
     this.animeImagesLoaded = false;
-    this.stimulusType = 'standard_faces';
+    this.stimulusType = 'human_faces';
+    this.animeMode = 'standard';
   }
   reset() {
     this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
@@ -918,13 +888,9 @@ class GameEngine {
   }
 
   async preloadImages() {
-    await Promise.all([FACE_PRELOAD_PROMISE, ANIME_FACE_PRELOAD_PROMISE]);
-    FACES.forEach(face => {
-      this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file];
-    });
-    ANIME_FACE_ASSET_MANIFEST.forEach(path => {
-      this.animeImageCache[path] = !!ANIME_IMAGE_CACHE[path];
-    });
+    await FACE_PRELOAD_PROMISE;
+    FACES.forEach(face => { this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file]; });
+    await Promise.all(Object.values(ANIME_FACE_PRELOAD_PROMISES));
     this.imagesLoaded = true;
     this.animeImagesLoaded = true;
   }
@@ -961,7 +927,8 @@ class GameEngine {
     return {
       gridType: safeVal('sel-grid-type', '2d'),
       gridSize: safeInt('sel-grid-size', 3),
-      stimulusType: this.stimulusType === 'anime_faces' ? 'anime_faces' : 'standard_faces',
+      stimulusType: this.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces',
+      animeMode: this.animeMode || 'standard',
       speed3d: safeInt('rng-3d-speed', 40),
       startN: safeInt('rng-start-n', 2),
       variableN: safeBool('chk-variable-n'),
@@ -1015,22 +982,23 @@ class GameEngine {
     return pos[Math.floor(Math.random() * pos.length)];
   }
 
-  pickAnimeFace() {
-    const available = ANIME_FACE_ASSET_MANIFEST.filter(path => this.animeImageCache[path]);
+  pickAnimeFace(mode = this.animeMode) {
+    const paths = ANIME_FACE_ASSET_MANIFEST[mode] || [];
+    const cache = ANIME_IMAGE_CACHE[mode] || {};
+    const available = paths.filter(path => cache[path]);
     if (!available.length) return null;
     return available[Math.floor(Math.random() * available.length)];
   }
 
   pickVisualStimulus(emoLoad) {
     if (this.stimulusType === 'anime_faces') {
-      const animePath = this.pickAnimeFace();
-      if (animePath) return { type: 'anime_faces', path: animePath, emotion: 'anime' };
-      // Graceful degradation if the optional anime asset bundle is unavailable.
+      const animePath = this.pickAnimeFace(this.animeMode);
+      if (animePath) return { type: 'anime_faces', path: animePath, emotion: 'anime', animeMode: this.animeMode };
       const fallback = this.pickFace(emoLoad);
-      return { type: 'standard_faces', path: fallback.file, emotion: fallback.emotion, fallbackFromAnime: true };
+      return { type: 'standard_faces', path: fallback.file, emotion: fallback.emotion, fallbackFromAnime: true, animeMode: this.animeMode };
     }
     const face = this.pickFace(emoLoad);
-    return { type: 'standard_faces', path: face.file, emotion: face.emotion, fallbackFromAnime: false };
+    return { type: 'standard_faces', path: face.file, emotion: face.emotion, fallbackFromAnime: false, animeMode: null };
   }
 
   pickWord(emoLoad) {
@@ -1091,6 +1059,7 @@ class GameEngine {
         pos: posSeq[i], col: colSeq[i], aud: audSeq[i], shp: shpSeq[i],
         face: visual.path, faceEmotion: visual.emotion, visualType: visual.type,
         animeAsset: visual.type === 'anime_faces' ? visual.path : null,
+        animeMode: visual.animeMode || null,
         word: word, audWord: audWord
       });
     }
@@ -1215,6 +1184,13 @@ const App = {
     if (modeDual) modeDual.addEventListener('click', () => this.setMode('dual'));
     if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
 
+    document.querySelectorAll('[data-stimulus-type]').forEach(card => {
+      card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
+    });
+    document.querySelectorAll('[data-anime-mode]').forEach(btn => {
+      btn.addEventListener('click', () => this.setAnimeMode(btn.dataset.animeMode));
+    });
+
     // Main buttons
     const btnInit = document.getElementById('btn-init-session');
     const btnDash = document.getElementById('btn-full-dashboard');
@@ -1231,11 +1207,6 @@ const App = {
     if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
     if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
     if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
-    const btnCamera = document.getElementById('btn-camera-check');
-    const btnCameraStop = document.getElementById('btn-camera-stop');
-    if (btnCamera) btnCamera.addEventListener('click', () => this.startCameraCheck());
-    if (btnCameraStop) btnCameraStop.addEventListener('click', () => this.stopCameraCheck());
-
     // Modal overlay click-to-close
     const modalOverlay = document.getElementById('modal-dashboard');
     if (modalOverlay) {
@@ -1249,7 +1220,8 @@ const App = {
 
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
-    this.setStimulusType(this._savedStimulusType || 'standard_faces', false);
+    this.setStimulusType(this._savedStimulusType || 'human_faces', false);
+    this.setAnimeMode(this._savedAnimeMode || 'standard', false);
     this.refreshSettingDisplays();
     this.updateGlobalStats();
     this.onStimChange();
@@ -1285,7 +1257,8 @@ const App = {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
         values,
         mode: modeCard?.dataset.mode || this.engine.mode || 'dual',
-        stimulusType: this.engine.stimulusType || 'standard_faces',
+        stimulusType: this.engine.stimulusType || 'human_faces',
+        animeMode: this.engine.animeMode || 'standard',
         keys: this.engine.keys,
         voiceName: voice?.name || null
       }));
@@ -1306,10 +1279,11 @@ const App = {
       });
       if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
-      this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'standard_faces';
+      this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+      this._savedAnimeMode = ['standard','waifu','hentai','gore'].includes(saved?.animeMode) ? saved.animeMode : 'standard';
       this._savedVoiceName = saved?.voiceName || null;
     } catch(e) {
-      this._savedMode = 'dual'; this._savedStimulusType = 'standard_faces'; this._savedVoiceName = null;
+      this._savedMode = 'dual'; this._savedStimulusType = 'human_faces'; this._savedAnimeMode = 'standard'; this._savedVoiceName = null;
     }
   },
 
@@ -1364,18 +1338,40 @@ const App = {
   },
 
   setStimulusType(type, persist = true) {
-    const normalized = type === 'anime_faces' ? 'anime_faces' : 'standard_faces';
+    const normalized = (type === 'anime_faces' || type === 'anime_standard' || type === 'anime_waifu' || type === 'hentai' || type === 'anime_gore') ? 'anime_faces' : 'human_faces';
+    if (type === 'anime_standard') this.animeMode = 'standard';
+    else if (type === 'anime_waifu') this.animeMode = 'waifu';
+    else if (type === 'hentai') this.animeMode = 'hentai';
+    else if (type === 'anime_gore') this.animeMode = 'gore';
     this.engine.stimulusType = normalized;
-    const card = document.getElementById('stimulus-anime-card');
+    const human = document.getElementById('stimulus-human-card');
+    const anime = document.getElementById('stimulus-anime-card');
+    const panel = document.getElementById('anime-submode-panel');
+    const humanActive = normalized === 'human_faces';
+    if (human) { human.classList.toggle('active', humanActive); human.setAttribute('aria-pressed', humanActive ? 'true' : 'false'); }
+    if (anime) { anime.classList.toggle('active', !humanActive); anime.setAttribute('aria-pressed', humanActive ? 'false' : 'true'); }
+    if (panel) panel.hidden = humanActive;
+    this.setAnimeMode(this.animeMode || 'standard', false);
     const status = document.getElementById('stimulus-type-status');
-    if (card) {
-      const active = normalized === 'anime_faces';
-      card.classList.toggle('active', active);
-      card.setAttribute('aria-pressed', active ? 'true' : 'false');
+    const labels = {standard:'Anime Faces • Standard', waifu:'Anime Waifu Faces', hentai:'Hentai Faces', gore:'Anime Gore'};
+    if (status) status.textContent = humanActive ? 'Human Faces • Standard affective faces' : (labels[this.animeMode] || labels.standard);
+    if (persist) this.saveSettings();
+  },
+
+  setAnimeMode(mode, persist = true) {
+    const normalized = ['standard','waifu','hentai','gore'].includes(mode) ? mode : 'standard';
+    this.engine.animeMode = normalized;
+    this.animeMode = normalized;
+    document.querySelectorAll('[data-anime-mode]').forEach(btn => {
+      const active = btn.dataset.animeMode === normalized;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    const status = document.getElementById('stimulus-type-status');
+    if (status && this.engine.stimulusType === 'anime_faces') {
+      const labels = {standard:'Anime Faces • Standard', waifu:'Anime Waifu Faces', hentai:'Hentai Faces', gore:'Anime Gore'};
+      status.textContent = labels[normalized];
     }
-    if (status) status.textContent = normalized === 'anime_faces'
-      ? 'Anime Faces • featured visual stimulus'
-      : 'Standard affective faces';
     if (persist) this.saveSettings();
   },
 
@@ -1486,11 +1482,11 @@ const App = {
   },
 
   async startSession() {
-    this.stopCameraCheck();
     const s = this.engine.getSettings();
     this.engine.reset();
     this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-    this.engine.stimulusType = s.stimulusType;
+    this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+    this.engine.animeMode = s.animeMode || this.engine.animeMode || 'standard';
     this.engine.setActiveStimuli();
     this.engine.currentN = s.startN;
     this.engine.highestN = s.startN;
@@ -1566,7 +1562,7 @@ const App = {
         cell.className = 'cell-2d';
         cell.id = 'pos-' + i;
         const img = document.createElement('img');
-        img.className = 'face-img';
+        img.className = 'face-img stimulus-image';
         img.alt = '';
         img.style.display = 'none';
         const fallback = document.createElement('div');
@@ -1662,7 +1658,7 @@ const App = {
     // Position stimulus
     if (this.engine.activeStimuli.includes('pos')) {
       const targetEl = document.getElementById('pos-' + trial.pos);
-      const imageCache = trial.visualType === 'anime_faces' ? this.engine.animeImageCache : this.engine.imageCache;
+      const imageCache = trial.visualType === 'anime_faces' ? (ANIME_IMAGE_CACHE[trial.animeMode] || {}) : this.engine.imageCache;
       const imgOK = !!imageCache[trial.face];
       if (s.gridType === '3d' && targetEl) {
         // Every visible face of the active 3D mini-cube gets a real JPEG <img>.
@@ -1673,7 +1669,8 @@ const App = {
           if (imgOK) {
             const img = createPreloadedFaceImage(
               trial.face,
-              trial.faceEmotion + ' emotional face'
+              trial.faceEmotion + ' visual stimulus',
+              imageCache
             );
             faceEl.appendChild(img);
           } else {
@@ -2045,71 +2042,6 @@ const App = {
     });
   },
 
-  async startCameraCheck() {
-    const video = document.getElementById('camera-video');
-    const status = document.getElementById('camera-status');
-    const startBtn = document.getElementById('btn-camera-check');
-    const stopBtn = document.getElementById('btn-camera-stop');
-    if (!video || !status) return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      status.textContent = 'Camera access is not available in this browser. Use the visual oval guide and keep your face centered.';
-      status.className = 'camera-status warn';
-      return;
-    }
-    try {
-      this.stopCameraCheck();
-      this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:{ideal:1280}, height:{ideal:720} }, audio:false });
-      video.srcObject = this.cameraStream;
-      await video.play();
-      if (startBtn) startBtn.style.display='none';
-      if (stopBtn) stopBtn.style.display='block';
-      status.textContent='LIVE — Center your eyes on the horizontal guide, keep your head inside the oval, and keep both shoulders visible. The feed is mirrored and centered.';
-      status.className='camera-status good';
-      this.runCameraPositionCheck();
-    } catch(err) {
-      console.warn('[ATTENTIONAL SHIELD] Camera unavailable:',err);
-      status.textContent=err && err.name==='NotAllowedError' ? 'Camera permission was denied. Allow camera access or use the on-screen positioning guide.' : 'Camera could not be started. The positioning guide remains available.';
-      status.className='camera-status error';
-      if(startBtn) startBtn.style.display='block'; if(stopBtn) stopBtn.style.display='none';
-    }
-  },
-
-  runCameraPositionCheck() {
-    if (!this.cameraStream) return;
-    const video=document.getElementById('camera-video'); const status=document.getElementById('camera-status');
-    if (!video || !status) return;
-    if ('FaceDetector' in window) {
-      if (!this.faceDetector) { try { this.faceDetector=new window.FaceDetector({fastMode:true,maxDetectedFaces:1}); } catch(e) { this.faceDetector=null; } }
-      if (this.faceDetector && !this.cameraCheckBusy) {
-        this.cameraCheckBusy=true;
-        this.faceDetector.detect(video).then(faces=>{
-          this.cameraCheckBusy=false; if(!this.cameraStream) return;
-          if(!faces.length){ status.textContent='No face detected — move closer, increase lighting, and place your face inside the oval.'; status.className='camera-status warn'; return; }
-          const b=faces[0].boundingBox, vw=video.videoWidth||1, vh=video.videoHeight||1;
-          const nx=(b.x+b.width/2)/vw, ny=(b.y+b.height/2)/vh, ratio=b.width/vw;
-          const centered=Math.abs(nx-.5)<.10 && Math.abs(ny-.45)<.12, sizeOK=ratio>=.18 && ratio<=.48;
-          if(centered&&sizeOK){ status.textContent='POSITION GOOD — face centered and at a usable distance. Keep this position for training.'; status.className='camera-status good'; }
-          else if(!centered){ status.textContent=nx<.5?'MOVE SLIGHTLY RIGHT — center your face in the oval.':'MOVE SLIGHTLY LEFT — center your face in the oval.'; status.className='camera-status warn'; }
-          else { status.textContent=ratio<.18?'MOVE CLOSER — your face is too small in the frame.':'MOVE BACK — your face is too large in the frame.'; status.className='camera-status warn'; }
-        }).catch(()=>{this.cameraCheckBusy=false;});
-      }
-      this.cameraCheckTimer=setTimeout(()=>this.runCameraPositionCheck(),350);
-    } else {
-      status.textContent='GUIDE ACTIVE — keep your face centered inside the oval, eyes level with the horizontal guide, and shoulders visible. Automatic detection is unavailable in this browser.';
-      status.className='camera-status good';
-      this.cameraCheckTimer=setTimeout(()=>this.runCameraPositionCheck(),1200);
-    }
-  },
-
-  stopCameraCheck() {
-    if(this.cameraCheckTimer){clearTimeout(this.cameraCheckTimer);this.cameraCheckTimer=null;}
-    this.cameraCheckBusy=false;
-    if(this.cameraStream){this.cameraStream.getTracks().forEach(t=>t.stop());this.cameraStream=null;}
-    const video=document.getElementById('camera-video'); if(video) video.srcObject=null;
-    const startBtn=document.getElementById('btn-camera-check'), stopBtn=document.getElementById('btn-camera-stop');
-    if(startBtn) startBtn.style.display='block'; if(stopBtn) stopBtn.style.display='none';
-  },
-
   closeModal() {
     const modal = document.getElementById('modal-dashboard');
     if (modal) modal.classList.remove('active');
@@ -2118,7 +2050,6 @@ const App = {
 
 // Expose the controller globally for legacy inline handlers and debugging.
 window.App = App;
-window.addEventListener('beforeunload', () => App.stopCameraCheck());
 
 // ==================== DOM READY ====================
 const boot = () => {
