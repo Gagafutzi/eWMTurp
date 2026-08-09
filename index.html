@@ -88,6 +88,22 @@ select:focus, input:focus { border-color:var(--cyan); }
 .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,240,255,0.35); }
 .btn-secondary { background:var(--bg-elevated); color:var(--text); border:1px solid var(--border); }
 .btn-secondary:hover { border-color:var(--text-muted); }
+.camera-check-panel { max-width:600px; margin:0 auto 14px; padding:14px; border:1px solid var(--border); border-radius:10px; background:rgba(10,15,24,0.72); }
+.camera-optional { float:right; font-size:0.55rem; letter-spacing:1px; color:var(--text-dim); border:1px solid var(--border); padding:3px 6px; border-radius:4px; }
+.camera-check-body { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,0.8fr); gap:14px; align-items:center; }
+.camera-preview { position:relative; width:100%; aspect-ratio:16/10; min-height:150px; overflow:hidden; border-radius:8px; border:1px solid var(--border); background:#05070b; box-shadow:inset 0 0 25px rgba(0,240,255,0.04); }
+.camera-preview video { width:100%; height:100%; display:block; object-fit:cover; object-position:center center; transform:scaleX(-1); background:#05070b; }
+.camera-guide { position:absolute; left:50%; top:50%; width:42%; height:72%; transform:translate(-50%,-50%); border:2px solid rgba(0,240,255,0.85); border-radius:50%; box-shadow:0 0 18px rgba(0,240,255,0.16), inset 0 0 18px rgba(0,240,255,0.05); pointer-events:none; }
+.camera-guide::before { content:""; position:absolute; left:50%; top:0; bottom:0; border-left:1px dashed rgba(0,240,255,0.25); transform:translateX(-50%); }
+.camera-guide::after { content:""; position:absolute; left:8%; right:8%; top:42%; border-top:1px dashed rgba(0,240,255,0.25); }
+.camera-guide-label { position:absolute; left:8px; right:8px; bottom:7px; text-align:center; font-family:var(--font-mono); font-size:0.5rem; letter-spacing:1px; color:rgba(232,236,241,0.72); pointer-events:none; text-shadow:0 1px 4px #000; }
+.camera-check-actions { display:flex; flex-direction:column; gap:10px; }
+.camera-status { min-height:58px; padding:10px; border-radius:7px; border:1px solid var(--border); background:var(--bg-elevated); color:var(--text-muted); font-size:0.68rem; line-height:1.45; }
+.camera-status.good { color:var(--green); border-color:rgba(0,255,136,0.45); box-shadow:0 0 12px rgba(0,255,136,0.08); }
+.camera-status.warn { color:var(--amber); border-color:rgba(255,170,0,0.45); }
+.camera-status.error { color:var(--red); border-color:rgba(255,51,51,0.45); }
+.camera-btn { width:100%; padding:9px 12px; font-size:0.72rem; }
+@media (max-width:640px) { .camera-check-body { grid-template-columns:1fr; } .camera-preview { min-height:180px; } }
 .btn-row { display:flex; gap:10px; max-width:600px; margin:0 auto 30px; width:100%; }
 .modal-overlay { display:none; pointer-events:none; position:fixed; inset:0; background:rgba(6,7,10,0.85); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:20px; }
 .modal-overlay.active { display:flex; pointer-events:auto; }
@@ -131,7 +147,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .top-stimulus { height:80px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
 .shape-display { width:70px; height:70px; position:relative; display:flex; align-items:center; justify-content:center; }
 .shape-display svg { width:100%; height:100%; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
-.shape-word { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.9); pointer-events:none; text-align:center; padding:3px; }
+.shape-word { display:none !important; position:absolute; inset:0; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.9); pointer-events:none; text-align:center; padding:3px; }
 .n-indicator { font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); height:18px; display:flex; align-items:center; gap:6px; }
 .n-indicator .n-badge { background:var(--cyan-dim); color:var(--cyan); padding:2px 6px; border-radius:3px; font-size:0.65rem; font-weight:700; border:1px solid rgba(0,240,255,0.2); }
 .n-indicator .n-badge.warn { background:var(--magenta-dim); color:var(--magenta); border-color:rgba(255,0,110,0.2); }
@@ -247,6 +263,13 @@ button, input, select { position:relative; z-index:1; }
           <span class="range-display" id="disp-emo-load">70%</span>
         </div>
       </div>
+          <div class="control-row">
+            <div class="control-label">Session Duration</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="rng-session-duration" min="5" max="60" step="5" value="10" style="width:120px" oninput="document.getElementById('disp-session-duration').textContent=this.value+' min'">
+              <span class="range-display" id="disp-session-duration">10 min</span>
+            </div>
+          </div>
       <div class="control-row">
         <div class="control-label">Grid Type</div>
         <select id="sel-grid-type" onchange="App.onGridTypeChange()">
@@ -333,13 +356,6 @@ button, input, select { position:relative; z-index:1; }
             </div>
           </div>
           <div class="control-row">
-            <div class="control-label">Session Duration</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="rng-session-duration" min="5" max="60" step="5" value="10" style="width:120px" oninput="document.getElementById('disp-session-duration').textContent=this.value+' min'">
-              <span class="range-display" id="disp-session-duration">10 min</span>
-            </div>
-          </div>
-          <div class="control-row">
             <div class="control-label">Tally Mode</div>
             <label class="toggle-switch"><input type="checkbox" id="chk-tally"><span class="toggle-slider"></span></label>
           </div>
@@ -378,6 +394,21 @@ button, input, select { position:relative; z-index:1; }
         </div>
       </div>
     </div>
+    <div class="camera-check-panel" id="camera-check-panel">
+      <div class="panel-title cyan">Camera Positioning Check <span class="camera-optional">OPTIONAL</span></div>
+      <div class="camera-check-body">
+        <div class="camera-preview" id="camera-preview">
+          <video id="camera-video" playsinline muted autoplay></video>
+          <div class="camera-guide" aria-hidden="true"></div>
+          <div class="camera-guide-label">CENTER FACE • EYES LEVEL • SHOULDERS VISIBLE</div>
+        </div>
+        <div class="camera-check-actions">
+          <div class="camera-status" id="camera-status">Camera check not started. Position your face inside the guide before training.</div>
+          <button class="btn btn-secondary camera-btn" id="btn-camera-check" type="button">START CAMERA CHECK</button>
+          <button class="btn btn-secondary camera-btn" id="btn-camera-stop" type="button" style="display:none">STOP CAMERA</button>
+        </div>
+      </div>
+    </div>
     <div class="btn-row">
       <button class="btn btn-secondary" id="btn-full-dashboard" style="flex:0.4">Dashboard</button>
       <button class="btn btn-primary" id="btn-init-session">INITIALIZE SESSION</button>
@@ -406,7 +437,6 @@ button, input, select { position:relative; z-index:1; }
       <div class="top-stimulus">
         <div class="shape-display" id="shape-display" style="visibility:hidden">
           <svg id="shape-svg" viewBox="0 0 100 100"></svg>
-          <div class="shape-word" id="shape-word"></div>
         </div>
         <div class="n-indicator" id="n-indicator"></div>
       </div>
@@ -559,6 +589,10 @@ const AFFECTIVE_WORD_BANK = {
     "CONFESSION", "SURREAL", "JUDGMENT", "REVELATION", "FATUM",
     "STALKER", "SECRETS", "HALLUCINATION", "OBSCURITY", "DELUSION",
     "SHADOW", "ECHO", "SUSPITION", "INVASION", "CONTAGION"
+  ],
+  socialIsolation: [
+    "IGNORED", "ABANDONED", "ISOLATED", "REJECTED", "EXCLUDED",
+    "ALONE", "UNWANTED", "FORGOTTEN", "DISTANT", "OUTCAST"
   ]
 };
 
@@ -938,9 +972,11 @@ class GameEngine {
       category = 'threat';
     } else if (r < 0.50 + load * 0.22) {
       category = 'grief';
-    } else if (r < 0.68 + load * 0.12) {
+    } else if (r < 0.62 + load * 0.10) {
       category = 'visceral';
-    } else if (r < 0.86) {
+    } else if (r < 0.78 + load * 0.04) {
+      category = 'socialIsolation';
+    } else if (r < 0.89) {
       category = 'ambiguousShock';
     } else {
       category = 'intensePositive';
@@ -965,13 +1001,13 @@ class GameEngine {
     const posCount = this.getPosCount();
     const posSeq = this.genSequence(posCount, this.kSeq, s.matchRate, s.interference / 100);
     const colSeq = this.genSequence(COLORS.length, this.kSeq, s.matchRate, s.interference / 100);
-    const audSeq = this.genSequence(WORDS_NEGATIVE.length + WORDS_POSITIVE.length + WORDS_NEUTRAL.length, this.kSeq, s.matchRate, s.interference / 100);
+    const audSeq = this.genSequence(AFFECTIVE_AUDIO_WORDS.length, this.kSeq, s.matchRate, s.interference / 100);
     const shpSeq = this.genSequence(SHAPES_SVG.length, this.kSeq, s.matchRate, s.interference / 100);
     this.trials = [];
     for (let i = 0; i < this.blockTrials; i++) {
       const face = this.pickFace(s.emoLoad);
       const word = this.pickWord(s.emoLoad);
-      const audWord = this.pickAffectiveAudioWord(s.emoLoad);
+      const audWord = AFFECTIVE_AUDIO_WORDS[audSeq[i]];
       this.trials.push({
         pos: posSeq[i], col: colSeq[i], aud: audSeq[i], shp: shpSeq[i],
         face: face.file, faceEmotion: face.emotion,
@@ -1115,6 +1151,10 @@ const App = {
     if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
     if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
     if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
+    const btnCamera = document.getElementById('btn-camera-check');
+    const btnCameraStop = document.getElementById('btn-camera-stop');
+    if (btnCamera) btnCamera.addEventListener('click', () => this.startCameraCheck());
+    if (btnCameraStop) btnCameraStop.addEventListener('click', () => this.stopCameraCheck());
 
     // Modal overlay click-to-close
     const modalOverlay = document.getElementById('modal-dashboard');
@@ -1347,6 +1387,7 @@ const App = {
   },
 
   async startSession() {
+    this.stopCameraCheck();
     const s = this.engine.getSettings();
     this.engine.reset();
     this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
@@ -1562,13 +1603,11 @@ const App = {
       }
     }
 
-    // Top stimulus (shape/color/word)
+    // Top stimulus (shape/color). No random word is rendered above the grid.
     const shapeDisp = document.getElementById('shape-display');
     const nInd = document.getElementById('n-indicator');
     if (this.engine.activeStimuli.includes('col') || this.engine.activeStimuli.includes('shp') || this.engine.activeStimuli.includes('aud')) {
       if (shapeDisp) shapeDisp.style.visibility = 'visible';
-      const sw = document.getElementById('shape-word');
-      if (sw) sw.textContent = trial.word;
       const fillColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : 'rgba(255,255,255,0.06)';
       const strokeColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : '#4b5563';
       const svg = document.getElementById('shape-svg');
@@ -1663,7 +1702,15 @@ const App = {
   processFeedback(type) {
     this.engine.responses[type][this.engine.currentTrial] = true;
     const k = this.engine.kSeq[this.engine.currentTrial];
-    const isTarget = this.engine.currentTrial >= k && this.engine.trials[this.engine.currentTrial][type] === this.engine.trials[this.engine.currentTrial - k][type];
+    let isTarget = false;
+    if (this.engine.currentTrial >= k) {
+      const current = this.engine.trials[this.engine.currentTrial];
+      const previous = this.engine.trials[this.engine.currentTrial - k];
+      if (type === 'aud') isTarget = current.audWord === previous.audWord;
+      else if (type === 'pos') isTarget = current.pos === previous.pos;
+      else if (type === 'shp') isTarget = current.shp === previous.shp;
+      else if (type === 'col') isTarget = current.col === previous.col;
+    }
     this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
   },
 
@@ -1672,7 +1719,13 @@ const App = {
     if (this.engine.currentTrial < k) return;
     let missedTarget = false;
     this.engine.activeStimuli.forEach(type => {
-      const isTarget = this.engine.trials[this.engine.currentTrial][type] === this.engine.trials[this.engine.currentTrial - k][type];
+      const current = this.engine.trials[this.engine.currentTrial];
+      const previous = this.engine.trials[this.engine.currentTrial - k];
+      let isTarget = false;
+      if (type === 'aud') isTarget = current.audWord === previous.audWord;
+      else if (type === 'pos') isTarget = current.pos === previous.pos;
+      else if (type === 'shp') isTarget = current.shp === previous.shp;
+      else if (type === 'col') isTarget = current.col === previous.col;
       if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
         missedTarget = true;
         this.flashIndicator(type, 'wrong');
@@ -1698,7 +1751,13 @@ const App = {
       for (let i = 0; i < this.engine.blockTrials; i++) {
         const k = this.engine.kSeq[i];
         if (i < k) continue;
-        const isTarget = this.engine.trials[i][type] === this.engine.trials[i - k][type];
+        const current = this.engine.trials[i];
+        const previous = this.engine.trials[i - k];
+        let isTarget = false;
+        if (type === 'aud') isTarget = current.audWord === previous.audWord;
+        else if (type === 'pos') isTarget = current.pos === previous.pos;
+        else if (type === 'shp') isTarget = current.shp === previous.shp;
+        else if (type === 'col') isTarget = current.col === previous.col;
         const responded = this.engine.responses[type][i];
         if (isTarget && responded) { st.hits++; blockHits++; }
         else if (isTarget && !responded) { st.misses++; blockMisses++; }
@@ -1885,6 +1944,71 @@ const App = {
     });
   },
 
+  async startCameraCheck() {
+    const video = document.getElementById('camera-video');
+    const status = document.getElementById('camera-status');
+    const startBtn = document.getElementById('btn-camera-check');
+    const stopBtn = document.getElementById('btn-camera-stop');
+    if (!video || !status) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      status.textContent = 'Camera access is not available in this browser. Use the visual oval guide and keep your face centered.';
+      status.className = 'camera-status warn';
+      return;
+    }
+    try {
+      this.stopCameraCheck();
+      this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user', width:{ideal:1280}, height:{ideal:720} }, audio:false });
+      video.srcObject = this.cameraStream;
+      await video.play();
+      if (startBtn) startBtn.style.display='none';
+      if (stopBtn) stopBtn.style.display='block';
+      status.textContent='LIVE — Center your eyes on the horizontal guide, keep your head inside the oval, and keep both shoulders visible. The feed is mirrored and centered.';
+      status.className='camera-status good';
+      this.runCameraPositionCheck();
+    } catch(err) {
+      console.warn('[ATTENTIONAL SHIELD] Camera unavailable:',err);
+      status.textContent=err && err.name==='NotAllowedError' ? 'Camera permission was denied. Allow camera access or use the on-screen positioning guide.' : 'Camera could not be started. The positioning guide remains available.';
+      status.className='camera-status error';
+      if(startBtn) startBtn.style.display='block'; if(stopBtn) stopBtn.style.display='none';
+    }
+  },
+
+  runCameraPositionCheck() {
+    if (!this.cameraStream) return;
+    const video=document.getElementById('camera-video'); const status=document.getElementById('camera-status');
+    if (!video || !status) return;
+    if ('FaceDetector' in window) {
+      if (!this.faceDetector) { try { this.faceDetector=new window.FaceDetector({fastMode:true,maxDetectedFaces:1}); } catch(e) { this.faceDetector=null; } }
+      if (this.faceDetector && !this.cameraCheckBusy) {
+        this.cameraCheckBusy=true;
+        this.faceDetector.detect(video).then(faces=>{
+          this.cameraCheckBusy=false; if(!this.cameraStream) return;
+          if(!faces.length){ status.textContent='No face detected — move closer, increase lighting, and place your face inside the oval.'; status.className='camera-status warn'; return; }
+          const b=faces[0].boundingBox, vw=video.videoWidth||1, vh=video.videoHeight||1;
+          const nx=(b.x+b.width/2)/vw, ny=(b.y+b.height/2)/vh, ratio=b.width/vw;
+          const centered=Math.abs(nx-.5)<.10 && Math.abs(ny-.45)<.12, sizeOK=ratio>=.18 && ratio<=.48;
+          if(centered&&sizeOK){ status.textContent='POSITION GOOD — face centered and at a usable distance. Keep this position for training.'; status.className='camera-status good'; }
+          else if(!centered){ status.textContent=nx<.5?'MOVE SLIGHTLY RIGHT — center your face in the oval.':'MOVE SLIGHTLY LEFT — center your face in the oval.'; status.className='camera-status warn'; }
+          else { status.textContent=ratio<.18?'MOVE CLOSER — your face is too small in the frame.':'MOVE BACK — your face is too large in the frame.'; status.className='camera-status warn'; }
+        }).catch(()=>{this.cameraCheckBusy=false;});
+      }
+      this.cameraCheckTimer=setTimeout(()=>this.runCameraPositionCheck(),350);
+    } else {
+      status.textContent='GUIDE ACTIVE — keep your face centered inside the oval, eyes level with the horizontal guide, and shoulders visible. Automatic detection is unavailable in this browser.';
+      status.className='camera-status good';
+      this.cameraCheckTimer=setTimeout(()=>this.runCameraPositionCheck(),1200);
+    }
+  },
+
+  stopCameraCheck() {
+    if(this.cameraCheckTimer){clearTimeout(this.cameraCheckTimer);this.cameraCheckTimer=null;}
+    this.cameraCheckBusy=false;
+    if(this.cameraStream){this.cameraStream.getTracks().forEach(t=>t.stop());this.cameraStream=null;}
+    const video=document.getElementById('camera-video'); if(video) video.srcObject=null;
+    const startBtn=document.getElementById('btn-camera-check'), stopBtn=document.getElementById('btn-camera-stop');
+    if(startBtn) startBtn.style.display='block'; if(stopBtn) stopBtn.style.display='none';
+  },
+
   closeModal() {
     const modal = document.getElementById('modal-dashboard');
     if (modal) modal.classList.remove('active');
@@ -1893,6 +2017,7 @@ const App = {
 
 // Expose the controller globally for legacy inline handlers and debugging.
 window.App = App;
+window.addEventListener('beforeunload', () => App.stopCameraCheck());
 
 // ==================== DOM READY ====================
 const boot = () => {
