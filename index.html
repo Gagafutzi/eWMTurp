@@ -1,607 +1,106 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ATTENTIONAL SHIELD // eWMT</title>
-<style>
-
-:root {
-  --bg:#06070a; --bg-panel:#0c0e14; --bg-elevated:#13161f; --border:#1e2330;
-  --border-hover:#2a3144; --text:#e8ecf1; --text-muted:#6b7280; --text-dim:#4b5563;
-  --cyan:#00f0ff; --cyan-dim:rgba(0,240,255,0.12); --cyan-glow:rgba(0,240,255,0.25);
-  --magenta:#ff006e; --magenta-dim:rgba(255,0,110,0.12);
-  --green:#00ff88; --green-dim:rgba(0,255,136,0.12);
-  --amber:#ffaa00; --amber-dim:rgba(255,170,0,0.12);
-  --red:#ff3333; --red-dim:rgba(255,51,51,0.12);
-  --font-mono:'Cascadia Code','SFMono-Regular',Consolas,'Liberation Mono',monospace; --font-sans:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-}
-* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-html,body { width:100%; height:100%; background:var(--bg); color:var(--text); font-family:var(--font-sans); overflow:hidden; touch-action:manipulation; }
-::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-track { background:var(--bg); } ::-webkit-scrollbar-thumb { background:var(--border-hover); border-radius:3px; }
-.screen { display:none; width:100%; height:100%; flex-direction:column; position:relative; }
-.screen.active { display:flex; }
-.setup-wrap { width:100%; height:100%; display:flex; flex-direction:column; overflow-y:auto; padding:20px; }
-.setup-header { text-align:center; padding:16px 0 6px; }
-.setup-header h1 { font-family:var(--font-mono); font-size:clamp(1.4rem,4vw,2rem); font-weight:800; letter-spacing:2px; background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-.setup-header .subtitle { font-family:var(--font-mono); font-size:0.6rem; color:var(--text-muted); letter-spacing:4px; text-transform:uppercase; margin-top:4px; }
-.discord-community { max-width:600px; width:100%; margin:0 auto 16px; padding:14px 18px; border:1px solid rgba(88,101,242,0.45); border-radius:10px; background:rgba(88,101,242,0.10); text-align:center; box-shadow:0 0 18px rgba(88,101,242,0.08); }
-.discord-community a { color:#9aa7ff; font-weight:800; text-decoration:none; }
-.discord-community a:hover { text-decoration:underline; color:#c1c8ff; }
-.discord-community strong { font-weight:800; }
-
-.stats-bar { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; padding:10px 14px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; max-width:600px; margin:0 auto 16px; width:100%; }
-.stat-chip { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.stat-chip .val { font-family:var(--font-mono); font-size:1.1rem; font-weight:700; color:var(--cyan); }
-.stat-chip .lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
-.primary-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:20px; max-width:600px; margin:0 auto 12px; width:100%; }
-.panel-title { font-family:var(--font-mono); font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
-.panel-title::before { content:''; display:block; width:6px; height:6px; background:var(--cyan); border-radius:1px; }
-.panel-title.magenta::before { background:var(--magenta); }
-.control-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
-.control-row:last-child { margin-bottom:0; }
-.control-label { font-size:0.85rem; font-weight:500; color:var(--text); }
-.control-label small { display:block; font-size:0.65rem; color:var(--text-dim); font-weight:400; margin-top:2px; }
-input[type="range"] { -webkit-appearance:none; appearance:none; width:140px; height:4px; background:var(--border); border-radius:2px; outline:none; }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:var(--cyan); cursor:pointer; box-shadow:0 0 8px rgba(0,240,255,0.4); }
-input[type="range"]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--cyan); cursor:pointer; border:none; }
-.range-display { font-family:var(--font-mono); font-size:0.8rem; color:var(--cyan); min-width:45px; text-align:right; }
-select, input[type="number"] { background:var(--bg-elevated); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:6px 10px; font-family:var(--font-sans); font-size:0.85rem; outline:none; min-width:80px; }
-select:focus, input:focus { border-color:var(--cyan); }
-.mode-cards { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-.mode-card { background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:pointer; text-align:center; transition:all 0.2s; }
-.mode-card:hover { border-color:var(--border-hover); }
-.mode-card.active { border-color:var(--cyan); background:var(--cyan-dim); box-shadow:0 0 16px rgba(0,240,255,0.08); }
-.mode-card .mode-name { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:2px; }
-.mode-card .mode-desc { font-size:0.65rem; color:var(--text-muted); line-height:1.3; }
-.stimulus-primary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 8px; }
-.stimulus-primary-card { width:100%; text-align:left; font:inherit; color:inherit; }
-.anime-submode-panel { margin:8px 0 10px; padding:10px; border:1px solid rgba(0,240,255,.22); border-radius:10px; background:rgba(0,240,255,.035); }
-.anime-submode-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.8px; color:var(--text-muted); text-transform:uppercase; }
-.anime-submode-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
-.anime-submode-btn { min-height:58px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.025); color:var(--text-muted); cursor:pointer; padding:8px; text-align:left; transition:.18s ease; }
-.anime-submode-btn strong { display:block; color:var(--text); font-size:.65rem; line-height:1.15; }
-.anime-submode-btn small { display:block; margin-top:4px; color:var(--text-dim); font-size:.52rem; text-transform:uppercase; letter-spacing:.6px; }
-.anime-submode-btn:hover { border-color:rgba(0,240,255,.45); transform:translateY(-1px); }
-.anime-submode-btn.active { border-color:var(--cyan); background:rgba(0,240,255,.08); box-shadow:0 0 14px rgba(0,240,255,.1), inset 0 0 12px rgba(0,240,255,.03); }
-.anime-submode-btn:disabled { cursor:not-allowed; opacity:.48; border-color:rgba(255,255,255,.10); transform:none !important; box-shadow:none; }
-.anime-submode-btn:disabled:hover { border-color:rgba(255,255,255,.10); transform:none; }
-.anime-coming-soon { display:inline-block; margin-left:6px; padding:2px 5px; border-radius:999px; font-size:.46rem; letter-spacing:.6px; color:var(--text-dim); border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.035); }
-@media (max-width:720px) { .stimulus-primary-grid,.anime-submode-grid { grid-template-columns:1fr 1fr; } }
-.stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0 14px; padding:14px 16px; border:1px solid rgba(255,0,110,0.55); border-radius:10px; background:linear-gradient(135deg,rgba(255,0,110,0.10),rgba(0,240,255,0.06)); cursor:pointer; transition:all .2s ease; box-shadow:0 0 18px rgba(255,0,110,0.06); }
-.stimulus-feature-card:hover { border-color:var(--magenta); box-shadow:0 0 24px rgba(255,0,110,0.14); transform:translateY(-1px); }
-.stimulus-feature-card.active { border-color:var(--cyan); background:linear-gradient(135deg,rgba(0,240,255,0.13),rgba(255,0,110,0.09)); box-shadow:0 0 22px rgba(0,240,255,0.13), inset 0 0 18px rgba(255,0,110,0.04); }
-.stimulus-feature-main { display:flex; align-items:center; gap:12px; min-width:0; }
-.stimulus-feature-icon { width:42px; height:42px; flex:0 0 42px; border-radius:8px; display:grid; place-items:center; font-size:1.25rem; background:rgba(0,240,255,0.10); border:1px solid rgba(0,240,255,0.32); }
-.stimulus-feature-title { font-family:var(--font-mono); font-size:.78rem; font-weight:800; letter-spacing:.4px; }
-.stimulus-feature-desc { font-size:.62rem; color:var(--text-muted); margin-top:3px; line-height:1.35; }
-.stimulus-feature-badge { align-self:flex-start; flex:0 0 auto; padding:3px 7px; border-radius:999px; font-family:var(--font-mono); font-size:.55rem; font-weight:800; letter-spacing:1px; color:#fff; background:linear-gradient(90deg,var(--magenta),#ff3b9d); box-shadow:0 0 12px rgba(255,0,110,.22); }
-.stimulus-type-status { font-family:var(--font-mono); font-size:.58rem; color:var(--text-dim); margin:-6px 0 12px; }
-.accordion { max-width:600px; margin:0 auto 12px; width:100%; }
-.accordion-header { background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:12px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; }
-.accordion-header:hover { border-color:var(--border-hover); }
-.accordion-header span { font-family:var(--font-mono); font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); }
-.accordion-header .chevron { transition:transform 0.3s; color:var(--text-dim); font-size:0.8rem; }
-.accordion.open .accordion-header .chevron { transform:rotate(180deg); }
-.accordion-body { max-height:0; overflow:hidden; transition:max-height 0.4s ease; }
-.accordion.open .accordion-body { max-height:1200px; }
-.accordion-inner { background:var(--bg-panel); border:1px solid var(--border); border-top:none; border-radius:0 0 10px 10px; padding:16px; }
-.toggle-switch { position:relative; width:40px; height:22px; }
-.toggle-switch input { opacity:0; width:0; height:0; }
-.toggle-slider { position:absolute; cursor:pointer; inset:0; background:var(--border); border-radius:22px; transition:0.3s; }
-.toggle-slider::before { content:''; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:var(--text-muted); border-radius:50%; transition:0.3s; }
-.toggle-switch input:checked + .toggle-slider { background:var(--cyan-dim); }
-.toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); background:var(--cyan); box-shadow:0 0 6px rgba(0,240,255,0.5); }
-.stimuli-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.stim-check { display:flex; align-items:center; gap:8px; padding:8px; background:var(--bg-elevated); border-radius:6px; cursor:pointer; border:1px solid transparent; transition:all 0.2s; }
-.stim-check:hover { border-color:var(--border-hover); }
-.stim-check input { display:none; }
-.stim-check .check-box { width:16px; height:16px; border-radius:3px; border:2px solid var(--border-hover); display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0; }
-.stim-check input:checked + .check-box { background:var(--cyan); border-color:var(--cyan); box-shadow:0 0 6px rgba(0,240,255,0.3); }
-.stim-check input:checked + .check-box::after { content:'\2713'; color:var(--bg); font-size:0.6rem; font-weight:800; }
-.stim-check .check-label { font-size:0.8rem; font-weight:500; color:var(--text); }
-.keybind-grid { display:grid; grid-template-columns:1fr auto; gap:6px 12px; align-items:center; }
-.keybind-grid .kb-label { font-size:0.75rem; color:var(--text-muted); }
-.keybind-btn { background:var(--bg-elevated); border:1px solid var(--border); color:var(--cyan); font-family:var(--font-mono); font-size:0.7rem; font-weight:600; padding:5px 12px; border-radius:5px; cursor:pointer; min-width:70px; text-align:center; transition:all 0.2s; }
-.keybind-btn:hover { border-color:var(--cyan); }
-.keybind-btn.listening { border-color:var(--magenta); color:var(--magenta); animation:pulse 1s infinite alternate; }
-@keyframes pulse { from{opacity:1;} to{opacity:0.4;} }
-.btn { padding:12px 20px; border-radius:8px; font-family:var(--font-sans); font-size:0.9rem; font-weight:700; border:none; cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; }
-.btn-primary { background:linear-gradient(135deg,var(--cyan),#0088ff); color:var(--bg); box-shadow:0 4px 16px rgba(0,240,255,0.25); width:100%; }
-.btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,240,255,0.35); }
-.btn-secondary { background:var(--bg-elevated); color:var(--text); border:1px solid var(--border); }
-.btn-secondary:hover { border-color:var(--text-muted); }
-.btn-row { display:flex; gap:10px; max-width:600px; margin:0 auto 30px; width:100%; }
-.modal-overlay { display:none; pointer-events:none; position:fixed; inset:0; background:rgba(6,7,10,0.85); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:20px; }
-.modal-overlay.active { display:flex; pointer-events:auto; }
-.modal-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:700px; width:100%; max-height:90vh; overflow-y:auto; position:relative; }
-.modal-close { position:absolute; top:12px; right:16px; background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
-.modal-close:hover { color:var(--text); }
-.modal-panel h2 { font-family:var(--font-mono); font-size:1rem; color:var(--cyan); letter-spacing:1px; margin-bottom:16px; }
-.chart-container { width:100%; height:180px; background:var(--bg-elevated); border-radius:6px; position:relative; overflow:hidden; margin-bottom:12px; }
-.chart-canvas { width:100%; height:100%; }
-.heatmap-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-top:10px; }
-.heatmap-cell { aspect-ratio:1; border-radius:2px; background:var(--bg-elevated); transition:transform 0.2s; }
-.heatmap-cell:hover { transform:scale(1.15); z-index:2; }
-.heatmap-cell[data-level="1"] { background:var(--cyan-dim); } .heatmap-cell[data-level="2"] { background:rgba(0,240,255,0.3); }
-.heatmap-cell[data-level="3"] { background:rgba(0,240,255,0.5); } .heatmap-cell[data-level="4"] { background:rgba(0,240,255,0.7); }
-.heatmap-cell[data-level="5"] { background:var(--cyan); box-shadow:0 0 6px rgba(0,240,255,0.3); }
-.game-hud { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:var(--bg-panel); border-bottom:1px solid var(--border); flex-shrink:0; }
-.hud-left,.hud-right { display:flex; align-items:center; gap:14px; }
-.hud-stat { display:flex; flex-direction:column; align-items:flex-start; }
-.hud-stat .hud-val { font-family:var(--font-mono); font-size:1rem; font-weight:700; }
-.hud-stat .hud-lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
-.hud-stat .hud-val.cyan { color:var(--cyan); text-shadow:0 0 8px rgba(0,240,255,0.3); }
-.hud-stat .hud-val.magenta { color:var(--magenta); text-shadow:0 0 8px rgba(255,0,110,0.3); }
-.hud-stat .hud-val.amber { color:var(--amber); } .hud-stat .hud-val.green { color:var(--green); }
-.hud-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:5px 12px; border-radius:5px; font-size:0.7rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:var(--font-sans); }
-.hud-btn:hover { border-color:var(--text-muted); color:var(--text); }
-.hud-btn.danger { border-color:var(--red); color:var(--red); } .hud-btn.danger:hover { background:var(--red-dim); }
-.hud-btn.warning { border-color:var(--amber); color:var(--amber); }
-.game-stage { flex:1; display:flex; flex-direction:row; align-items:center; justify-content:center; padding:8px; gap:12px; position:relative; overflow:hidden; min-height:0; }
-.side-controls { display:flex; flex-direction:column; gap:10px; width:80px; min-width:65px; height:100%; justify-content:center; z-index:10; }
-.modality-btn { flex:1; max-height:130px; min-height:60px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; transition:all 0.15s ease; user-select:none; touch-action:manipulation; position:relative; overflow:hidden; }
-.modality-btn:active { transform:scale(0.96); }
-.modality-btn .mod-initial { font-family:var(--font-mono); font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:var(--text); line-height:1; pointer-events:none; }
-.modality-btn .mod-key { font-family:var(--font-mono); font-size:0.55rem; color:var(--text-dim); background:var(--bg-elevated); padding:2px 6px; border-radius:3px; border:1px solid var(--border); pointer-events:none; }
-.modality-btn.correct { border-color:var(--green); background:var(--green-dim); box-shadow:0 0 16px rgba(0,255,136,0.15); }
-.modality-btn.correct .mod-initial { color:var(--green); }
-.modality-btn.wrong { border-color:var(--red); background:var(--red-dim); box-shadow:0 0 16px rgba(255,51,51,0.15); }
-.modality-btn.wrong .mod-initial { color:var(--red); }
-.modality-btn.neutral { border-color:var(--text-dim); background:rgba(255,255,255,0.03); }
-.modality-btn.neutral .mod-initial { color:var(--text-dim); }
-.center-display { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; min-height:0; gap:10px; position:relative; }
-.top-stimulus { height:80px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
-.shape-display { width:70px; height:70px; position:relative; display:flex; align-items:center; justify-content:center; }
-.shape-display svg { width:100%; height:100%; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
-.shape-word { display:none !important; position:absolute; inset:0; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.6rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.9); pointer-events:none; text-align:center; padding:3px; }
-.n-indicator { font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); height:18px; display:flex; align-items:center; gap:6px; }
-.n-indicator .n-badge { background:var(--cyan-dim); color:var(--cyan); padding:2px 6px; border-radius:3px; font-size:0.65rem; font-weight:700; border:1px solid rgba(0,240,255,0.2); }
-.n-indicator .n-badge.warn { background:var(--magenta-dim); color:var(--magenta); border-color:rgba(255,0,110,0.2); }
-.grid-2d { display:none; gap:min(2vmin,8px); width:100%; max-width:min(calc(100vw - 200px),calc(100vh - 200px)); max-height:min(calc(100vw - 200px),calc(100vh - 200px)); aspect-ratio:1/1; }
-.grid-2d.active { display:grid; }
-.cell-2d { background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; transition:all 0.15s ease; display:flex; align-items:center; justify-content:center; }
-.cell-2d.active { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,240,255,0.15),inset 0 0 16px rgba(0,240,255,0.05); }
-.cell-2d .face-img,
-.stimulus-image,
-.mini-face img { width:100%; height:100%; display:block; object-fit:cover; opacity:0.92; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
-.cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
-.cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
-.cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
-.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 150px),calc(100vh - 80px)); max-height:min(calc(100vw - 150px),calc(100vh - 80px)); aspect-ratio:1/1; perspective:1500px; align-items:center; justify-content:center; overflow:visible; }
-.scene-3d.active { display:flex; }
-.cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
-@keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
-@keyframes rotate3dMobile { 0%{transform:scale(1.02) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.02) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
-.mini-cube { position:absolute; width:clamp(46px,9vmin,86px); height:clamp(46px,9vmin,86px); left:clamp(-43px,-4.5vmin,-23px); top:clamp(-43px,-4.5vmin,-23px); transform-style:preserve-3d; }
-.mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; box-shadow:0 0 4px rgba(190,220,255,0.08); }
-.mini-face.active { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,240,255,0.45),inset 0 0 18px rgba(0,240,255,0.12); background:rgba(0,240,255,0.10); }
-.mini-face img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
-.mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
-.mini-face .face-fallback { display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.5rem; color:var(--text-dim); }
-.mf-front { transform:translateZ(clamp(23px,4.5vmin,43px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.mf-right { transform:rotateY(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.mf-top { transform:rotateX(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-bottom { transform:rotateX(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.inter-msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:var(--font-mono); font-size:1.2rem; font-weight:700; color:var(--cyan); text-align:center; z-index:100; display:none; text-shadow:0 0 16px rgba(0,240,255,0.4); letter-spacing:2px; }
-.inter-msg.active { display:block; animation:fadeIn 0.4s ease; }
-@keyframes fadeIn { from{opacity:0;transform:translate(-50%,-40%);} to{opacity:1;transform:translate(-50%,-50%);} }
-.results-container { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
-.results-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:560px; width:100%; text-align:center; }
-.results-panel h2 { font-family:var(--font-mono); font-size:1.1rem; font-weight:700; letter-spacing:2px; margin-bottom:18px; color:var(--cyan); }
-.results-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:18px; }
-.result-card { background:var(--bg-elevated); border-radius:8px; padding:14px; border:1px solid var(--border); }
-.result-card .res-val { font-family:var(--font-mono); font-size:1.4rem; font-weight:700; margin-bottom:3px; }
-.result-card .res-lbl { font-size:0.6rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); }
-.modality-breakdown { text-align:left; margin-bottom:18px; background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); overflow:hidden; }
-.modality-breakdown .break-header { display:grid; grid-template-columns:1fr 55px 55px 55px 55px; gap:6px; padding:8px 12px; background:rgba(255,255,255,0.02); font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:600; }
-.modality-breakdown .break-row { display:grid; grid-template-columns:1fr 55px 55px 55px 55px; gap:6px; padding:8px 12px; border-top:1px solid var(--border); font-size:0.75rem; align-items:center; }
-.modality-breakdown .break-row .mod-name { font-weight:600; } .modality-breakdown .break-row .mod-dp { font-family:var(--font-mono); color:var(--cyan); font-weight:700; }
-.modality-breakdown .break-row .mod-acc { font-family:var(--font-mono); } .modality-breakdown .break-row .mod-hits { color:var(--green); font-family:var(--font-mono); }
-.modality-breakdown .break-row .mod-fa { color:var(--red); font-family:var(--font-mono); }
-@media (max-width:640px) {
-  .side-controls { width:55px; min-width:50px; gap:6px; }
-  .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
-  .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
-  .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
-  .scene-3d { max-width:min(calc(100vw - 120px),calc(100vh - 90px)); max-height:min(calc(100vw - 120px),calc(100vh - 90px)); perspective:1250px; }
-  .results-grid { grid-template-columns:1fr 1fr; }
-  .setup-wrap { padding:12px; }
-  .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
-  .modal-panel { padding:16px; }
-}
-</style>
-<style>
-/* Refactor safety/responsiveness */
-button, input, select { position:relative; z-index:1; }
-.modal-overlay, .modal-panel { isolation:isolate; }
-@media (max-width:480px) {
-  .setup-header { padding-top:8px; }
-  .primary-panel { padding:14px; }
-  .control-row { align-items:flex-start; }
-  .control-row > :last-child { flex-shrink:0; }
-  .btn-row { flex-direction:column; }
-  .btn-row .btn { width:100% !important; flex:1 !important; }
-  .game-stage { gap:6px; padding:5px; }
-  .side-controls { width:52px; min-width:46px; }
-  .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:calc(100vw - 108px); max-height:calc(100vh - 125px); perspective:1000px; }
-  .cube-3d { animation-name:rotate3dMobile; }
-  .hud-stat .hud-lbl { display:none; }
-  .hud-btn { padding:5px 8px; }
-}
-</style>
-</head>
-<body>
-
-<!-- SETUP SCREEN -->
-<div id="screen-setup" class="screen active">
-  <div class="setup-wrap">
-    <div class="setup-header">
-      <h1>ATTENTIONAL SHIELD</h1>
-      <div class="subtitle">emotional Working Memory Training</div>
-    </div>
-    <div class="stats-bar" id="global-stats-bar">
-      <div class="stat-chip"><div class="val" id="stat-total-time">0</div><div class="lbl">Mins Trained</div></div>
-      <div class="stat-chip"><div class="val" id="stat-sessions">0</div><div class="lbl">Sessions</div></div>
-      <div class="stat-chip"><div class="val" id="stat-best-n">1</div><div class="lbl">Best N-Level</div></div>
-      <div class="stat-chip"><div class="val" id="stat-avg-d">0.0</div><div class="lbl">Avg D Prime</div></div>
-    </div>
-    <div class="discord-community"><strong>Join the MINDBUILDING Community on Discord:</strong> <a href="https://discord.gg/brain" target="_blank" rel="noopener noreferrer">discord.gg/brain</a></div>
-    <div class="primary-panel">
-      <div class="panel-title">Training Configuration</div>
-      <div class="mode-cards">
-        <div class="mode-card active" data-mode="dual" id="mode-dual">
-          <div class="mode-name">DUAL N-BACK</div>
-          <div class="mode-desc">Position + Audio</div>
-        </div>
-        <div class="mode-card" data-mode="quad" id="mode-quad">
-          <div class="mode-name">QUAD N-BACK</div>
-          <div class="mode-desc">Pos + Aud + Shape + Color</div>
-        </div>
-      </div>
-      <div class="stimulus-selector" id="stimulus-selector" aria-label="Visual stimulus type">
-        <div class="stimulus-primary-grid">
-          <button type="button" class="stimulus-feature-card stimulus-primary-card active" id="stimulus-human-card" aria-pressed="true" data-stimulus-type="human_faces">
-            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◎</span><span><span class="stimulus-feature-title">Human Faces</span><span class="stimulus-feature-desc">Standard affective face stimuli</span></span></span>
-          </button>
-          <button type="button" class="stimulus-feature-card stimulus-primary-card" id="stimulus-anime-card" aria-pressed="false" data-stimulus-type="anime_faces">
-            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◉</span><span><span class="stimulus-feature-title">Anime Faces</span><span class="stimulus-feature-desc">Featured visual stimulus family</span></span></span>
-            <span class="stimulus-feature-badge">NEW</span>
-          </button>
-        </div>
-        <div class="anime-submode-panel" id="anime-submode-panel" hidden>
-          <div class="anime-submode-heading"><span>Anime Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
-          <div class="anime-submode-grid" role="group" aria-label="Anime stimulus subtype">
-            <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime Faces</strong><small>Standard</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Waifu Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Waifu</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false" disabled aria-disabled="true"><strong>Hentai Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Hentai</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Gore <span class="anime-coming-soon">COMING SOON</span></strong><small>Gore</small></button>
-          </div>
-        </div>
-      </div>
-      <div class="stimulus-type-status" id="stimulus-type-status">Human Faces • Standard affective faces</div>
-      <div class="control-row">
-        <div class="control-label">Starting N-Level</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="range" id="rng-start-n" min="1" max="9" value="2" style="width:120px" oninput="document.getElementById('disp-start-n').textContent=this.value">
-          <span class="range-display" id="disp-start-n">2</span>
-        </div>
-      </div>
-      <div class="control-row">
-        <div class="control-label">Emotional Load</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="range" id="rng-emo-load" min="0" max="100" value="70" style="width:120px" oninput="document.getElementById('disp-emo-load').textContent=this.value+'%'">
-          <span class="range-display" id="disp-emo-load">70%</span>
-        </div>
-      </div>
-          <div class="control-row">
-            <div class="control-label">Session Duration</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="rng-session-duration" min="5" max="60" step="5" value="10" style="width:120px" oninput="document.getElementById('disp-session-duration').textContent=this.value+' min'">
-              <span class="range-display" id="disp-session-duration">10 min</span>
-            </div>
-          </div>
-      <div class="control-row">
-        <div class="control-label">Grid Type</div>
-        <select id="sel-grid-type" onchange="App.onGridTypeChange()">
-          <option value="2d">2D Grid</option>
-          <option value="3d">3D Rotating Cube</option>
-        </select>
-      </div>
-      <div class="control-row" id="row-2d-size">
-        <div class="control-label">Grid Size</div>
-        <select id="sel-grid-size"><option value="3">3 x 3</option><option value="4">4 x 4</option></select>
-      </div>
-      <div class="control-row" id="row-3d-speed" style="display:none">
-        <div class="control-label">Rotation Speed</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input type="range" id="rng-3d-speed" min="1" max="100" value="40" style="width:100px" oninput="App.update3DSpeedDisplay()">
-          <span class="range-display" id="disp-3d-speed">Normal</span>
-        </div>
-      </div>
-    </div>
-    <div class="accordion" id="accordion-advanced">
-      <div class="accordion-header" onclick="App.toggleAccordion('accordion-advanced')">
-        <span>Advanced Settings</span>
-        <span class="chevron">&#9660;</span>
-      </div>
-      <div class="accordion-body">
-        <div class="accordion-inner">
-          <div class="panel-title magenta">N-Back Engine</div>
-          <div class="control-row">
-            <div class="control-label">Variable N-Back</div>
-            <label class="toggle-switch"><input type="checkbox" id="chk-variable-n" onchange="App.onVariableNToggle()"><span class="toggle-slider"></span></label>
-          </div>
-          <div id="variable-n-controls" style="opacity:0.4;pointer-events:none;transition:opacity 0.3s">
-            <div class="control-row">
-              <div class="control-label">Min N</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <input type="range" id="rng-var-min" min="1" max="1" value="1" style="width:90px" oninput="document.getElementById('disp-var-min').textContent=this.value">
-                <span class="range-display" id="disp-var-min">1</span>
-              </div>
-            </div>
-            <div class="control-row">
-              <div class="control-label">Max N</div>
-              <input type="number" id="inp-var-max" min="1" max="9" value="3" style="width:60px">
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Adaptive D Prime</div>
-            <label class="toggle-switch"><input type="checkbox" id="chk-adaptive" checked><span class="toggle-slider"></span></label>
-          </div>
-          <div class="panel-title amber" style="margin-top:16px">Timing &amp; Control</div>
-          <div class="control-row">
-            <div class="control-label">ISI Mode</div>
-            <select id="sel-isi-mode" onchange="App.onISIModeChange()"><option value="fixed">Fixed</option><option value="variable">Variable</option></select>
-          </div>
-          <div id="isi-fixed-controls">
-            <div class="control-row">
-              <div class="control-label">ISI Duration</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <input type="range" id="rng-isi-fixed" min="500" max="5000" step="50" value="1800" style="width:120px" oninput="document.getElementById('disp-isi-fixed').textContent=this.value+'ms'">
-                <span class="range-display" id="disp-isi-fixed">1800ms</span>
-              </div>
-            </div>
-          </div>
-          <div id="isi-variable-controls" style="display:none">
-            <div class="control-row">
-              <div class="control-label">Min ISI</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <input type="range" id="rng-isi-min" value="1300" min="500" max="5000" step="50" style="width:100px" oninput="document.getElementById('disp-isi-min').textContent=this.value+'ms'">
-                <span class="range-display" id="disp-isi-min">1300ms</span>
-              </div>
-            </div>
-            <div class="control-row">
-              <div class="control-label">Max ISI</div>
-              <div style="display:flex;align-items:center;gap:8px">
-                <input type="range" id="rng-isi-max" value="3000" min="500" max="5000" step="50" style="width:100px" oninput="document.getElementById('disp-isi-max').textContent=this.value+'ms'">
-                <span class="range-display" id="disp-isi-max">3000ms</span>
-              </div>
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Stimulus Duration</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="rng-stim-dur" min="500" max="800" step="100" value="700" style="width:100px" oninput="document.getElementById('disp-stim-dur').textContent=this.value+'ms'">
-              <span class="range-display" id="disp-stim-dur">700ms</span>
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Tally Mode</div>
-            <label class="toggle-switch"><input type="checkbox" id="chk-tally"><span class="toggle-slider"></span></label>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Buzzer Sound on Miss</div>
-            <label class="toggle-switch"><input type="checkbox" id="chk-buzzer"><span class="toggle-slider"></span></label>
-          </div>
-          <div class="panel-title" style="margin-top:16px;color:var(--magenta)">Affective Parameters</div>
-          <div class="control-row">
-            <div class="control-label">Interference / Lures</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="rng-interference" min="0" max="100" value="40" style="width:100px" oninput="document.getElementById('disp-interference').textContent=this.value+'%'">
-              <span class="range-display" id="disp-interference">40%</span>
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Match Rate</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <input type="range" id="rng-match-rate" min="10" max="50" value="30" style="width:100px" oninput="document.getElementById('disp-match-rate').textContent=this.value+'%'">
-              <span class="range-display" id="disp-match-rate">30%</span>
-            </div>
-          </div>
-          <div class="control-row">
-            <div class="control-label">Audio Voice</div>
-            <select id="sel-voice" style="max-width:140px"></select>
-          </div>
-          <div class="panel-title green" style="margin-top:16px">Active Modalities</div>
-          <div class="stimuli-grid" id="stimuli-grid">
-            <label class="stim-check"><input type="checkbox" id="chk-pos" checked onchange="App.onStimChange()"><span class="check-box"></span><span class="check-label">Position</span></label>
-            <label class="stim-check"><input type="checkbox" id="chk-aud" checked onchange="App.onStimChange()"><span class="check-box"></span><span class="check-label">Audio</span></label>
-            <label class="stim-check" id="chk-shp-wrapper"><input type="checkbox" id="chk-shp" onchange="App.onStimChange()"><span class="check-box"></span><span class="check-label">Shape</span></label>
-            <label class="stim-check" id="chk-col-wrapper"><input type="checkbox" id="chk-col" onchange="App.onStimChange()"><span class="check-box"></span><span class="check-label">Color</span></label>
-          </div>
-          <div class="panel-title" style="margin-top:14px">Keybindings</div>
-          <div class="keybind-grid" id="keybind-grid"></div>
-        </div>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" id="btn-full-dashboard" style="flex:0.4">Dashboard</button>
-      <button class="btn btn-primary" id="btn-init-session">INITIALIZE SESSION</button>
-    </div>
-  </div>
-</div>
-
-<!-- GAME SCREEN -->
-<div id="screen-game" class="screen">
-  <div class="game-hud">
-    <div class="hud-left">
-      <div class="hud-stat"><span class="hud-val cyan" id="hud-timer">0:00</span><span class="hud-lbl">Session</span></div>
-      <div class="hud-stat"><span class="hud-val magenta" id="hud-nlevel">2-Back</span><span class="hud-lbl">Load</span></div>
-      <div class="hud-stat"><span class="hud-val amber" id="hud-trial">0 / 0</span><span class="hud-lbl">Trial</span></div>
-    </div>
-    <div class="hud-right">
-      <div class="hud-stat" style="align-items:flex-end"><span class="hud-val green" id="hud-dprime">0.00</span><span class="hud-lbl">D Prime</span></div>
-      <button class="hud-btn warning" id="btn-pause">PAUSE</button>
-      <button class="hud-btn danger" id="btn-end-session">END</button>
-    </div>
-  </div>
-  <div class="game-stage">
-    <div class="inter-msg" id="inter-msg">INITIALIZING...</div>
-    <div class="side-controls" id="side-left"></div>
-    <div class="center-display">
-      <div class="top-stimulus">
-        <div class="shape-display" id="shape-display" style="visibility:hidden">
-          <svg id="shape-svg" viewBox="0 0 100 100"></svg>
-        </div>
-        <div class="n-indicator" id="n-indicator"></div>
-      </div>
-      <div class="grid-2d" id="grid-2d"></div>
-      <div class="scene-3d" id="scene-3d"><div class="cube-3d" id="cube-3d"></div></div>
-    </div>
-    <div class="side-controls" id="side-right"></div>
-  </div>
-</div>
-
-<!-- RESULTS SCREEN -->
-<div id="screen-results" class="screen">
-  <div class="results-container">
-    <div class="results-panel">
-      <h2>SESSION COMPLETE</h2>
-      <div class="results-grid">
-        <div class="result-card"><div class="res-val cyan" id="res-time">0:00</div><div class="res-lbl">Duration</div></div>
-        <div class="result-card"><div class="res-val magenta" id="res-best-n">2</div><div class="res-lbl">Peak N-Level</div></div>
-        <div class="result-card"><div class="res-val green" id="res-dprime">0.00</div><div class="res-lbl">Overall D Prime</div></div>
-        <div class="result-card"><div class="res-val amber" id="res-trials">0</div><div class="res-lbl">Trials</div></div>
-      </div>
-      <div class="modality-breakdown" id="modality-breakdown"></div>
-      <div style="display:flex; gap:10px;">
-        <button class="btn btn-secondary" id="btn-results-menu" style="flex:1">Main Menu</button>
-        <button class="btn btn-primary" id="btn-results-again" style="flex:1">Train Again</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- FULL DASHBOARD MODAL -->
-<div class="modal-overlay" id="modal-dashboard">
-  <div class="modal-panel">
-    <button class="modal-close" id="btn-modal-close">&times;</button>
-    <h2>PERFORMANCE DASHBOARD</h2>
-    <div class="chart-container"><canvas id="chart-dprime" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>D Prime Over Time (last 20 sessions)</span></div>
-    <div class="chart-container"><canvas id="chart-modality" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>Accuracy by Modality</span></div>
-    <div class="chart-container"><canvas id="chart-tod" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>Time-of-Day Performance</span></div>
-    <div class="chart-container"><canvas id="chart-nlevel" class="chart-canvas"></canvas></div>
-    <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--text-dim); margin-bottom:8px"><span>N-Level Progression</span></div>
-    <div class="heatmap-grid" id="modal-heatmap"></div>
-    <div style="margin-top:6px; display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-dim)"><span>Training Consistency (last 28 days)</span></div>
-  </div>
-</div>
-
 <script>
-(function() {
-'use strict';
+/* ============================================================
+   ATTENTIONAL SHIELD — ANIME WEBP ASSET PIPELINE
+   ============================================================
 
-const STORAGE_KEY = 'attentional_shield_v2';
-const SETTINGS_STORAGE_KEY = STORAGE_KEY + '_settings_v3';
+   Actual repository assets:
 
-// ==================== SESSION / TRIAL DEFAULTS ====================
-const DEFAULT_ISI = 1800;
-const DEFAULT_SESSION_DURATION_MIN = 10;
+     assets/stimuli/anime/a.webp
+     assets/stimuli/anime/b.webp
+     assets/stimuli/anime/c.webp
+     assets/stimuli/anime/d.webp
+     assets/stimuli/anime/e.webp
+     assets/stimuli/anime/f.webp
+     assets/stimuli/anime/g.webp
+     assets/stimuli/anime/h.webp
+     assets/stimuli/anime/i.webp
+     assets/stimuli/anime/j.webp
+     assets/stimuli/anime/k.webp
+     assets/stimuli/anime/l.webp
 
-// Stimulus presentation is intentionally unchanged.
-// ISI is the blank/response interval after the stimulus.
-const TRIAL_TIMING = Object.freeze({ stimulusMs:700 });
+   placeholder.txt is intentionally ignored.
 
-const FACES = [
-  {file:'face_0.jpg', emotion:'neutral', valence:0},
-  {file:'face_1.jpg', emotion:'positive', valence:1},
-  {file:'face_2.jpg', emotion:'positive', valence:2},
-  {file:'face_3.jpg', emotion:'negative', valence:-2},
-  {file:'face_4.jpg', emotion:'negative', valence:-2},
-  {file:'face_5.jpg', emotion:'negative', valence:-1},
-  {file:'face_6.jpg', emotion:'surprise', valence:0},
-  {file:'face_7.jpg', emotion:'negative', valence:-2},
-  {file:'face_8.jpg', emotion:'neutral', valence:0},
-  {file:'face_9.jpg', emotion:'negative', valence:-1}
-];
+   ============================================================ */
 
-// ==================== VISUAL ASSET PIPELINE ====================
-// The repository contains the Standard Anime PNGs directly in:
-//   assets/stimuli/anime/
-//
-// This manifest is intentionally embedded in index.html so GitHub Pages
-// never depends on a runtime manifest.json or directory listing.
+
+/* ==================== ANIME MANIFEST ==================== */
+
 const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
+
   standard: Object.freeze([
-    'assets/stimuli/anime/1.png',
-    'assets/stimuli/anime/100.png',
-    'assets/stimuli/anime/1000.png',
-    'assets/stimuli/anime/10000.png',
-    'assets/stimuli/anime/10001.png',
-    'assets/stimuli/anime/10002.png',
-    'assets/stimuli/anime/10003.png',
-    'assets/stimuli/anime/10004.png',
-    'assets/stimuli/anime/10005.png',
-    'assets/stimuli/anime/10007.png',
-    'assets/stimuli/anime/10014.png',
-    'assets/stimuli/anime/10018.png',
-    'assets/stimuli/anime/10019.png',
-    'assets/stimuli/anime/10030.png',
-    'assets/stimuli/anime/10043.png',
-    'assets/stimuli/anime/10047.png',
-    'assets/stimuli/anime/10054.png',
-    'assets/stimuli/anime/10059.png',
-    'assets/stimuli/anime/1006.png',
-    'assets/stimuli/anime/10078.png',
-    'assets/stimuli/anime/10079.png',
-    'assets/stimuli/anime/10080.png',
-    'assets/stimuli/anime/10088.png',
-    'assets/stimuli/anime/10089.png',
-    'assets/stimuli/anime/1009.png',
-    'assets/stimuli/anime/10090.png',
-    'assets/stimuli/anime/10092.png',
-    'assets/stimuli/anime/1010.png',
-    'assets/stimuli/anime/10100.png',
-    'assets/stimuli/anime/1011.png',
-    'assets/stimuli/anime/10133.png',
-    'assets/stimuli/anime/1015.png',
-    'assets/stimuli/anime/10154.png',
-    'assets/stimuli/anime/10170.png',
-    'assets/stimuli/anime/10171.png',
-    'assets/stimuli/anime/10174.png',
-    'assets/stimuli/anime/1018.png',
-    'assets/stimuli/anime/1020.png',
-    'assets/stimuli/anime/10223.png',
-    'assets/stimuli/anime/10224.png',
-    'assets/stimuli/anime/10228.png',
-    'assets/stimuli/anime/10234.png'
+    'assets/stimuli/anime/a.webp',
+    'assets/stimuli/anime/b.webp',
+    'assets/stimuli/anime/c.webp',
+    'assets/stimuli/anime/d.webp',
+    'assets/stimuli/anime/e.webp',
+    'assets/stimuli/anime/f.webp',
+    'assets/stimuli/anime/g.webp',
+    'assets/stimuli/anime/h.webp',
+    'assets/stimuli/anime/i.webp',
+    'assets/stimuli/anime/j.webp',
+    'assets/stimuli/anime/k.webp',
+    'assets/stimuli/anime/l.webp'
   ]),
+
   waifu: Object.freeze([]),
   hentai: Object.freeze([]),
   gore: Object.freeze([])
+
 });
 
-const ANIME_MODES = Object.freeze(['standard','waifu','hentai','gore']);
 
-const FACE_IMAGE_CACHE = Object.create(null);
-const ANIME_IMAGE_CACHE = Object.create(null);
+/* ==================== ANIME MODES ==================== */
+
+const ANIME_MODES = Object.freeze([
+  'standard',
+  'waifu',
+  'hentai',
+  'gore'
+]);
+
+
+/* ==================== IMAGE CACHES ==================== */
+
+const FACE_IMAGE_CACHE =
+  Object.create(null);
+
+const ANIME_IMAGE_CACHE =
+  Object.create(null);
+
+
+/*
+ * Explicitly initialize every Anime cache bucket
+ * before any preload or trial generation occurs.
+ */
 
 ANIME_MODES.forEach(mode => {
-  ANIME_IMAGE_CACHE[mode] = Object.create(null);
+  ANIME_IMAGE_CACHE[mode] =
+    Object.create(null);
 });
 
+
+/* ==================== IMAGE PRELOADER ==================== */
+
 function preloadImage(path, targetCache) {
+
   return new Promise(resolve => {
-    if (!path || !targetCache) {
+
+    if (
+      !path ||
+      !targetCache ||
+      typeof targetCache !== 'object'
+    ) {
       resolve(false);
       return;
     }
 
-    const existing = targetCache[path];
+
+    /*
+     * Reuse an already successfully decoded image.
+     */
+
+    const existing =
+      targetCache[path];
 
     if (
       existing instanceof HTMLImageElement &&
@@ -613,21 +112,36 @@ function preloadImage(path, targetCache) {
       return;
     }
 
+
+    /*
+     * Never retain a failed/stale cache entry.
+     */
+
     delete targetCache[path];
 
-    const img = new Image();
+
+    const img =
+      new Image();
+
     img.decoding = 'async';
     img.loading = 'eager';
 
+
     let settled = false;
 
+
     const fail = reason => {
-      if (settled) return;
+
+      if (settled) {
+        return;
+      }
+
       settled = true;
+
       delete targetCache[path];
 
       console.error(
-        '[ATTENTIONAL SHIELD] Failed to load image:',
+        '[ATTENTIONAL SHIELD] Failed to load Anime image:',
         path,
         reason || ''
       );
@@ -635,9 +149,19 @@ function preloadImage(path, targetCache) {
       resolve(false);
     };
 
-    img.onerror = () => fail('load error');
+
+    img.onerror = () => {
+      fail('browser image load error');
+    };
+
 
     img.onload = async () => {
+
+      /*
+       * WebP is accepted exactly like PNG/JPG.
+       * naturalWidth is the authoritative load check.
+       */
+
       if (
         img.naturalWidth <= 0 ||
         img.naturalHeight <= 0
@@ -646,48 +170,121 @@ function preloadImage(path, targetCache) {
         return;
       }
 
-      if (typeof img.decode === 'function') {
+
+      /*
+       * Force the browser to finish decoding before
+       * placing the image in the verified cache.
+       */
+
+      if (
+        typeof img.decode === 'function'
+      ) {
+
         try {
+
           await img.decode();
+
         } catch (error) {
-          fail(error);
+
+          fail(
+            `decode failed: ${
+              error?.message || error
+            }`
+          );
+
           return;
         }
       }
+
+
+      /*
+       * Validate once again after decoding.
+       */
 
       if (
         img.naturalWidth <= 0 ||
         img.naturalHeight <= 0
       ) {
-        fail('zero dimensions after decode');
+        fail(
+          'zero dimensions after decode'
+        );
+
         return;
       }
 
-      if (settled) return;
+
+      if (settled) {
+        return;
+      }
+
 
       settled = true;
-      targetCache[path] = img;
+
+      /*
+       * ONLY successfully loaded WebP images
+       * are stored in the cache.
+       */
+
+      targetCache[path] =
+        img;
+
       resolve(true);
     };
 
+
+    /*
+     * Exact repository path.
+     */
+
     img.src = path;
+
   });
+
 }
 
-function getCachedAnimePaths(mode = 'standard') {
+
+/* ==================== CACHE QUERY ==================== */
+
+function getCachedAnimePaths(
+  mode = 'standard'
+) {
+
   const safeMode =
     ANIME_MODES.includes(mode)
       ? mode
       : 'standard';
 
+
   const cache =
-    ANIME_IMAGE_CACHE[safeMode] || Object.create(null);
+    ANIME_IMAGE_CACHE[safeMode];
 
-  const paths =
-    ANIME_FACE_ASSET_MANIFEST[safeMode] || [];
 
-  return paths.filter(path => {
-    const img = cache[path];
+  const manifest =
+    ANIME_FACE_ASSET_MANIFEST[safeMode] ||
+    [];
+
+
+  if (!cache || !manifest.length) {
+
+    return [];
+
+  }
+
+
+  /*
+   * Return ONLY images that:
+   *
+   * 1. exist in the manifest
+   * 2. exist in the cache
+   * 3. are HTMLImageElements
+   * 4. completed loading
+   * 5. have non-zero natural dimensions
+   */
+
+  return manifest.filter(path => {
+
+    const img =
+      cache[path];
 
     return (
       img instanceof HTMLImageElement &&
@@ -695,1696 +292,265 @@ function getCachedAnimePaths(mode = 'standard') {
       img.naturalWidth > 0 &&
       img.naturalHeight > 0
     );
+
   });
+
 }
 
-const FACE_PRELOAD_PROMISE = Promise.all(
-  FACES.map(face =>
-    preloadImage(
-      face.file,
-      FACE_IMAGE_CACHE
+
+/* ==================== ANIME PRELOAD ==================== */
+
+const ANIME_PRELOAD_READY =
+  Promise.all(
+
+    ANIME_MODES.map(
+      async mode => {
+
+        const paths =
+          ANIME_FACE_ASSET_MANIFEST[mode] ||
+          [];
+
+
+        if (!ANIME_IMAGE_CACHE[mode]) {
+
+          ANIME_IMAGE_CACHE[mode] =
+            Object.create(null);
+
+        }
+
+
+        if (!paths.length) {
+
+          return {
+            mode,
+            requested: 0,
+            loaded: 0
+          };
+
+        }
+
+
+        const results =
+          await Promise.all(
+
+            paths.map(path =>
+              preloadImage(
+                path,
+                ANIME_IMAGE_CACHE[mode]
+              )
+            )
+
+          );
+
+
+        const loaded =
+          results.filter(Boolean).length;
+
+
+        console.info(
+          `[ATTENTIONAL SHIELD] Anime ${mode}: ${loaded}/${paths.length} WebP images loaded.`
+        );
+
+
+        return {
+          mode,
+          requested: paths.length,
+          loaded
+        };
+
+      }
+
     )
+
   )
-);
+  .catch(error => {
 
-/*
- * Single unified Anime preload gate.
- * It resolves even if an individual image fails, so optional Anime
- * stimuli can never freeze session initialization.
- */
-const ANIME_PRELOAD_READY = Promise.all(
-  ANIME_MODES.map(async mode => {
-    const paths =
-      ANIME_FACE_ASSET_MANIFEST[mode] || [];
-
-    if (!ANIME_IMAGE_CACHE[mode]) {
-      ANIME_IMAGE_CACHE[mode] =
-        Object.create(null);
-    }
-
-    const results = await Promise.all(
-      paths.map(path =>
-        preloadImage(
-          path,
-          ANIME_IMAGE_CACHE[mode]
-        )
-      )
+    console.error(
+      '[ATTENTIONAL SHIELD] Anime preload pipeline failed:',
+      error
     );
 
-    return {
-      mode,
-      loaded: results.filter(Boolean).length
-    };
-  })
-).catch(error => {
-  console.error(
-    '[ATTENTIONAL SHIELD] Anime preload pipeline failed:',
-    error
-  );
 
-  ANIME_MODES.forEach(mode => {
-    if (!ANIME_IMAGE_CACHE[mode]) {
-      ANIME_IMAGE_CACHE[mode] =
-        Object.create(null);
-    }
+    /*
+     * Keep all cache buckets valid even if
+     * the optional Anime pipeline fails.
+     */
+
+    ANIME_MODES.forEach(mode => {
+
+      if (!ANIME_IMAGE_CACHE[mode]) {
+
+        ANIME_IMAGE_CACHE[mode] =
+          Object.create(null);
+
+      }
+
+    });
+
+
+    return [];
+
   });
 
-  return [];
-});
+
+/* ==================== PRELOAD PROMISES ==================== */
 
 const ANIME_FACE_PRELOAD_PROMISES =
   Object.fromEntries(
+
     ANIME_MODES.map(mode => [
+
       mode,
-      ANIME_PRELOAD_READY.then(() =>
-        getCachedAnimePaths(mode)
+
+      ANIME_PRELOAD_READY.then(
+        () =>
+          getCachedAnimePaths(mode)
       )
+
     ])
+
   );
 
-function createPreloadedFaceImage(path, altText, cache) {
-  const cached = cache?.[path] || FACE_IMAGE_CACHE[path] || null;
-  const img = cached instanceof HTMLImageElement ? cached.cloneNode(false) : new Image();
-  img.src = path;
-  img.alt = altText || '';
-  img.decoding = 'async';
-  img.loading = 'eager';
-  img.draggable = false;
-  img.className = 'stimulus-image';
-  img.style.width = '100%';
-  img.style.height = '100%';
-  img.style.display = 'block';
-  img.style.objectFit = 'cover';
-  img.style.maxWidth = '100%';
-  img.style.maxHeight = '100%';
-  img.style.pointerEvents = 'none';
-  img.style.imageRendering = 'pixelated';
-  return img;
-}
 
-// Expanded High-Arousal Affective Word Bank for eWMT Engine
-// Used specifically for the spoken affective-word stimulus.
-const AFFECTIVE_WORD_BANK = {
-  threat: [
-    "TERROR", "PANIC", "AGONY", "HORROR", "SLAUGHTER",
-    "SUFFOCATION", "FATAL", "RAGE", "SCREAM", "TORTURE",
-    "SHELTERLESS", "EXECUTION", "EXPLOSION", "DISASTER", "AMBUSH",
-    "HOSTAGE", "CHAOS", "MUTILATION", "VIOLENCE", "CRUELTY"
-  ],
-  grief: [
-    "DESPAIR", "ANGUISH", "BETRAYAL", "ISOLATION", "ABANDONED",
-    "DEVASTATION", "TRAGEDY", "MISERY", "GRIEF", "HEARTBREAK",
-    "LONELINESS", "HOPELESS", "SHATTERED", "HELPLESS", "LOSS",
-    "REGRET", "CONDEMNED", "RUIN", "REJECTION", "MOURNING"
-  ],
-  visceral: [
-    "REVULSION", "DECAY", "CORRUPTION", "FOUL", "ROT",
-    "CONTAMINATION", "NAUSEA", "INFESTATION", "POISON", "SICKNESS",
-    "SEWAGE", "INFECTION", "MAGGOT", "FILTH", "SMEAR",
-    "DISEASE", "PUTRID", "TOXIC", "DRAIN", "CANCER"
-  ],
-  intensePositive: [
-    "ECSTASY", "EUPHORIA", "RAPTURE", "PASSION", "BLISS",
-    "TRIUMPH", "OBSESSION", "ADRENALINE", "EXHILARATION", "DEVOTION",
-    "PARADISE", "DELIGHT", "THRILL", "VICTORY", "BELOVED",
-    "INTOXICATION", "DESIRE", "CHERISH", "INFATUATION", "FEAST"
-  ],
-  ambiguousShock: [
-    "VOID", "UNHINGED", "HYSTERIA", "PARANOIA", "VULNERABLE",
-    "CONFESSION", "SURREAL", "JUDGMENT", "REVELATION", "FATUM",
-    "STALKER", "SECRETS", "HALLUCINATION", "OBSCURITY", "DELUSION",
-    "SHADOW", "ECHO", "SUSPITION", "INVASION", "CONTAGION"
-  ],
-  socialIsolation: [
-    "IGNORED", "ABANDONED", "ISOLATED", "REJECTED", "EXCLUDED",
-    "ALONE", "UNWANTED", "FORGOTTEN", "DISTANT", "OUTCAST"
-  ]
-};
+/* ==================== ANIME SELECTION ==================== */
 
-// Keep the original non-audio word pools for the visual/shape-word stimulus.
-const WORDS_NEGATIVE = ['Murder','Rape','Failure','Genocide','Retard','Hurt','Alone','Reject','Worthless','Disaster','Death','Pain','Trash','Loser','Betray'];
-const WORDS_POSITIVE = ['Success','Victory','Gift','Miracle','Money','Loved','Triumph','Joy','Peace','Winner','Glory','Hero','Champion','Blessing','Proud'];
-const WORDS_NEUTRAL  = [
-  'Method','Process','System','Format','Factor','Aspect','Context','Detail','Section','Option',
-  'Pattern','Structure','Framework','Principle','Element','Function','Sequence','Variable','Category','Concept',
-  'Criterion','Strategy','Model','Parameter','Component'
-];
+function pickAnimeFace(
+  mode = 'standard'
+) {
 
-const AFFECTIVE_AUDIO_WORDS = Object.values(AFFECTIVE_WORD_BANK).flat();
-const COLORS = ['#FF453A','#30D158','#0A84FF','#FFD60A','#BF5AF2','#FF9F0A','#00F0FF','#FF006E'];
-const SHAPES_SVG = [
-  '<circle cx="50" cy="50" r="42" fill="FILL" stroke="STROKE" stroke-width="4"/>',
-  '<rect x="10" y="10" width="80" height="80" rx="10" fill="FILL" stroke="STROKE" stroke-width="4"/>',
-  '<polygon points="50,8 90,88 10,88" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>',
-  '<polygon points="50,6 63,35 94,36 70,55 79,86 50,68 21,86 30,55 6,36 37,35" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>',
-  '<polygon points="50,8 92,28 92,72 50,92 8,72 8,28" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>',
-  '<path d="M50 8 L62 38 L94 38 L68 58 L78 90 L50 72 L22 90 L32 58 L6 38 L38 38 Z" fill="FILL" stroke="STROKE" stroke-width="4" stroke-linejoin="round"/>'
-];
-const MOD_LABELS = {pos:'Position', col:'Color', aud:'Audio', shp:'Shape'};
-const MOD_INITIALS = {pos:'P', col:'C', aud:'A', shp:'S'};
+  const safeMode =
+    ANIME_MODES.includes(mode)
+      ? mode
+      : 'standard';
 
-function inverseNormalCDF(p) {
-  if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
-  const a1=-3.969683028665376e+01, a2=2.209460984245205e+02, a3=-2.759285104469687e+02;
-  const a4=1.383577518672690e+02, a5=-3.066479806614716e+01, a6=2.506628277459239e+00;
-  const b1=-5.447609879822406e+01, b2=1.615858368580409e+02, b3=-1.556989798598866e+02;
-  const b4=6.680131188771972e+01, b5=-1.328068155288572e+01;
-  const c1=-7.784894002430293e-03, c2=-3.223964580411365e-01, c3=-2.400758277161838e+00;
-  const c4=-2.549732539343734e+00, c5=4.374664141464968e+00, c6=2.938163982698783e+00;
-  const d1=7.784695709041462e-03, d2=3.224671290700398e-01, d3=2.445134137142996e+00, d4=3.754408661907416e+00;
-  const p_low=0.02425, p_high=1-p_low;
-  let q,r;
-  if (p < p_low) {
-    q = Math.sqrt(-2*Math.log(p));
-    return (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1);
-  } else if (p <= p_high) {
-    q = p - 0.5; r = q*q;
-    return (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q / (((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1);
-  } else {
-    q = Math.sqrt(-2*Math.log(1-p));
-    return -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) / ((((d1*q+d2)*q+d3)*q+d4)*q+1);
-  }
-}
 
-function calculateDPrime(hits, misses, falseAlarms, correctRejects) {
-  const targets = hits + misses, lures = falseAlarms + correctRejects;
-  if (targets === 0 || lures === 0) return 0;
-  let hr = hits / targets, far = falseAlarms / lures;
-  if (hr >= 1) hr = 1 - 1/(2*targets); if (hr <= 0) hr = 1/(2*targets);
-  if (far >= 1) far = 1 - 1/(2*lures); if (far <= 0) far = 1/(2*lures);
-  return inverseNormalCDF(hr) - inverseNormalCDF(far);
-}
+  const cachedPaths =
+    getCachedAnimePaths(
+      safeMode
+    );
 
-function formatTime(ms) {
-  const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
-  return m + ':' + (s<10?'0':'') + s;
-}
-function formatKey(k) {
-  if (!k) return '?';
-  if (k === ' ') return 'Space';
-  if (k.startsWith('Arrow')) return k.replace('Arrow','') + 'Arr';
-  return k.length === 1 ? k.toUpperCase() : k;
-}
 
-// ==================== AUDIO ENGINE (Safe Fallback) ====================
-const AudioEngine = {
-  ctx: null,
-  init() {
-    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.ctx = null; }
-  },
-  speak(word) {
-    if (typeof speechSynthesis !== 'undefined') {
-      try {
-        const voices = speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-          const msg = new SpeechSynthesisUtterance(word);
-          const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
-          if (preferred) msg.voice = preferred;
-          msg.rate = 1.1;
-          speechSynthesis.cancel();
-          speechSynthesis.speak(msg);
-          return;
-        }
-      } catch(e) {}
-    }
-    // Web Audio fallback
-    if (!this.ctx) this.init();
-    if (this.ctx) {
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 440 + (word.length * 30);
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.3);
-      } catch(e) {}
-    }
-  },
-  buzzMiss() {
-    if (!this.ctx) this.init();
-    if (!this.ctx) return;
-    try {
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(170, now);
-      osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.008);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
-      osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(now); osc.stop(now + 0.15);
-    } catch(e) {}
-  }
-};
+  if (!cachedPaths.length) {
 
-// ==================== STATS MANAGER ====================
-const StatsManager = {
-  data: null,
-  load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      this.data = raw ? JSON.parse(raw) : this.getDefault();
-    } catch (e) { this.data = this.getDefault(); }
-  },
-  save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); } catch(e) {} },
-  getDefault() { return {sessions:[], totalMs:0, bestN:1, createdAt:Date.now(), daily:{}}; },
-  addSession(session) {
-    this.data.sessions.push(session);
-    this.data.totalMs += session.durationMs;
-    if (session.bestN > this.data.bestN) this.data.bestN = session.bestN;
-    const d = new Date(session.timestamp).toISOString().split('T')[0];
-    if (!this.data.daily[d]) this.data.daily[d] = {sessions:0, totalMs:0};
-    this.data.daily[d].sessions++;
-    this.data.daily[d].totalMs += session.durationMs;
-    this.save();
-  },
-  getRecentSessions(n) { return this.data.sessions.slice(-n); },
-  getAvgDPrime(n) {
-    const s = this.getRecentSessions(n);
-    if (!s.length) return 0;
-    return s.reduce((a,b) => a + (b.overallDPrime||0), 0) / s.length;
-  },
-  getHeatmapData() {
-    const days = [];
-    for (let i=27; i>=0; i--) {
-      const d = new Date(); d.setDate(d.getDate()-i);
-      const key = d.toISOString().split('T')[0];
-      const entry = this.data.daily[key];
-      days.push({date:key, level: entry ? Math.min(5, Math.ceil(entry.sessions/2)) : 0});
-    }
-    return days;
-  },
-  getTimeOfDayData() {
-    const buckets = Array(4).fill(0).map(() => ({count:0, dprime:0}));
-    this.data.sessions.forEach(s => {
-      const h = new Date(s.timestamp).getHours();
-      const idx = h < 6 ? 0 : h < 12 ? 1 : h < 18 ? 2 : 3;
-      buckets[idx].count++; buckets[idx].dprime += s.overallDPrime || 0;
-    });
-    return buckets.map(b => b.count ? b.dprime/b.count : 0);
-  }
-};
+    console.error(
+      '[ATTENTIONAL SHIELD] No verified Anime WebP images are available:',
+      safeMode
+    );
 
-// ==================== CHART RENDERER ====================
-const ChartRenderer = {
-  drawLine(canvas, data, color, fill) {
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    const w = rect.width, h = rect.height;
-    ctx.clearRect(0,0,w,h);
-    if (!data || data.length < 2) {
-      ctx.fillStyle = '#4b5563'; ctx.font = '12px JetBrains Mono';
-      ctx.textAlign = 'center'; ctx.fillText('No data yet', w/2, h/2);
-      return;
-    }
-    const pad = {t:20, r:20, b:30, l:40};
-    const vals = data.map(d => d.y);
-    let minY = Math.min(...vals), maxY = Math.max(...vals);
-    if (maxY === minY) { maxY += 1; minY -= 1; }
-    const range = maxY - minY;
-    const xScale = (w - pad.l - pad.r) / (data.length - 1);
-    const yScale = (h - pad.t - pad.b) / range;
-    const getX = i => pad.l + i * xScale;
-    const getY = v => pad.t + (maxY - v) * yScale;
-    ctx.strokeStyle = '#1e2330'; ctx.lineWidth = 1;
-    for (let i=0; i<=4; i++) {
-      const y = pad.t + (h - pad.t - pad.b) * i / 4;
-      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w-pad.r, y); ctx.stroke();
-      ctx.fillStyle = '#4b5563'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
-      ctx.fillText((maxY - range * i / 4).toFixed(1), pad.l - 6, y + 3);
-    }
-    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round';
-    ctx.beginPath();
-    data.forEach((d,i) => { if (i===0) ctx.moveTo(getX(i), getY(d.y)); else ctx.lineTo(getX(i), getY(d.y)); });
-    ctx.stroke();
-    if (fill) {
-      ctx.fillStyle = color + '1a';
-      ctx.beginPath(); ctx.moveTo(getX(0), getY(data[0].y));
-      data.forEach((d,i) => ctx.lineTo(getX(i), getY(d.y)));
-      ctx.lineTo(getX(data.length-1), h-pad.b); ctx.lineTo(getX(0), h-pad.b); ctx.closePath(); ctx.fill();
-    }
-    ctx.fillStyle = color;
-    data.forEach((d,i) => { ctx.beginPath(); ctx.arc(getX(i), getY(d.y), 3, 0, Math.PI*2); ctx.fill(); });
-    ctx.fillStyle = '#4b5563'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
-    const step = Math.ceil(data.length / 6);
-    data.forEach((d,i) => { if (i % step === 0) ctx.fillText(d.x, getX(i), h - 8); });
-  },
-  drawBars(canvas, labels, values, colors) {
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    const w = rect.width, h = rect.height;
-    ctx.clearRect(0,0,w,h);
-    if (!values || values.length === 0) return;
-    const pad = {t:20, r:20, b:30, l:40};
-    const maxV = Math.max(...values, 1);
-    const barW = (w - pad.l - pad.r) / values.length * 0.6;
-    const gap = (w - pad.l - pad.r) / values.length;
-    values.forEach((v,i) => {
-      const x = pad.l + i * gap + (gap - barW) / 2;
-      const barH = (v / maxV) * (h - pad.t - pad.b);
-      const y = h - pad.b - barH;
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fillRect(x, y, barW, barH);
-      ctx.fillStyle = '#e8ecf1'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
-      ctx.fillText(v.toFixed(1), x + barW/2, y - 4);
-      ctx.fillStyle = '#6b7280'; ctx.font = '10px JetBrains Mono';
-      ctx.fillText(labels[i], x + barW/2, h - 10);
-    });
-  }
-};
+    return null;
 
-// ==================== GAME ENGINE ====================
-class GameEngine {
-  constructor() {
-    this.reset();
-    this.voices = [];
-    this.selectedVoice = null;
-    this.mode = 'dual';
-    this.keys = {pos:'ArrowLeft', col:'ArrowUp', aud:'ArrowRight', shp:'ArrowDown'};
-    this.listeningBind = null;
-    this.activeStimuli = [];
-    this.imageCache = {};
-    this.imagesLoaded = false;
-    this.animeImagesLoaded = false;
-    this.stimulusType = 'human_faces';
-    this.animeMode = 'standard';
-  }
-  reset() {
-    this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
-    this.responses = {}; this.stats = {};
-    this.isRunning = false; this.isPaused = false; this.isTrialActive = false;
-    this.sessionStart = 0; this.sessionMs = 0; this.lastTick = 0;
-    this.timerInterval = null; this.trialTimeout = null; this.trialAdvanceTimeout = null;
-    this.currentN = 2; this.highestN = 2;
   }
 
-  async preloadImages() {
-    if (this._preloadPromise) return this._preloadPromise;
 
-    this._preloadPromise = (async () => {
-      try {
-        await FACE_PRELOAD_PROMISE;
-        FACES.forEach(face => {
-          this.imageCache[face.file] = FACE_IMAGE_CACHE[face.file] instanceof HTMLImageElement;
-        });
-
-        await ANIME_PRELOAD_READY;
-
-        const cachedAnime = getCachedAnimePaths('standard');
-        this.imagesLoaded = true;
-        this.animeImagesLoaded = cachedAnime.length > 0;
-
-        console.info('[ATTENTIONAL SHIELD] Image preload complete:', {
-          humanFaces: Object.values(this.imageCache).filter(Boolean).length,
-          animeStandard: cachedAnime.length,
-          animeReady: this.animeImagesLoaded
-        });
-
-        return {animeReady:this.animeImagesLoaded, animeLoaded:cachedAnime.length};
-      } catch (error) {
-        // Never let an optional visual asset prevent the WMT engine from starting.
-        this.imagesLoaded = true;
-        this.animeImagesLoaded = getCachedAnimePaths('standard').length > 0;
-        console.warn('[ATTENTIONAL SHIELD] Non-fatal image preload issue; session can continue.', error);
-        return {animeReady:this.animeImagesLoaded, animeLoaded:getCachedAnimePaths('standard').length};
-      }
-    })();
-
-    return this._preloadPromise;
-  }
-
-  initVoices() {
-    if (typeof speechSynthesis === 'undefined') return;
-    try {
-      const raw = speechSynthesis.getVoices();
-      if (!raw || raw.length === 0) return;
-      this.voices = raw.filter(v => v.lang && v.lang.startsWith('en'));
-      if (!this.voices.length) this.voices = raw;
-      const sel = document.getElementById('sel-voice');
-      if (!sel) return;
-      sel.innerHTML = '';
-      this.voices.forEach((v, i) => {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = v.name + ' (' + v.lang + ')';
-        if (v.default || v.name.includes('Google') || v.name.includes('Samantha')) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      if (this._savedVoiceName) {
-        const savedIndex = this.voices.findIndex(v => v.name === this._savedVoiceName);
-        if (savedIndex >= 0) sel.value = String(savedIndex);
-      }
-      this.selectedVoice = this.voices[sel.value];
-    } catch(e) {}
-  }
-
-  getSettings() {
-    const safeInt = (id, def) => { const el = document.getElementById(id); return el ? (parseInt(el.value) || def) : def; };
-    const safeBool = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
-    const safeVal = (id, def) => { const el = document.getElementById(id); return el ? el.value : def; };
-    return {
-      gridType: safeVal('sel-grid-type', '2d'),
-      gridSize: safeInt('sel-grid-size', 3),
-      stimulusType: this.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces',
-      animeMode: this.animeMode || 'standard',
-      speed3d: safeInt('rng-3d-speed', 40),
-      startN: safeInt('rng-start-n', 2),
-      variableN: safeBool('chk-variable-n'),
-      varMin: safeInt('rng-var-min', 1),
-      varMax: safeInt('inp-var-max', 3),
-      adaptive: safeBool('chk-adaptive'),
-      isiMode: safeVal('sel-isi-mode', 'fixed'),
-      isiFixed: safeInt('rng-isi-fixed', DEFAULT_ISI),
-      isiMin: safeInt('rng-isi-min', 1300),
-      isiMax: safeInt('rng-isi-max', 3000),
-      stimDur: safeInt('rng-stim-dur', TRIAL_TIMING.stimulusMs),
-      sessionDurationMin: safeInt('rng-session-duration', DEFAULT_SESSION_DURATION_MIN),
-      tally: safeBool('chk-tally'),
-      buzzerOnMiss: safeBool('chk-buzzer'),
-      emoLoad: safeInt('rng-emo-load', 70),
-      interference: safeInt('rng-interference', 40),
-      matchRate: safeInt('rng-match-rate', 30) / 100,
-      stimPos: safeBool('chk-pos'),
-      stimAud: safeBool('chk-aud'),
-      stimShp: safeBool('chk-shp'),
-      stimCol: safeBool('chk-col'),
-    };
-  }
-
-  setActiveStimuli() {
-    const s = this.getSettings();
-    this.activeStimuli = [];
-    if (s.stimPos) this.activeStimuli.push('pos');
-    if (s.stimAud) this.activeStimuli.push('aud');
-    if (s.stimShp) this.activeStimuli.push('shp');
-    if (s.stimCol) this.activeStimuli.push('col');
-    if (this.activeStimuli.length === 0) {
-      this.activeStimuli = ['pos'];
-      const el = document.getElementById('chk-pos');
-      if (el) el.checked = true;
-    }
-  }
-
-  getPosCount() {
-    const s = this.getSettings();
-    return s.gridType === '3d' ? 27 : (s.gridSize * s.gridSize);
-  }
-
-  pickFace(emoLoad) {
-    const r = Math.random() * 100;
-    const neg = FACES.filter(f => f.valence < 0);
-    const neu = FACES.filter(f => f.valence === 0);
-    const pos = FACES.filter(f => f.valence > 0);
-    if (r < emoLoad) return neg[Math.floor(Math.random() * neg.length)];
-    if (r < emoLoad + (100 - emoLoad) * 0.6) return neu[Math.floor(Math.random() * neu.length)];
-    return pos[Math.floor(Math.random() * pos.length)];
-  }
-
-  pickAnimeFace(mode = this.animeMode) {
-    const safeMode = mode === 'standard' ? 'standard' : 'standard';
-    const available = getCachedAnimePaths(safeMode);
-    if (!available.length) return null;
-    return available[Math.floor(Math.random() * available.length)];
-  }
-
-  pickVisualStimulus(emoLoad) {
-    if (this.stimulusType === 'anime_faces') {
-      const animePath = this.pickAnimeFace('standard');
-      if (animePath) {
-        return {type:'anime_faces', path:animePath, emotion:'anime', animeMode:'standard', fallbackFromAnime:false};
-      }
-
-      // Anime is optional. If its files are unavailable, continue the actual
-      // training session using a verified human face rather than throwing.
-      console.warn('[ATTENTIONAL SHIELD] Anime assets unavailable; falling back to human face stimuli for this trial.');
-      const face = this.pickFace(emoLoad);
-      return {type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null, fallbackFromAnime:true};
-    }
-
-    const face = this.pickFace(emoLoad);
-    return {type:'standard_faces', path:face.file, emotion:face.emotion, fallbackFromAnime:false, animeMode:null};
-  }
-
-  pickWord(emoLoad) {
-    const r = Math.random() * 100;
-    if (r < emoLoad * 0.8) return WORDS_NEGATIVE[Math.floor(Math.random() * WORDS_NEGATIVE.length)];
-    if (r < emoLoad * 0.8 + (100 - emoLoad * 0.8) * 0.5) return WORDS_NEUTRAL[Math.floor(Math.random() * WORDS_NEUTRAL.length)];
-    return WORDS_POSITIVE[Math.floor(Math.random() * WORDS_POSITIVE.length)];
-  }
-
-  pickAffectiveAudioWord(emoLoad) {
-    // Higher emotional load favors threat/grief/visceral material while
-    // retaining some positive and ambiguous high-arousal words.
-    const load = Math.max(0, Math.min(100, Number(emoLoad) || 0)) / 100;
-    const r = Math.random();
-
-    let category;
-    if (r < 0.28 + load * 0.24) {
-      category = 'threat';
-    } else if (r < 0.50 + load * 0.22) {
-      category = 'grief';
-    } else if (r < 0.62 + load * 0.10) {
-      category = 'visceral';
-    } else if (r < 0.78 + load * 0.04) {
-      category = 'socialIsolation';
-    } else if (r < 0.89) {
-      category = 'ambiguousShock';
-    } else {
-      category = 'intensePositive';
-    }
-
-    const words = AFFECTIVE_WORD_BANK[category];
-    return words[Math.floor(Math.random() * words.length)];
-  }
-
-  generateBlock() {
-    const s = this.getSettings();
-    this.blockTrials = 20 + (this.currentN * this.currentN);
-    this.kSeq = [];
-    const minK = s.variableN ? s.varMin : this.currentN;
-    const maxK = s.variableN ? Math.min(s.varMax, this.currentN) : this.currentN;
-
-    for (let i = 0; i < this.blockTrials; i++) {
-      if (!s.variableN) { this.kSeq.push(this.currentN); continue; }
-      const maxAllowed = Math.min(i, maxK);
-      if (maxAllowed < minK) this.kSeq.push(this.currentN);
-      else this.kSeq.push(Math.floor(Math.random() * (maxAllowed - minK + 1)) + minK);
-    }
-
-    const posSeq = this.genSequence(this.getPosCount(), this.kSeq, s.matchRate, s.interference / 100);
-    const colSeq = this.genSequence(COLORS.length, this.kSeq, s.matchRate, s.interference / 100);
-    const audSeq = this.genSequence(AFFECTIVE_AUDIO_WORDS.length, this.kSeq, s.matchRate, s.interference / 100);
-    const shpSeq = this.genSequence(SHAPES_SVG.length, this.kSeq, s.matchRate, s.interference / 100);
-
-    this.trials = [];
-    for (let i = 0; i < this.blockTrials; i++) {
-      const visual = this.pickVisualStimulus(s.emoLoad);
-      const word = this.pickWord(s.emoLoad);
-      const audWord = AFFECTIVE_AUDIO_WORDS[audSeq[i]];
-
-      this.trials.push({
-        pos:posSeq[i], col:colSeq[i], aud:audSeq[i], shp:shpSeq[i],
-        face:visual.path,
-        faceEmotion:visual.emotion,
-        visualType:visual.type,
-        animeAsset:visual.type === 'anime_faces' ? visual.path : null,
-        animeMode:visual.type === 'anime_faces' ? 'standard' : null,
-        fallbackFromAnime:!!visual.fallbackFromAnime,
-        word, audWord
-      });
-    }
-
-    this.currentTrial = 0;
-    this.responses = {};
-    this.activeStimuli.forEach(t => {
-      this.responses[t] = Array(this.blockTrials).fill(false);
-      if (!this.stats[t]) this.stats[t] = {hits:0, misses:0, falseAlarms:0, correctRejects:0};
-    });
-  }
-
-  genSequence(poolSize, kArr, matchRate, interfRate) {
-    const seq = [];
-    for (let i = 0; i < this.blockTrials; i++) {
-      const k = kArr[i];
-      const targetVal = (i >= k) ? seq[i - k] : null;
-      const isTarget = (i >= k) && (Math.random() < matchRate);
-      if (isTarget) {
-        seq.push(targetVal);
-      } else {
-        const forbidden = new Set();
-        if (targetVal !== null) forbidden.add(targetVal);
-        let picked = null;
-        if (Math.random() < interfRate) {
-          const lures = [];
-          for (let lag = 1; lag <= 4; lag++) {
-            if (i - lag >= 0) {
-              const c = seq[i - lag];
-              if (!forbidden.has(c)) lures.push(c);
-            }
-          }
-          if (lures.length > 0) picked = lures[Math.floor(Math.random() * lures.length)];
-        }
-        if (picked === null) {
-          const avoid = new Set(forbidden);
-          if (interfRate < 0.5) {
-            for (let lag = 1; lag <= 3; lag++) { if (i - lag >= 0) avoid.add(seq[i - lag]); }
-          }
-          let avail = [];
-          for (let v = 0; v < poolSize; v++) { if (!avoid.has(v)) avail.push(v); }
-          if (avail.length === 0) { for (let v = 0; v < poolSize; v++) { if (!forbidden.has(v)) avail.push(v); } }
-          if (avail.length === 0) avail = Array.from({length: poolSize}, (_, idx) => idx);
-          picked = avail[Math.floor(Math.random() * avail.length)];
-        }
-        seq.push(picked);
-      }
-    }
-    return seq;
-  }
-
-  getISI() {
-    const s = this.getSettings();
-    const fixed = Number.isFinite(s.isiFixed) ? s.isiFixed : DEFAULT_ISI;
-    if (s.isiMode === 'fixed') return Math.max(500, Math.min(5000, fixed));
-    const min = Math.max(500, Math.min(5000, Number.isFinite(s.isiMin) ? s.isiMin : 1300));
-    const max = Math.max(min, Math.min(5000, Number.isFinite(s.isiMax) ? s.isiMax : 3000));
-    return Math.round(min + Math.random() * (max - min));
-  }
-}
-
-// ==================== APP CONTROLLER ====================
-const App = {
-  engine: new GameEngine(),
-  screens: {},
-  _initialized: false,
-
-  init() {
-    if (this._initialized) return;
-    this._initialized = true;
-    StatsManager.load();
-    this.loadSettings();
-    this.screens = {
-      setup: document.getElementById('screen-setup'),
-      game: document.getElementById('screen-game'),
-      results: document.getElementById('screen-results')
-    };
-
-    // Voice init with retry
-    this.engine.initVoices();
-    if (typeof speechSynthesis !== 'undefined') {
-      speechSynthesis.onvoiceschanged = () => this.engine.initVoices();
-    }
-    const voiceSel = document.getElementById('sel-voice');
-    if (voiceSel) {
-      voiceSel.addEventListener('change', (e) => {
-        if (this.engine.voices[e.target.value]) this.engine.selectedVoice = this.engine.voices[e.target.value];
-        this.saveSettings();
-      });
-    }
-
-    // Native control bindings. These are deliberately registered from JS so the app
-    // does not depend on inline handlers or script execution order.
-    const bindInput = (id, event, handler) => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener(event, handler);
-    };
-    bindInput('rng-start-n', 'input', e => { document.getElementById('disp-start-n').textContent = e.target.value; this.onVariableNToggle(); });
-    bindInput('rng-emo-load', 'input', e => { document.getElementById('disp-emo-load').textContent = e.target.value + '%'; });
-    bindInput('sel-grid-type', 'change', () => this.onGridTypeChange());
-    bindInput('rng-3d-speed', 'input', () => this.update3DSpeedDisplay());
-    bindInput('chk-variable-n', 'change', () => this.onVariableNToggle());
-    bindInput('rng-var-min', 'input', e => { document.getElementById('disp-var-min').textContent = e.target.value; });
-    bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
-    bindInput('rng-isi-fixed', 'input', e => { document.getElementById('disp-isi-fixed').textContent = e.target.value + 'ms'; });
-    bindInput('rng-isi-min', 'input', e => { document.getElementById('disp-isi-min').textContent = e.target.value + 'ms'; });
-    bindInput('rng-isi-max', 'input', e => { document.getElementById('disp-isi-max').textContent = e.target.value + 'ms'; });
-    bindInput('rng-session-duration', 'input', e => { document.getElementById('disp-session-duration').textContent = e.target.value + ' min'; });
-    bindInput('rng-stim-dur', 'input', e => { document.getElementById('disp-stim-dur').textContent = e.target.value + 'ms'; });
-    bindInput('rng-interference', 'input', e => { document.getElementById('disp-interference').textContent = e.target.value + '%'; });
-    bindInput('rng-match-rate', 'input', e => { document.getElementById('disp-match-rate').textContent = e.target.value + '%'; });
-    bindInput('chk-pos', 'change', () => this.onStimChange());
-    bindInput('chk-aud', 'change', () => this.onStimChange());
-    bindInput('chk-shp', 'change', () => this.onStimChange());
-    bindInput('chk-col', 'change', () => this.onStimChange());
-
-    // Persist every user-facing configuration control.
-    this.bindSettingsPersistence();
-
-    // Mode cards
-    const modeDual = document.getElementById('mode-dual');
-    const modeQuad = document.getElementById('mode-quad');
-    if (modeDual) modeDual.addEventListener('click', () => this.setMode('dual'));
-    if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
-
-    document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-      card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
-    });
-    document.querySelectorAll('[data-anime-mode]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.disabled || btn.dataset.locked === 'true') return;
-        this.setAnimeMode(btn.dataset.animeMode);
-      });
-    });
-
-    // Main buttons
-    const btnInit = document.getElementById('btn-init-session');
-    const btnDash = document.getElementById('btn-full-dashboard');
-    const btnPause = document.getElementById('btn-pause');
-    const btnEnd = document.getElementById('btn-end-session');
-    const btnResMenu = document.getElementById('btn-results-menu');
-    const btnResAgain = document.getElementById('btn-results-again');
-    const btnModalClose = document.getElementById('btn-modal-close');
-
-    if (btnInit) btnInit.addEventListener('click', () => this.startSession());
-    if (btnDash) btnDash.addEventListener('click', () => this.showStatsFull());
-    if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
-    if (btnEnd) btnEnd.addEventListener('click', () => this.endSession());
-    if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
-    if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
-    if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
-    // Modal overlay click-to-close
-    const modalOverlay = document.getElementById('modal-dashboard');
-    if (modalOverlay) {
-      modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) this.closeModal();
-      });
-    }
-
-    // Keyboard
-    document.addEventListener('keydown', (e) => this.handleKeydown(e));
-
-    // Initial UI state
-    this.setMode(this._savedMode || 'dual', false);
-    this.setStimulusType(this._savedStimulusType || 'human_faces', false);
-    this.setAnimeMode(this._savedAnimeMode || 'standard', false);
-    this.refreshSettingDisplays();
-    this.updateGlobalStats();
-    this.onStimChange();
-    this.onVariableNToggle();
-    this.onGridTypeChange();
-    this.onISIModeChange();
-    this.saveSettings();
-
-    // Preload images non-blocking
-    this.engine.preloadImages();
-  },
-
-  getPersistentControlIds() {
-    return [
-      'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed',
-      'chk-variable-n','rng-var-min','inp-var-max','chk-adaptive','sel-isi-mode',
-      'rng-isi-fixed','rng-isi-min','rng-isi-max','rng-stim-dur','rng-session-duration',
-      'chk-tally','chk-buzzer','rng-interference','rng-match-rate','sel-voice',
-      'chk-pos','chk-aud','chk-shp','chk-col'
+  const selectedPath =
+    cachedPaths[
+      Math.floor(
+        Math.random() *
+        cachedPaths.length
+      )
     ];
-  },
 
-  saveSettings() {
-    try {
-      const values = {};
-      this.getPersistentControlIds().forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        values[id] = el.type === 'checkbox' ? el.checked : el.value;
-      });
-      const modeCard = document.querySelector('.mode-card.active');
-      const voice = this.engine.selectedVoice || this.engine.voices[document.getElementById('sel-voice')?.value];
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
-        values,
-        mode: modeCard?.dataset.mode || this.engine.mode || 'dual',
-        stimulusType: this.engine.stimulusType || 'human_faces',
-        animeMode: this.engine.animeMode || 'standard',
-        keys: this.engine.keys,
-        voiceName: voice?.name || null
-      }));
-    } catch(e) {}
-  },
 
-  loadSettings() {
-    try {
-      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      const values = saved?.values || {};
-      this.getPersistentControlIds().forEach(id => {
-        const el = document.getElementById(id);
-        if (!el || !(id in values)) return;
-        if (el.type === 'checkbox') el.checked = !!values[id];
-        else el.value = values[id];
-      });
-      if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
-      this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
-      this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this._savedAnimeMode = saved?.animeMode === 'standard' ? 'standard' : 'standard';
-      this._savedVoiceName = saved?.voiceName || null;
-    } catch(e) {
-      this._savedMode = 'dual'; this._savedStimulusType = 'human_faces'; this._savedAnimeMode = 'standard'; this._savedVoiceName = null;
-    }
-  },
+  /*
+   * Final defensive validation.
+   */
 
-  bindSettingsPersistence() {
-    this.getPersistentControlIds().forEach(id => {
-      const el = document.getElementById(id);
-      if (!el || el.dataset.persistenceBound === '1') return;
-      const save = () => this.saveSettings();
-      el.addEventListener('change', save);
-      el.addEventListener('input', save);
-      el.dataset.persistenceBound = '1';
-    });
-  },
+  const selectedImage =
+    ANIME_IMAGE_CACHE[safeMode][
+      selectedPath
+    ];
 
-  refreshSettingDisplays() {
-    const map = {
-      'disp-start-n':['rng-start-n',v=>v], 'disp-emo-load':['rng-emo-load',v=>v+'%'],
-      'disp-3d-speed':['rng-3d-speed',v=>v<30?'Slow':v<70?'Normal':'Fast'], 'disp-var-min':['rng-var-min',v=>v],
-      'disp-isi-fixed':['rng-isi-fixed',v=>v+'ms'], 'disp-isi-min':['rng-isi-min',v=>v+'ms'],
-      'disp-isi-max':['rng-isi-max',v=>v+'ms'], 'disp-stim-dur':['rng-stim-dur',v=>v+'ms'],
-      'disp-session-duration':['rng-session-duration',v=>v+' min'], 'disp-interference':['rng-interference',v=>v+'%'],
-      'disp-match-rate':['rng-match-rate',v=>v+'%']
-    };
-    Object.entries(map).forEach(([out,[id,fmt]]) => { const input=document.getElementById(id), display=document.getElementById(out); if(input&&display) display.textContent=fmt(input.value); });
-  },
 
-  switchScreen(id) {
-    Object.values(this.screens).forEach(s => { if (s) s.classList.remove('active'); });
-    if (this.screens[id]) this.screens[id].classList.add('active');
-    if (id === 'setup') {
-      this.updateGlobalStats();
-    }
-  },
+  if (
+    !(
+      selectedImage instanceof HTMLImageElement &&
+      selectedImage.complete &&
+      selectedImage.naturalWidth > 0 &&
+      selectedImage.naturalHeight > 0
+    )
+  ) {
 
-  setMode(mode, persist = true) {
-    this.engine.mode = mode;
-    const dual = document.getElementById('mode-dual');
-    const quad = document.getElementById('mode-quad');
-    if (dual) dual.classList.toggle('active', mode === 'dual');
-    if (quad) quad.classList.toggle('active', mode === 'quad');
-    const isQuad = mode === 'quad';
-    const shpWrap = document.getElementById('chk-shp-wrapper');
-    const colWrap = document.getElementById('chk-col-wrapper');
-    if (shpWrap) shpWrap.style.display = isQuad ? 'flex' : 'none';
-    if (colWrap) colWrap.style.display = isQuad ? 'flex' : 'none';
-    const shp = document.getElementById('chk-shp');
-    const col = document.getElementById('chk-col');
-    if (shp) shp.checked = isQuad;
-    if (col) col.checked = isQuad;
-    this.onStimChange();
-    if (persist) this.saveSettings();
-  },
+    console.error(
+      'Failed to load anime face path:',
+      selectedPath
+    );
 
-  setStimulusType(type, persist = true) {
-    const normalized = type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces';
+    return null;
 
-    // Standard Anime Faces is the only active anime subtype. Any attempt to
-    // select a locked subtype is safely coerced to Standard instead of
-    // entering a fallback loop or changing the underlying stimulus family.
-    if (normalized === 'anime_faces') this.animeMode = 'standard';
-
-    this.engine.stimulusType = normalized;
-    this.engine.animeMode = this.animeMode || 'standard';
-
-    const human = document.getElementById('stimulus-human-card');
-    const anime = document.getElementById('stimulus-anime-card');
-    const panel = document.getElementById('anime-submode-panel');
-    const humanActive = normalized === 'human_faces';
-
-    if (human) {
-      human.classList.toggle('active', humanActive);
-      human.setAttribute('aria-pressed', humanActive ? 'true' : 'false');
-    }
-    if (anime) {
-      anime.classList.toggle('active', !humanActive);
-      anime.setAttribute('aria-pressed', humanActive ? 'false' : 'true');
-    }
-    if (panel) panel.hidden = humanActive;
-
-    this.setAnimeMode('standard', false);
-
-    const status = document.getElementById('stimulus-type-status');
-    if (status) status.textContent = humanActive
-      ? 'Human Faces • Standard affective faces'
-      : 'Anime Faces • Standard';
-
-    if (persist) this.saveSettings();
-  },
-
-  setAnimeMode(mode, persist = true) {
-    // waifu/hentai/gore are intentionally locked until their asset manifests
-    // are supplied. They cannot become the active engine state.
-    const normalized = mode === 'standard' ? 'standard' : 'standard';
-    this.engine.animeMode = normalized;
-    this.animeMode = normalized;
-
-    document.querySelectorAll('[data-anime-mode]').forEach(btn => {
-      const active = btn.dataset.animeMode === normalized;
-      const locked = btn.dataset.animeMode !== 'standard';
-      btn.classList.toggle('active', active);
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      if (locked) {
-        btn.disabled = true;
-        btn.setAttribute('aria-disabled', 'true');
-      }
-    });
-
-    const status = document.getElementById('stimulus-type-status');
-    if (status && this.engine.stimulusType === 'anime_faces') {
-      status.textContent = 'Anime Faces • Standard';
-    }
-
-    if (persist) this.saveSettings();
-  },
-
-  onGridTypeChange() {
-    const sel = document.getElementById('sel-grid-type');
-    const is3d = sel ? sel.value === '3d' : false;
-    const r2d = document.getElementById('row-2d-size');
-    const r3d = document.getElementById('row-3d-speed');
-    if (r2d) r2d.style.display = is3d ? 'none' : 'flex';
-    if (r3d) r3d.style.display = is3d ? 'flex' : 'none';
-  },
-
-  update3DSpeedDisplay() {
-    const rng = document.getElementById('rng-3d-speed');
-    const disp = document.getElementById('disp-3d-speed');
-    if (rng && disp) {
-      const v = parseInt(rng.value);
-      disp.textContent = v < 30 ? 'Slow' : v < 70 ? 'Normal' : 'Fast';
-    }
-  },
-
-  onVariableNToggle() {
-    const chk = document.getElementById('chk-variable-n');
-    const el = document.getElementById('variable-n-controls');
-    const on = chk ? chk.checked : false;
-    if (el) {
-      el.style.opacity = on ? '1' : '0.4';
-      el.style.pointerEvents = on ? 'auto' : 'none';
-    }
-    const nVal = parseInt(document.getElementById('rng-start-n')?.value) || 1;
-    const minRng = document.getElementById('rng-var-min');
-    if (minRng) {
-      minRng.max = Math.max(1, nVal - 1);
-      if (parseInt(minRng.value) > parseInt(minRng.max)) minRng.value = minRng.max;
-      const disp = document.getElementById('disp-var-min');
-      if (disp) disp.textContent = minRng.value;
-    }
-  },
-
-  onISIModeChange() {
-    const sel = document.getElementById('sel-isi-mode');
-    const mode = sel ? sel.value : 'fixed';
-    const fixedCtrl = document.getElementById('isi-fixed-controls');
-    const varCtrl = document.getElementById('isi-variable-controls');
-    if (fixedCtrl) fixedCtrl.style.display = mode === 'fixed' ? 'block' : 'none';
-    if (varCtrl) varCtrl.style.display = mode === 'variable' ? 'block' : 'none';
-  },
-
-  onStimChange() {
-    this.engine.setActiveStimuli();
-    const grid = document.getElementById('keybind-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    this.engine.activeStimuli.forEach(stim => {
-      const label = document.createElement('div');
-      label.className = 'kb-label';
-      label.textContent = MOD_LABELS[stim];
-      const btn = document.createElement('button');
-      btn.className = 'keybind-btn';
-      btn.dataset.type = stim;
-      btn.textContent = formatKey(this.engine.keys[stim]);
-      btn.addEventListener('click', () => this.startBind(btn));
-      grid.appendChild(label);
-      grid.appendChild(btn);
-    });
-  },
-
-  startBind(btn) {
-    if (this.engine.listeningBind) {
-      const old = document.querySelector('.keybind-btn.listening');
-      if (old) {
-        old.classList.remove('listening');
-        old.textContent = formatKey(this.engine.keys[old.dataset.type]);
-      }
-    }
-    this.engine.listeningBind = btn.dataset.type;
-    btn.textContent = 'Press...';
-    btn.classList.add('listening');
-  },
-
-  handleKeydown(e) {
-    if (this.engine.listeningBind) {
-      e.preventDefault();
-      this.engine.keys[this.engine.listeningBind] = e.key;
-      this.engine.listeningBind = null;
-      this.onStimChange();
-      this.saveSettings();
-      return;
-    }
-    if (!this.screens.game || !this.screens.game.classList.contains('active')) return;
-    if (!this.engine.isRunning || this.engine.isPaused) return;
-    if (this.engine.isTrialActive && this.engine.currentTrial < this.engine.blockTrials) {
-      this.engine.activeStimuli.forEach(type => {
-        if (e.key === this.engine.keys[type] && !this.engine.responses[type][this.engine.currentTrial]) {
-          this.processFeedback(type);
-        }
-      });
-    }
-    if (this.engine.getSettings().tally && e.code === 'Space') {
-      e.preventDefault();
-      this.advanceTally();
-    }
-  },
-
-  toggleAccordion(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('open');
-  },
-
-  async startSession() {
-    const s = this.engine.getSettings();
-
-    // Asset loading is deliberately non-fatal. Await it before the game screen
-    // is entered, then use human faces if Anime Standard is unavailable.
-    try {
-      await this.engine.preloadImages();
-    } catch (error) {
-      console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
-      this.engine.imagesLoaded = true;
-      this.engine.animeImagesLoaded = getCachedAnimePaths('standard').length > 0;
-    }
-
-    this.engine.reset();
-    this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-    this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-    this.engine.animeMode = s.animeMode || 'standard';
-    this.engine.setActiveStimuli();
-    this.engine.currentN = s.startN;
-    this.engine.highestN = s.startN;
-    this.engine.sessionStart = Date.now();
-    this.engine.lastTick = Date.now();
-    this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
-    this.engine.isRunning = true;
-
-    if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
-      console.warn('[ATTENTIONAL SHIELD] Anime Standard assets are unavailable. Human faces will be used as a non-fatal fallback.');
-    }
-
-    AudioEngine.init();
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
-
-    this.buildGrid();
-    this.buildSideControls();
-    this.switchScreen('game');
-    this.showInterMsg('GET READY', 800);
-    setTimeout(() => {
-      if (!this.engine.isRunning || this.engine.isPaused) return;
-      try {
-        this.startBlock();
-      } catch (error) {
-        console.error('[ATTENTIONAL SHIELD] Block initialization failed:', error);
-        // Last-resort recovery: switch the engine to human faces and retry.
-        this.engine.stimulusType = 'human_faces';
-        this.engine.animeMode = 'standard';
-        try { this.startBlock(); }
-        catch (retryError) {
-          console.error('[ATTENTIONAL SHIELD] Session recovery failed:', retryError);
-          this.endSession('error');
-        }
-      }
-    }, 850);
-
-    this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
-  },
-
-  updateTimer() {
-    if (!this.engine.isRunning || this.engine.isPaused) return;
-    const now = Date.now();
-    this.engine.sessionMs += (now - this.engine.lastTick);
-    this.engine.lastTick = now;
-    const limit = this.engine.sessionLimitMs || 0;
-    if (limit > 0 && this.engine.sessionMs >= limit) {
-      this.engine.sessionMs = limit;
-      const el = document.getElementById('hud-timer');
-      if (el) el.textContent = formatTime(this.engine.sessionMs);
-      this.endSession('duration');
-      return;
-    }
-    const el = document.getElementById('hud-timer');
-    if (el) el.textContent = formatTime(this.engine.sessionMs);
-  },
-
-  buildGrid() {
-    const s = this.engine.getSettings();
-    const g2d = document.getElementById('grid-2d');
-    const s3d = document.getElementById('scene-3d');
-    const cube = document.getElementById('cube-3d');
-    if (g2d) { g2d.classList.remove('active'); g2d.innerHTML = ''; }
-    if (s3d) { s3d.classList.remove('active'); }
-    if (cube) { cube.innerHTML = ''; }
-
-    if (s.gridType === '3d') {
-      if (s3d) s3d.classList.add('active');
-      const speed = s.speed3d;
-      const dur = 35 - (speed / 100) * 32;
-      if (cube) cube.style.setProperty('--rot-speed', Math.max(3, dur) + 's');
-      for (let i = 0; i < 27; i++) {
-        const spacing = 14.5;
-        const x = ((i % 3) - 1) * spacing, y = ((Math.floor(i / 3) % 3) - 1) * spacing, z = (Math.floor(i / 9) - 1) * spacing;
-        const div = document.createElement('div');
-        div.className = 'mini-cube';
-        div.id = 'pos-' + i;
-        div.style.transform = 'translate3d(' + x + 'vmin,' + y + 'vmin,' + z + 'vmin)';
-        div.innerHTML = '<div class="mini-face mf-front"></div><div class="mini-face mf-back"></div><div class="mini-face mf-right"></div><div class="mini-face mf-left"></div><div class="mini-face mf-top"></div><div class="mini-face mf-bottom"></div>';
-        cube.appendChild(div);
-      }
-    } else {
-      if (g2d) g2d.classList.add('active');
-      const sz = s.gridSize;
-      g2d.style.gridTemplateColumns = 'repeat(' + sz + ', 1fr)';
-      g2d.style.gridTemplateRows = 'repeat(' + sz + ', 1fr)';
-      for (let i = 0; i < sz * sz; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell-2d';
-        cell.id = 'pos-' + i;
-        const img = document.createElement('img');
-        img.className = 'face-img stimulus-image';
-        img.alt = '';
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        img.style.display = 'none';
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '100%';
-        img.style.pointerEvents = 'none';
-        const fallback = document.createElement('div');
-        fallback.className = 'face-fallback';
-        fallback.style.display = 'none';
-        const overlay = document.createElement('div');
-        overlay.className = 'cell-overlay';
-        cell.appendChild(img);
-        cell.appendChild(fallback);
-        cell.appendChild(overlay);
-        g2d.appendChild(cell);
-      }
-    }
-  },
-
-  buildSideControls() {
-    const left = document.getElementById('side-left');
-    const right = document.getElementById('side-right');
-    if (left) left.innerHTML = '';
-    if (right) right.innerHTML = '';
-    const stims = this.engine.activeStimuli;
-    let leftStims = [], rightStims = [];
-    if (stims.length >= 4) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
-    else if (stims.length === 3) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
-    else if (stims.length === 2) { leftStims = [stims[0]]; rightStims = [stims[1]]; }
-    else { leftStims = stims; }
-
-    const makeBtn = (type) => {
-      const d = document.createElement('div');
-      d.className = 'modality-btn';
-      d.id = 'ind-' + type;
-      d.dataset.type = type;
-      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
-      d.addEventListener('touchstart', (e) => { e.preventDefault(); this.tapFeedback(type); }, {passive: false});
-      d.addEventListener('mousedown', (e) => { e.preventDefault(); this.tapFeedback(type); });
-      return d;
-    };
-    leftStims.forEach(t => { if (left) left.appendChild(makeBtn(t)); });
-    rightStims.forEach(t => { if (right) right.appendChild(makeBtn(t)); });
-  },
-
-  tapFeedback(type) {
-    if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
-    if (this.engine.currentTrial >= this.engine.blockTrials) return;
-    if (!this.engine.responses[type][this.engine.currentTrial]) this.processFeedback(type);
-  },
-
-  showInterMsg(text, duration) {
-    const el = document.getElementById('inter-msg');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.add('active');
-    setTimeout(() => el.classList.remove('active'), duration);
-  },
-
-  startBlock() {
-    this.engine.generateBlock();
-    this.updateHUD();
-    this.runTrial();
-  },
-
-  runTrial() {
-    if (!this.engine.isRunning || this.engine.isPaused) return;
-    if (this.engine.currentTrial >= this.engine.blockTrials) {
-      this.evaluateBlock();
-      if (this.engine.isRunning && !this.engine.isPaused) {
-        this.showInterMsg('BLOCK COMPLETE', 300);
-        setTimeout(() => { if (this.engine.isRunning && !this.engine.isPaused) this.startBlock(); }, 350);
-      }
-      return;
-    }
-
-    const trial = this.engine.trials[this.engine.currentTrial];
-    const k = this.engine.kSeq[this.engine.currentTrial];
-    const s = this.engine.getSettings();
-    this.engine.isTrialActive = true;
-
-    const hudTrial = document.getElementById('hud-trial');
-    if (hudTrial) hudTrial.textContent = (this.engine.currentTrial + 1) + ' / ' + this.engine.blockTrials;
-    const nDisp = document.getElementById('hud-nlevel');
-    if (nDisp) {
-      if (s.variableN) {
-        nDisp.textContent = k + '-Back';
-        nDisp.style.color = 'var(--magenta)';
-      } else {
-        nDisp.textContent = this.engine.currentN + '-Back';
-        nDisp.style.color = 'var(--text)';
-      }
-    }
-
-    this.clearGrid();
-
-    // Position stimulus
-    if (this.engine.activeStimuli.includes('pos')) {
-      const targetEl = document.getElementById('pos-' + trial.pos);
-      const isAnime = trial.visualType === 'anime_faces';
-      const imageCache = isAnime ? (ANIME_IMAGE_CACHE.standard || {}) : this.engine.imageCache;
-      const imagePath = isAnime && typeof trial.face === 'string'
-        ? `assets/stimuli/anime/${trial.face.split('/').pop()}`
-        : trial.face;
-
-      const showFallback = (label) => {
-        if (!targetEl) return;
-        if (s.gridType === '3d') {
-          targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-            faceEl.replaceChildren();
-            faceEl.classList.add('active');
-            const fb = document.createElement('div');
-            fb.className = 'face-fallback';
-            fb.textContent = label;
-            faceEl.appendChild(fb);
-          });
-        } else {
-          const img = targetEl.querySelector('.face-img');
-          const fb = targetEl.querySelector('.face-fallback');
-          if (img) img.style.display = 'none';
-          if (fb) { fb.textContent = label; fb.style.display = 'flex'; }
-          targetEl.classList.add('active');
-        }
-      };
-
-      if (isAnime && !(imagePath && imageCache[imagePath] instanceof HTMLImageElement && imageCache[imagePath].naturalWidth > 0)) {
-        console.error('Failed to load anime face path:', imagePath);
-        showFallback('ANIME');
-      } else if (targetEl && s.gridType === '3d') {
-        targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-          faceEl.replaceChildren();
-          faceEl.classList.add('active');
-          const img = createPreloadedFaceImage(imagePath, isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' visual stimulus', imageCache);
-          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
-          img.onerror = () => {
-            if (isAnime) console.error('Failed to load anime face path:', imagePath);
-            img.remove();
-            const fb = document.createElement('div'); fb.className = 'face-fallback'; fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
-            faceEl.appendChild(fb);
-          };
-          faceEl.appendChild(img);
-        });
-      } else if (targetEl) {
-        const img = targetEl.querySelector('.face-img');
-        const fb = targetEl.querySelector('.face-fallback');
-        if (imagePath && img) {
-          img.className = 'face-img stimulus-image';
-          img.alt = isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' emotional face';
-          img.decoding = 'async'; img.loading = 'eager';
-          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
-          img.onerror = () => {
-            if (isAnime) console.error('Failed to load anime face path:', imagePath);
-            img.style.display = 'none';
-            if (fb) { fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase(); fb.style.display = 'flex'; }
-          };
-          img.src = imagePath;
-          if (fb) fb.style.display = 'none';
-        } else {
-          showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
-        }
-        targetEl.classList.add('active');
-      }
-    }
-
-    // Top stimulus (shape/color). No random word is rendered above the grid.
-    const shapeDisp = document.getElementById('shape-display');
-    const nInd = document.getElementById('n-indicator');
-    if (this.engine.activeStimuli.includes('col') || this.engine.activeStimuli.includes('shp') || this.engine.activeStimuli.includes('aud')) {
-      if (shapeDisp) shapeDisp.style.visibility = 'visible';
-      const fillColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : 'rgba(255,255,255,0.06)';
-      const strokeColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : '#4b5563';
-      const svg = document.getElementById('shape-svg');
-      if (this.engine.activeStimuli.includes('shp')) {
-        if (svg) svg.innerHTML = SHAPES_SVG[trial.shp].replace(/FILL/g, fillColor).replace(/STROKE/g, strokeColor);
-      } else if (this.engine.activeStimuli.includes('col')) {
-        if (svg) svg.innerHTML = '<rect x="10" y="10" width="80" height="80" rx="14" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="4"/>';
-      } else {
-        if (svg) svg.innerHTML = '';
-      }
-    } else {
-      if (shapeDisp) shapeDisp.style.visibility = 'hidden';
-    }
-
-    if (s.variableN && nInd) {
-      nInd.innerHTML = '<span class="n-badge">' + k + '-Back</span>';
-    } else if (nInd) {
-      nInd.innerHTML = '';
-    }
-
-    // Audio
-    if (this.engine.activeStimuli.includes('aud')) {
-      AudioEngine.speak(trial.audWord);
-    }
-
-    // Fixed timeline: stimulus removal and trial advancement are both
-    // scheduled from the same trial start. Audio playback never controls timing.
-    const stimulusMs = Math.max(500, Math.min(800, s.stimDur || TRIAL_TIMING.stimulusMs));
-    const isiMs = this.engine.getISI();
-    const totalMs = stimulusMs + isiMs;
-    const trialStartedAt = performance.now();
-
-    const hideStimulus = () => {
-      if (!this.engine.isRunning || this.engine.isPaused) return;
-      this.clearGrid();
-      if (s.variableN && nDisp) nDisp.style.color = 'var(--text)';
-    };
-
-    const advanceTrial = () => {
-      if (!this.engine.isRunning || this.engine.isPaused) return;
-      const remaining = Math.max(0, totalMs - (performance.now() - trialStartedAt));
-      if (remaining > 8) {
-        this.engine.trialAdvanceTimeout = setTimeout(advanceTrial, remaining);
-        return;
-      }
-      this.clearGrid();
-      if (s.variableN && nDisp) nDisp.style.color = 'var(--text)';
-      if (s.tally) {
-        const inter = document.getElementById('inter-msg');
-        if (inter) { inter.textContent = 'PRESS SPACE'; inter.classList.add('active'); }
-        this.engine.isTrialActive = false;
-        return;
-      }
-      this.showMissedFeedback();
-      this.engine.currentTrial++;
-      this.engine.trialTimeout = null;
-      this.engine.trialAdvanceTimeout = null;
-      this.runTrial();
-    };
-
-    this.engine.trialTimeout = setTimeout(hideStimulus, stimulusMs);
-    this.engine.trialAdvanceTimeout = setTimeout(advanceTrial, totalMs);
-  },
-
-  advanceTally() {
-    const inter = document.getElementById('inter-msg');
-    if (inter) inter.classList.remove('active');
-    this.showMissedFeedback();
-    this.engine.currentTrial++;
-    this.runTrial();
-  },
-
-  clearGrid() {
-    const s = this.engine.getSettings();
-    if (s.gridType === '3d') {
-      document.querySelectorAll('.mini-face').forEach(f => { f.innerHTML = ''; f.classList.remove('active'); });
-    } else {
-      document.querySelectorAll('.cell-2d').forEach(c => {
-        c.classList.remove('active');
-        const img = c.querySelector('.face-img');
-        const fb = c.querySelector('.face-fallback');
-        if (img) { img.style.display = 'none'; }
-        if (fb) fb.style.display = 'none';
-      });
-    }
-    const shapeDisp = document.getElementById('shape-display');
-    const nInd = document.getElementById('n-indicator');
-    if (shapeDisp) shapeDisp.style.visibility = 'hidden';
-    if (nInd) nInd.innerHTML = '';
-  },
-
-  processFeedback(type) {
-    this.engine.responses[type][this.engine.currentTrial] = true;
-    const k = this.engine.kSeq[this.engine.currentTrial];
-    let isTarget = false;
-    if (this.engine.currentTrial >= k) {
-      const current = this.engine.trials[this.engine.currentTrial];
-      const previous = this.engine.trials[this.engine.currentTrial - k];
-      if (type === 'aud') isTarget = current.audWord === previous.audWord;
-      else if (type === 'pos') isTarget = current.pos === previous.pos;
-      else if (type === 'shp') isTarget = current.shp === previous.shp;
-      else if (type === 'col') isTarget = current.col === previous.col;
-    }
-    this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
-  },
-
-  showMissedFeedback() {
-    const k = this.engine.kSeq[this.engine.currentTrial];
-    if (this.engine.currentTrial < k) return;
-    let missedTarget = false;
-    this.engine.activeStimuli.forEach(type => {
-      const current = this.engine.trials[this.engine.currentTrial];
-      const previous = this.engine.trials[this.engine.currentTrial - k];
-      let isTarget = false;
-      if (type === 'aud') isTarget = current.audWord === previous.audWord;
-      else if (type === 'pos') isTarget = current.pos === previous.pos;
-      else if (type === 'shp') isTarget = current.shp === previous.shp;
-      else if (type === 'col') isTarget = current.col === previous.col;
-      if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
-        missedTarget = true;
-        this.flashIndicator(type, 'wrong');
-      }
-    });
-    if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
-  },
-
-  flashIndicator(type, status) {
-    const el = document.getElementById('ind-' + type);
-    if (!el) return;
-    el.classList.remove('correct', 'wrong', 'neutral');
-    void el.offsetWidth;
-    el.classList.add(status);
-    setTimeout(() => el.classList.remove('correct', 'wrong', 'neutral'), 300);
-  },
-
-  evaluateBlock() {
-    const s = this.engine.getSettings();
-    let blockHits = 0, blockMisses = 0, blockFA = 0, blockCR = 0;
-    this.engine.activeStimuli.forEach(type => {
-      const st = this.engine.stats[type];
-      for (let i = 0; i < this.engine.blockTrials; i++) {
-        const k = this.engine.kSeq[i];
-        if (i < k) continue;
-        const current = this.engine.trials[i];
-        const previous = this.engine.trials[i - k];
-        let isTarget = false;
-        if (type === 'aud') isTarget = current.audWord === previous.audWord;
-        else if (type === 'pos') isTarget = current.pos === previous.pos;
-        else if (type === 'shp') isTarget = current.shp === previous.shp;
-        else if (type === 'col') isTarget = current.col === previous.col;
-        const responded = this.engine.responses[type][i];
-        if (isTarget && responded) { st.hits++; blockHits++; }
-        else if (isTarget && !responded) { st.misses++; blockMisses++; }
-        else if (!isTarget && responded) { st.falseAlarms++; blockFA++; }
-        else { st.correctRejects++; blockCR++; }
-      }
-    });
-
-    const totalTargets = blockHits + blockMisses;
-    const totalLures = blockFA + blockCR;
-    let blockD = 0;
-    if (totalTargets > 0 && totalLures > 0) {
-      let hr = blockHits / totalTargets, far = blockFA / totalLures;
-      if (hr >= 1) hr = 1 - 1/(2*totalTargets); if (hr <= 0) hr = 1/(2*totalTargets);
-      if (far >= 1) far = 1 - 1/(2*totalLures); if (far <= 0) far = 1/(2*totalLures);
-      blockD = inverseNormalCDF(hr) - inverseNormalCDF(far);
-    }
-
-    const hudD = document.getElementById('hud-dprime');
-    if (hudD) hudD.textContent = blockD.toFixed(2);
-
-    if (s.adaptive) {
-      if (blockD > 2.2 && this.engine.currentN < 9) {
-        this.engine.currentN++;
-        if (this.engine.currentN > this.engine.highestN) this.engine.highestN = this.engine.currentN;
-      } else if (blockD < 1.0 && this.engine.currentN > 1) {
-        this.engine.currentN--;
-      }
-    }
-  },
-
-  updateHUD() {
-    const nlevel = document.getElementById('hud-nlevel');
-    const trial = document.getElementById('hud-trial');
-    const dprime = document.getElementById('hud-dprime');
-    if (nlevel) nlevel.textContent = this.engine.currentN + '-Back';
-    if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
-    if (dprime) dprime.textContent = '0.00';
-  },
-
-  togglePause() {
-    if (!this.engine.isRunning) return;
-    const btn = document.getElementById('btn-pause');
-    if (!this.engine.isPaused) {
-      this.engine.isPaused = true;
-      this.engine.lastTick = Date.now();
-      clearTimeout(this.engine.trialTimeout);
-      clearTimeout(this.engine.trialAdvanceTimeout);
-      try { window.speechSynthesis.cancel(); } catch(e) {}
-      if (btn) btn.textContent = 'RESUME';
-      this.clearGrid();
-      this.showInterMsg('PAUSED', 999999);
-    } else {
-      this.engine.isPaused = false;
-      this.engine.lastTick = Date.now();
-      if (btn) btn.textContent = 'PAUSE';
-      const inter = document.getElementById('inter-msg');
-      if (inter) inter.classList.remove('active');
-      this.engine.activeStimuli.forEach(t => { if (this.engine.responses[t][this.engine.currentTrial]) this.engine.responses[t][this.engine.currentTrial] = false; });
-      this.runTrial();
-    }
-  },
-
-  endSession(reason = 'manual') {
-    this.engine.isRunning = false;
-    this.engine.isTrialActive = false;
-    clearTimeout(this.engine.trialTimeout);
-    clearTimeout(this.engine.trialAdvanceTimeout);
-    clearInterval(this.engine.timerInterval);
-    try { window.speechSynthesis.cancel(); } catch(e) {}
-
-    const now = Date.now();
-    this.engine.sessionMs += (now - this.engine.lastTick);
-
-    let totalHits = 0, totalMisses = 0, totalFA = 0, totalCR = 0;
-    const modalityStats = [];
-    this.engine.activeStimuli.forEach(type => {
-      const st = this.engine.stats[type];
-      totalHits += st.hits; totalMisses += st.misses;
-      totalFA += st.falseAlarms; totalCR += st.correctRejects;
-      const d = calculateDPrime(st.hits, st.misses, st.falseAlarms, st.correctRejects);
-      const targets = st.hits + st.misses;
-      const acc = targets > 0 ? (st.hits / (st.hits + st.falseAlarms + st.misses)) * 100 : 0;
-      modalityStats.push({type: type, d: d, acc: acc, hits: st.hits, fa: st.falseAlarms});
-    });
-
-    const overallD = calculateDPrime(totalHits, totalMisses, totalFA, totalCR);
-    const totalTargets = totalHits + totalMisses;
-    const overallAcc = totalTargets > 0 ? (totalHits / (totalHits + totalFA + totalMisses)) * 100 : 0;
-
-    StatsManager.addSession({
-      timestamp: Date.now(),
-      durationMs: this.engine.sessionMs,
-      bestN: this.engine.highestN,
-      overallDPrime: overallD,
-      overallAccuracy: overallAcc,
-      modalityStats: modalityStats,
-      trialsCompleted: this.engine.currentTrial,
-      settings: this.engine.getSettings()
-    });
-
-    const resTime = document.getElementById('res-time');
-    const resBestN = document.getElementById('res-best-n');
-    const resD = document.getElementById('res-dprime');
-    const resTrials = document.getElementById('res-trials');
-    if (resTime) resTime.textContent = formatTime(this.engine.sessionMs);
-    if (resBestN) resBestN.textContent = this.engine.highestN;
-    if (resD) resD.textContent = overallD.toFixed(2);
-    if (resTrials) resTrials.textContent = this.engine.currentTrial;
-
-    const breakdown = document.getElementById('modality-breakdown');
-    if (breakdown) {
-      let html = `<div class="break-header"><span>Modality</span><span>D'</span><span>Acc%</span><span>Hits</span><span>FA</span></div>`;
-      modalityStats.forEach(m => {
-        html += '<div class="break-row"><span class="mod-name">' + MOD_LABELS[m.type] + '</span><span class="mod-dp">' + m.d.toFixed(2) + '</span><span class="mod-acc">' + Math.round(m.acc) + '%</span><span class="mod-hits">' + m.hits + '</span><span class="mod-fa">' + m.fa + '</span></div>';
-      });
-      breakdown.innerHTML = html;
-    }
-
-    this.switchScreen('results');
-    if (reason === 'duration') {
-      const title = document.querySelector('#screen-results .results-panel h2');
-      if (title) title.textContent = 'SESSION COMPLETE // TIME LIMIT';
-    }
-  },
-
-  updateGlobalStats() {
-    const d = StatsManager.data;
-    const elTime = document.getElementById('stat-total-time');
-    const elSess = document.getElementById('stat-sessions');
-    const elBest = document.getElementById('stat-best-n');
-    const elAvg = document.getElementById('stat-avg-d');
-    if (elTime) elTime.textContent = Math.floor(d.totalMs / 60000);
-    if (elSess) elSess.textContent = d.sessions.length;
-    if (elBest) elBest.textContent = d.bestN;
-    if (elAvg) elAvg.textContent = StatsManager.getAvgDPrime().toFixed(1);
-  },
-
-  showStatsFull() {
-    const modal = document.getElementById('modal-dashboard');
-    if (!modal) return;
-    modal.classList.add('active');
-
-    // Render heatmap
-    const heatmap = document.getElementById('modal-heatmap');
-    if (heatmap) {
-      heatmap.innerHTML = '';
-      StatsManager.getHeatmapData().forEach(d => {
-        const cell = document.createElement('div');
-        cell.className = 'heatmap-cell';
-        cell.dataset.level = d.level;
-        cell.title = d.date + ': ' + (d.level > 0 ? d.level + ' sessions' : 'No training');
-        heatmap.appendChild(cell);
-      });
-    }
-
-    // Render charts after modal is visible so canvas has size
-    requestAnimationFrame(() => {
-      const sessions = StatsManager.data.sessions;
-      const dprimeData = sessions.slice(-20).map((s, i) => ({x: (i+1).toString(), y: s.overallDPrime || 0}));
-      ChartRenderer.drawLine(document.getElementById('chart-dprime'), dprimeData, '#00f0ff', true);
-
-      const modTotals = {pos:{hits:0, fa:0}, col:{hits:0, fa:0}, aud:{hits:0, fa:0}, shp:{hits:0, fa:0}};
-      sessions.forEach(s => {
-        if (s.modalityStats) {
-          s.modalityStats.forEach(m => {
-            if (modTotals[m.type]) { modTotals[m.type].hits += m.hits || 0; modTotals[m.type].fa += m.fa || 0; }
-          });
-        }
-      });
-      const modLabels = Object.keys(modTotals).filter(k => modTotals[k].hits + modTotals[k].fa > 0);
-      const modAccs = modLabels.map(k => {
-        const t = modTotals[k];
-        const total = t.hits + t.fa;
-        return total > 0 ? (t.hits / total) * 100 : 0;
-      });
-      ChartRenderer.drawBars(document.getElementById('chart-modality'), modLabels.map(k => MOD_LABELS[k] || k), modAccs, ['#00f0ff', '#ff006e', '#00ff88', '#ffaa00']);
-
-      const tod = StatsManager.getTimeOfDayData();
-      ChartRenderer.drawBars(document.getElementById('chart-tod'), ['Night', 'Morning', 'Afternoon', 'Evening'], tod, ['#4b5563', '#00f0ff', '#ffaa00', '#ff006e']);
-
-      const nData = sessions.slice(-20).map((s, i) => ({x: (i+1).toString(), y: s.bestN || 1}));
-      ChartRenderer.drawLine(document.getElementById('chart-nlevel'), nData, '#ff006e', false);
-    });
-  },
-
-  closeModal() {
-    const modal = document.getElementById('modal-dashboard');
-    if (modal) modal.classList.remove('active');
   }
-};
 
-// Expose the controller globally for legacy inline handlers and debugging.
-window.App = App;
 
-// ==================== DOM READY ====================
-const boot = () => {
-  try { App.init(); } catch (error) {
-    console.error('[ATTENTIONAL SHIELD] Initialization failed:', error);
-    const msg = document.getElementById('inter-msg');
-    if (msg) { msg.textContent = 'INITIALIZATION ERROR — OPEN CONSOLE'; msg.classList.add('active'); }
-  }
-};
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
-else boot();
-})();
+  return selectedPath;
+
+}
+
+
+/* ==================== PRELOADED IMAGE CREATOR ==================== */
+
+function createPreloadedFaceImage(
+  path,
+  altText,
+  cache
+) {
+
+  const cached =
+    cache?.[path] ||
+    FACE_IMAGE_CACHE[path] ||
+    null;
+
+
+  const img =
+    cached instanceof HTMLImageElement
+      ? cached.cloneNode(false)
+      : new Image();
+
+
+  img.src =
+    path;
+
+  img.alt =
+    altText || '';
+
+  img.decoding =
+    'async';
+
+  img.loading =
+    'eager';
+
+  img.draggable =
+    false;
+
+  img.className =
+    'stimulus-image';
+
+
+  /*
+   * Full-cell rendering for both human and Anime faces.
+   */
+
+  img.style.width =
+    '100%';
+
+  img.style.height =
+    '100%';
+
+  img.style.display =
+    'block';
+
+  img.style.objectFit =
+    'cover';
+
+  img.style.maxWidth =
+    '100%';
+
+  img.style.maxHeight =
+    '100%';
+
+  img.style.pointerEvents =
+    'none';
+
+
+  return img;
+
+}
 </script>
-</body>
-</html>
