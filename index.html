@@ -138,7 +138,19 @@ select:focus, input:focus { border-color:var(--cyan); }
 .hud-btn:hover { border-color:var(--text-muted); color:var(--text); }
 .hud-btn.danger { border-color:var(--red); color:var(--red); } .hud-btn.danger:hover { background:var(--red-dim); }
 .hud-btn.warning { border-color:var(--amber); color:var(--amber); }
-.game-stage { flex:1; display:flex; flex-direction:row; align-items:center; justify-content:center; padding:8px; gap:12px; position:relative; overflow:hidden; min-height:0; }
+.game-stage {
+  flex:1;
+  display:flex;
+  flex-direction:row;
+  align-items:stretch;
+  justify-content:stretch;
+  padding:4px;
+  gap:8px;
+  position:relative;
+  overflow:hidden;
+  min-height:0;
+  min-width:0;
+}
 .side-controls { display:flex; flex-direction:column; gap:10px; width:80px; min-width:65px; height:100%; justify-content:center; z-index:10; }
 .modality-btn { flex:1; max-height:130px; min-height:60px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; transition:all 0.15s ease; user-select:none; touch-action:manipulation; position:relative; overflow:hidden; }
 .modality-btn:active { transform:scale(0.96); }
@@ -150,7 +162,18 @@ select:focus, input:focus { border-color:var(--cyan); }
 .modality-btn.wrong .mod-initial { color:var(--red); }
 .modality-btn.neutral { border-color:var(--text-dim); background:rgba(255,255,255,0.03); }
 .modality-btn.neutral .mod-initial { color:var(--text-dim); }
-.center-display { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; min-height:0; gap:10px; position:relative; }
+.center-display {
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  min-height:0;
+  gap:6px;
+  position:relative;
+  overflow:hidden;
+}
 .top-stimulus { height:80px; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
 .shape-display { width:70px; height:70px; position:relative; display:flex; align-items:center; justify-content:center; }
 .shape-display svg { width:100%; height:100%; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
@@ -168,7 +191,24 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
-.scene-3d { display:none; width:100%; height:100%; max-width:min(94vw,94vh); max-height:min(94vw,94vh); aspect-ratio:1/1; perspective:1200px; align-items:center; justify-content:center; overflow:visible; }
+.scene-3d {
+  display:none;
+  position:relative;
+  flex:1 1 auto;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  max-width:none;
+  max-height:none;
+  aspect-ratio:auto;
+  margin:auto;
+  padding:0;
+  overflow:hidden;
+  align-items:center;
+  justify-content:center;
+  place-items:center;
+}
 .scene-3d.active { display:flex; }
 .cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
 @keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
@@ -203,7 +243,7 @@ select:focus, input:focus { border-color:var(--cyan); }
   .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
-  .scene-3d { max-width:min(91vw,91vh); max-height:min(91vw,91vh); perspective:1050px; }
+  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; perspective:none; }
   .results-grid { grid-template-columns:1fr 1fr; }
   .setup-wrap { padding:12px; }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
@@ -224,10 +264,49 @@ button, input, select { position:relative; z-index:1; }
   .game-stage { gap:6px; padding:5px; }
   .side-controls { width:52px; min-width:46px; }
   .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:min(88vw,82vh); max-height:min(88vw,82vh); perspective:900px; }
+  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; perspective:none; }
   .cube-3d { animation-name:rotate3dMobile; }
   .hud-stat .hud-lbl { display:none; }
   .hud-btn { padding:5px 8px; }
+}
+
+/* 3D viewport: centered, uncapped, and symmetric. */
+.scene-3d {
+  position:relative;
+  display:flex;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  max-width:none;
+  max-height:none;
+  margin:auto;
+  padding:0;
+  overflow:hidden;
+  align-items:center;
+  justify-content:center;
+  place-items:center;
+}
+
+.scene-3d canvas {
+  position:relative !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:auto !important;
+  display:block !important;
+}
+
+@media (max-width:700px) {
+  .scene-3d {
+    width:100%;
+    height:100%;
+    max-width:none;
+    max-height:none;
+    margin:auto;
+  }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -1062,70 +1141,49 @@ const Spatial3D = (() => {
   const SPACING = CELL_SIZE + GAP;
   const GRID_HALF = (SPACING * 3) / 2;
 
-  // Reusable quaternion helpers for screen-upright billboarding.
-  const parentWorldQuat = new THREE.Quaternion();
-  const billboardQuat = new THREE.Quaternion();
-
   function addSegment(vertices, ax, ay, az, bx, by, bz) {
     vertices.push(ax, ay, az, bx, by, bz);
   }
 
   function buildUnifiedLatticeGeometry() {
+    /*
+     * One consolidated 3×3×3 matrix.
+     *
+     * Four coordinates on each axis define the outer boundary and
+     * the two internal partitions. Drawing 4×4 lines in each of
+     * the X/Y/Z directions creates every compartment edge exactly
+     * once, with no overlapping BoxGeometry edges.
+     */
     const vertices = [];
     const h = GRID_HALF;
 
-    // One outer bounding cube: 12 unique edges.
-    const corners = [
-      [-h,-h,-h], [ h,-h,-h], [ h, h,-h], [-h, h,-h],
-      [-h,-h, h], [ h,-h, h], [ h, h, h], [-h, h, h]
+    const coords = [
+      -h,
+      -SPACING / 2,
+       SPACING / 2,
+       h
     ];
 
-    const outerEdges = [
-      [0,1],[1,2],[2,3],[3,0],
-      [4,5],[5,6],[6,7],[7,4],
-      [0,4],[1,5],[2,6],[3,7]
-    ];
+    // 16 lines parallel to X.
+    for (const y of coords) {
+      for (const z of coords) {
+        addSegment(vertices, -h, y, z, h, y, z);
+      }
+    }
 
-    outerEdges.forEach(([a,b]) => {
-      addSegment(
-        vertices,
-        ...corners[a],
-        ...corners[b]
-      );
-    });
+    // 16 lines parallel to Y.
+    for (const x of coords) {
+      for (const z of coords) {
+        addSegment(vertices, x, -h, z, x, h, z);
+      }
+    }
 
-    /*
-     * Interior compartment lines.
-     *
-     * Each internal plane is represented only by its four boundary
-     * segments, producing a clean 3×3×3 lattice with no stacked
-     * duplicate box edges.
-     */
-    const inner = [-SPACING / 2, SPACING / 2];
-
-    // X-constant planes: lines parallel to Y and Z.
-    inner.forEach(x => {
-      addSegment(vertices, x, -h, -h, x, h, -h);
-      addSegment(vertices, x, -h,  h, x, h,  h);
-      addSegment(vertices, x, -h, -h, x, -h, h);
-      addSegment(vertices, x,  h, -h, x,  h, h);
-    });
-
-    // Y-constant planes: lines parallel to X and Z.
-    inner.forEach(y => {
-      addSegment(vertices, -h, y, -h, h, y, -h);
-      addSegment(vertices, -h, y,  h, h, y,  h);
-      addSegment(vertices, -h, y, -h, -h, y, h);
-      addSegment(vertices,  h, y, -h, h, y, h);
-    });
-
-    // Z-constant planes: lines parallel to X and Y.
-    inner.forEach(z => {
-      addSegment(vertices, -h, -h, z, h, -h, z);
-      addSegment(vertices, -h,  h, z, h,  h, z);
-      addSegment(vertices, -h, -h, z, -h, h, z);
-      addSegment(vertices,  h, -h, z, h, h, z);
-    });
+    // 16 lines parallel to Z.
+    for (const x of coords) {
+      for (const y of coords) {
+        addSegment(vertices, x, y, -h, x, y, h);
+      }
+    }
 
     const geometry = new THREE.BufferGeometry();
 
@@ -1168,8 +1226,8 @@ const Spatial3D = (() => {
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     renderer.domElement.style.display = 'block';
-    renderer.domElement.style.maxWidth = '100%';
-    renderer.domElement.style.maxHeight = '100%';
+    renderer.domElement.style.maxWidth = 'none';
+    renderer.domElement.style.maxHeight = 'none';
     renderer.domElement.setAttribute(
       'aria-label',
       '3D spatial stimulus'
@@ -1184,16 +1242,17 @@ const Spatial3D = (() => {
      * approximately 85–90% of the available center display.
      */
     camera = new THREE.PerspectiveCamera(
-      38,
+      48,
       1,
       0.1,
       100
     );
 
+    // Symmetric camera placement around the lattice origin.
     camera.position.set(
-      3.55,
-      3.05,
-      4.55
+      4.7,
+      4.0,
+      6.15
     );
 
     camera.lookAt(0, 0, 0);
@@ -1204,7 +1263,7 @@ const Spatial3D = (() => {
      * Increase the physical footprint without changing the
      * logical 3×3×3 coordinates.
      */
-    latticeGroup.scale.setScalar(1.18);
+    latticeGroup.scale.setScalar(0.92);
 
     scene.add(latticeGroup);
 
@@ -1239,9 +1298,8 @@ const Spatial3D = (() => {
     /*
      * Active stimulus cube.
      *
-     * It is kept as a child of latticeGroup for spatial positioning,
-     * but its local rotation is continuously counter-rotated so the
-     * textured face remains upright relative to the camera.
+     * It is a direct child of latticeGroup, so after its initial
+     * camera alignment it rotates naturally with the entire matrix.
      */
     const activeGeometry =
       new THREE.BoxGeometry(
@@ -1298,46 +1356,13 @@ const Spatial3D = (() => {
 
       if (latticeGroup) {
         /*
-         * Continuous multi-axis rotation:
-         * X = vertical tilt
-         * Y = horizontal/orbital rotation
-         * Z = diagonal roll
+         * Continuous multi-axis rotation.
+         * The active face is NOT counter-rotated here; it is a
+         * normal child of this group and therefore rotates with it.
          */
         latticeGroup.rotation.x += 0.0028;
         latticeGroup.rotation.y += 0.0048;
         latticeGroup.rotation.z += 0.0022;
-      }
-
-      if (
-        activeCube &&
-        camera &&
-        latticeGroup
-      ) {
-        /*
-         * Billboard/counter-rotation:
-         *
-         * activeCube is inside the rotating lattice, so its local
-         * quaternion must cancel the parent's world rotation and
-         * match the camera's orientation. This keeps the image
-         * upright and screen-facing while the lattice rotates freely.
-         */
-        latticeGroup.getWorldQuaternion(
-          parentWorldQuat
-        );
-
-        parentWorldQuat.invert();
-
-        billboardQuat.copy(
-          camera.quaternion
-        );
-
-        billboardQuat.premultiply(
-          parentWorldQuat
-        );
-
-        activeCube.quaternion.copy(
-          billboardQuat
-        );
       }
 
       if (
@@ -1395,10 +1420,13 @@ const Spatial3D = (() => {
       false
     );
 
-    camera.aspect =
-      width / height;
-
+    /*
+     * Dynamic aspect synchronization is essential now that the
+     * 3D viewport is no longer locked to a square.
+     */
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    camera.lookAt(0, 0, 0);
   }
 
   function clearActiveTexture() {
@@ -1597,12 +1625,8 @@ const Spatial3D = (() => {
       z * SPACING
     );
 
-    /*
-     * Reset local rotation before the animation loop applies
-     * the camera-facing billboard quaternion.
-     */
-    activeCube.quaternion.identity();
-
+    // Faces use the native texture orientation; no inversion or standard orientation.
+    activeCube.rotation.set(0, 0, 0);
     activeCube.visible = true;
 
     if (imagePath) {
