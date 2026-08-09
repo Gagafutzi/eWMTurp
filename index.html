@@ -168,7 +168,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
-.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 95px),calc(100vh - 55px)); max-height:min(calc(100vw - 95px),calc(100vh - 55px)); aspect-ratio:1/1; perspective:1800px; align-items:center; justify-content:center; overflow:visible; }
+.scene-3d { display:none; width:100%; height:100%; max-width:min(94vw,94vh); max-height:min(94vw,94vh); aspect-ratio:1/1; perspective:1200px; align-items:center; justify-content:center; overflow:visible; }
 .scene-3d.active { display:flex; }
 .cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
 @keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
@@ -203,7 +203,7 @@ select:focus, input:focus { border-color:var(--cyan); }
   .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
-  .scene-3d { max-width:min(calc(100vw - 92px),calc(100vh - 72px)); max-height:min(calc(100vw - 92px),calc(100vh - 72px)); perspective:1500px; }
+  .scene-3d { max-width:min(91vw,91vh); max-height:min(91vw,91vh); perspective:1050px; }
   .results-grid { grid-template-columns:1fr 1fr; }
   .setup-wrap { padding:12px; }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
@@ -224,7 +224,7 @@ button, input, select { position:relative; z-index:1; }
   .game-stage { gap:6px; padding:5px; }
   .side-controls { width:52px; min-width:46px; }
   .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:calc(100vw - 82px); max-height:calc(100vh - 108px); perspective:1250px; }
+  .scene-3d { max-width:min(88vw,82vh); max-height:min(88vw,82vh); perspective:900px; }
   .cube-3d { animation-name:rotate3dMobile; }
   .hud-stat .hud-lbl { display:none; }
   .hud-btn { padding:5px 8px; }
@@ -1054,10 +1054,90 @@ const Spatial3D = (() => {
   let textureRequestId = 0;
   let activeTexture = null;
   let activeMaterials = null;
+  let latticeGeometry = null;
+  let latticeMaterial = null;
 
   const CELL_SIZE = 1;
   const GAP = 0.05;
   const SPACING = CELL_SIZE + GAP;
+  const GRID_HALF = (SPACING * 3) / 2;
+
+  // Reusable quaternion helpers for screen-upright billboarding.
+  const parentWorldQuat = new THREE.Quaternion();
+  const billboardQuat = new THREE.Quaternion();
+
+  function addSegment(vertices, ax, ay, az, bx, by, bz) {
+    vertices.push(ax, ay, az, bx, by, bz);
+  }
+
+  function buildUnifiedLatticeGeometry() {
+    const vertices = [];
+    const h = GRID_HALF;
+
+    // One outer bounding cube: 12 unique edges.
+    const corners = [
+      [-h,-h,-h], [ h,-h,-h], [ h, h,-h], [-h, h,-h],
+      [-h,-h, h], [ h,-h, h], [ h, h, h], [-h, h, h]
+    ];
+
+    const outerEdges = [
+      [0,1],[1,2],[2,3],[3,0],
+      [4,5],[5,6],[6,7],[7,4],
+      [0,4],[1,5],[2,6],[3,7]
+    ];
+
+    outerEdges.forEach(([a,b]) => {
+      addSegment(
+        vertices,
+        ...corners[a],
+        ...corners[b]
+      );
+    });
+
+    /*
+     * Interior compartment lines.
+     *
+     * Each internal plane is represented only by its four boundary
+     * segments, producing a clean 3×3×3 lattice with no stacked
+     * duplicate box edges.
+     */
+    const inner = [-SPACING / 2, SPACING / 2];
+
+    // X-constant planes: lines parallel to Y and Z.
+    inner.forEach(x => {
+      addSegment(vertices, x, -h, -h, x, h, -h);
+      addSegment(vertices, x, -h,  h, x, h,  h);
+      addSegment(vertices, x, -h, -h, x, -h, h);
+      addSegment(vertices, x,  h, -h, x,  h, h);
+    });
+
+    // Y-constant planes: lines parallel to X and Z.
+    inner.forEach(y => {
+      addSegment(vertices, -h, y, -h, h, y, -h);
+      addSegment(vertices, -h, y,  h, h, y,  h);
+      addSegment(vertices, -h, y, -h, -h, y, h);
+      addSegment(vertices,  h, y, -h, h, y, h);
+    });
+
+    // Z-constant planes: lines parallel to X and Y.
+    inner.forEach(z => {
+      addSegment(vertices, -h, -h, z, h, -h, z);
+      addSegment(vertices, -h,  h, z, h,  h, z);
+      addSegment(vertices, -h, -h, z, -h, h, z);
+      addSegment(vertices,  h, -h, z, h, h, z);
+    });
+
+    const geometry = new THREE.BufferGeometry();
+
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(vertices, 3)
+    );
+
+    geometry.computeBoundingSphere();
+
+    return geometry;
+  }
 
   function init3D(containerElement) {
     if (!containerElement || typeof THREE === 'undefined') {
@@ -1066,100 +1146,273 @@ const Spatial3D = (() => {
     }
 
     dispose();
+
     container = containerElement;
+
     scene = new THREE.Scene();
     scene.background = null;
+
     textureLoader = new THREE.TextureLoader();
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true
+    });
+
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, 2)
+    );
+
     renderer.setClearColor(0x090d16, 0);
+
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     renderer.domElement.style.display = 'block';
-    renderer.domElement.setAttribute('aria-label', '3D spatial stimulus');
+    renderer.domElement.style.maxWidth = '100%';
+    renderer.domElement.style.maxHeight = '100%';
+    renderer.domElement.setAttribute(
+      'aria-label',
+      '3D spatial stimulus'
+    );
+
     container.appendChild(renderer.domElement);
 
-    // Slightly closer camera / narrower FOV makes the 3×3×3 lattice occupy
-    // substantially more of the available center display area.
-    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(4.25, 3.75, 5.65);
+    /*
+     * Large viewport framing:
+     * the lattice itself is scaled up while the camera is moved
+     * closer with a narrower FOV so the 3D structure occupies
+     * approximately 85–90% of the available center display.
+     */
+    camera = new THREE.PerspectiveCamera(
+      38,
+      1,
+      0.1,
+      100
+    );
+
+    camera.position.set(
+      3.55,
+      3.05,
+      4.55
+    );
+
     camera.lookAt(0, 0, 0);
 
     latticeGroup = new THREE.Group();
+
+    /*
+     * Increase the physical footprint without changing the
+     * logical 3×3×3 coordinates.
+     */
+    latticeGroup.scale.setScalar(1.18);
+
     scene.add(latticeGroup);
 
-    const cellGeometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    const edgeGeometry = new THREE.EdgesGeometry(cellGeometry);
-    const edgeMaterial = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.35,
-      depthTest: true
-    });
+    /*
+     * ONE unified LineSegments object.
+     *
+     * This replaces 27 individual BoxGeometry/EdgesGeometry
+     * objects and therefore eliminates overlapping/double edges.
+     */
+    latticeGeometry =
+      buildUnifiedLatticeGeometry();
 
-    for (let z = -1; z <= 1; z++) {
-      for (let y = -1; y <= 1; y++) {
-        for (let x = -1; x <= 1; x++) {
-          const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-          edges.position.set(x * SPACING, y * SPACING, z * SPACING);
-          latticeGroup.add(edges);
-        }
-      }
-    }
+    latticeMaterial =
+      new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.35,
+        depthTest: true,
+        depthWrite: false
+      });
 
-    const activeGeometry = new THREE.BoxGeometry(0.88, 0.88, 0.88);
-    activeMaterials = Array.from({ length: 6 }, () =>
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-    activeCube = new THREE.Mesh(activeGeometry, activeMaterials);
+    const latticeLines =
+      new THREE.LineSegments(
+        latticeGeometry,
+        latticeMaterial
+      );
+
+    latticeLines.frustumCulled = true;
+
+    latticeGroup.add(latticeLines);
+
+    /*
+     * Active stimulus cube.
+     *
+     * It is kept as a child of latticeGroup for spatial positioning,
+     * but its local rotation is continuously counter-rotated so the
+     * textured face remains upright relative to the camera.
+     */
+    const activeGeometry =
+      new THREE.BoxGeometry(
+        0.88,
+        0.88,
+        0.88
+      );
+
+    activeMaterials =
+      Array.from(
+        { length: 6 },
+        () =>
+          new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: false
+          })
+      );
+
+    activeCube =
+      new THREE.Mesh(
+        activeGeometry,
+        activeMaterials
+      );
+
     activeCube.visible = false;
+
     latticeGroup.add(activeCube);
 
-    resizeHandler = () => resizeRenderer();
-    window.addEventListener('resize', resizeHandler, { passive: true });
+    resizeHandler =
+      () => resizeRenderer();
+
+    window.addEventListener(
+      'resize',
+      resizeHandler,
+      { passive: true }
+    );
 
     if ('ResizeObserver' in window) {
-      resizeObserver = new ResizeObserver(resizeHandler);
+      resizeObserver =
+        new ResizeObserver(
+          resizeHandler
+        );
+
       resizeObserver.observe(container);
     }
 
     resizeRenderer();
 
     const animate = () => {
-      animationFrame = requestAnimationFrame(animate);
+      animationFrame =
+        requestAnimationFrame(
+          animate
+        );
 
       if (latticeGroup) {
-        // Simultaneous X/Y/Z rotation produces continuous diagonal motion.
-        latticeGroup.rotation.x += 0.0035;
-        latticeGroup.rotation.y += 0.0050;
-        latticeGroup.rotation.z += 0.0025;
+        /*
+         * Continuous multi-axis rotation:
+         * X = vertical tilt
+         * Y = horizontal/orbital rotation
+         * Z = diagonal roll
+         */
+        latticeGroup.rotation.x += 0.0028;
+        latticeGroup.rotation.y += 0.0048;
+        latticeGroup.rotation.z += 0.0022;
       }
 
-      if (renderer && scene && camera) renderer.render(scene, camera);
+      if (
+        activeCube &&
+        camera &&
+        latticeGroup
+      ) {
+        /*
+         * Billboard/counter-rotation:
+         *
+         * activeCube is inside the rotating lattice, so its local
+         * quaternion must cancel the parent's world rotation and
+         * match the camera's orientation. This keeps the image
+         * upright and screen-facing while the lattice rotates freely.
+         */
+        latticeGroup.getWorldQuaternion(
+          parentWorldQuat
+        );
+
+        parentWorldQuat.invert();
+
+        billboardQuat.copy(
+          camera.quaternion
+        );
+
+        billboardQuat.premultiply(
+          parentWorldQuat
+        );
+
+        activeCube.quaternion.copy(
+          billboardQuat
+        );
+      }
+
+      if (
+        renderer &&
+        scene &&
+        camera
+      ) {
+        renderer.render(
+          scene,
+          camera
+        );
+      }
     };
 
     animate();
+
     return true;
   }
 
   function resizeRenderer() {
-    if (!container || !renderer || !camera) return;
-    const rect = container.getBoundingClientRect();
-    const width = Math.max(1, Math.round(rect.width || container.clientWidth || 1));
-    const height = Math.max(1, Math.round(rect.height || container.clientHeight || 1));
-    renderer.setSize(width, height, false);
-    camera.aspect = width / height;
+    if (
+      !container ||
+      !renderer ||
+      !camera
+    ) {
+      return;
+    }
+
+    const rect =
+      container.getBoundingClientRect();
+
+    const width =
+      Math.max(
+        1,
+        Math.round(
+          rect.width ||
+          container.clientWidth ||
+          1
+        )
+      );
+
+    const height =
+      Math.max(
+        1,
+        Math.round(
+          rect.height ||
+          container.clientHeight ||
+          1
+        )
+      );
+
+    renderer.setSize(
+      width,
+      height,
+      false
+    );
+
+    camera.aspect =
+      width / height;
+
     camera.updateProjectionMatrix();
   }
 
   function clearActiveTexture() {
-    if (!activeMaterials) return;
-    activeMaterials.forEach(material => {
-      material.map = null;
-      material.color.set(0xffffff);
-      material.needsUpdate = true;
-    });
+    if (activeMaterials) {
+      activeMaterials.forEach(
+        material => {
+          material.map = null;
+          material.color.set(
+            0xffffff
+          );
+          material.needsUpdate = true;
+        }
+      );
+    }
 
     if (activeTexture) {
       activeTexture.dispose();
@@ -1168,119 +1421,278 @@ const Spatial3D = (() => {
   }
 
   function applyTexture(texture) {
-    if (!activeMaterials || !texture) return;
+    if (
+      !activeMaterials ||
+      !texture
+    ) {
+      return;
+    }
 
-    texture.colorSpace = THREE.SRGBColorSpace;
+    if (
+      'colorSpace' in texture &&
+      THREE.SRGBColorSpace
+    ) {
+      texture.colorSpace =
+        THREE.SRGBColorSpace;
+    }
+
     texture.needsUpdate = true;
 
-    activeMaterials.forEach(material => {
-      material.map = texture;
-      material.color.set(0xffffff);
-      material.needsUpdate = true;
-    });
+    activeMaterials.forEach(
+      material => {
+        material.map = texture;
+        material.color.set(
+          0xffffff
+        );
+        material.needsUpdate = true;
+      }
+    );
 
     activeTexture = texture;
   }
 
-  function loadStimulusTexture(imagePath) {
-    const requestId = ++textureRequestId;
+  function loadStimulusTexture(
+    imagePath
+  ) {
+    const requestId =
+      ++textureRequestId;
 
     clearActiveTexture();
 
-    if (!imagePath || !textureLoader) return;
-
-    // Prefer the application's already-verified image cache where available.
-    const cachedImage =
-      (typeof ANIME_IMAGE_CACHE !== 'undefined' && ANIME_IMAGE_CACHE.standard && ANIME_IMAGE_CACHE.standard[imagePath]) ||
-      (typeof App !== 'undefined' && App.engine && App.engine.imageCache && App.engine.imageCache[imagePath]);
-
-    if (cachedImage instanceof HTMLImageElement && cachedImage.naturalWidth > 0) {
-      const texture = new THREE.Texture(cachedImage);
-      texture.needsUpdate = true;
-      if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
-      if (requestId === textureRequestId) applyTexture(texture);
+    if (
+      !imagePath ||
+      !textureLoader
+    ) {
       return;
     }
 
-    // TextureLoader remains the network/path fallback for uncached stimuli.
+    /*
+     * Prefer the application's already-verified image cache.
+     * This supports both Anime WebP and human-face images.
+     */
+    const cachedImage =
+      (
+        typeof ANIME_IMAGE_CACHE !== 'undefined' &&
+        ANIME_IMAGE_CACHE.standard &&
+        ANIME_IMAGE_CACHE.standard[imagePath]
+      ) ||
+      (
+        typeof App !== 'undefined' &&
+        App.engine &&
+        App.engine.imageCache &&
+        App.engine.imageCache[imagePath]
+      );
+
+    if (
+      cachedImage instanceof HTMLImageElement &&
+      cachedImage.naturalWidth > 0 &&
+      cachedImage.naturalHeight > 0
+    ) {
+      const texture =
+        new THREE.Texture(
+          cachedImage
+        );
+
+      texture.needsUpdate = true;
+
+      if (
+        'colorSpace' in texture &&
+        THREE.SRGBColorSpace
+      ) {
+        texture.colorSpace =
+          THREE.SRGBColorSpace;
+      }
+
+      if (
+        requestId === textureRequestId
+      ) {
+        applyTexture(texture);
+      } else {
+        texture.dispose();
+      }
+
+      return;
+    }
+
+    /*
+     * Fallback to TextureLoader for any valid path that has not
+     * already entered the application's image cache.
+     */
     textureLoader.load(
       imagePath,
+
       texture => {
-        if (requestId !== textureRequestId || !activeCube) {
+        if (
+          requestId !== textureRequestId ||
+          !activeCube
+        ) {
           texture.dispose();
           return;
         }
+
         applyTexture(texture);
       },
+
       undefined,
+
       error => {
-        if (requestId !== textureRequestId) return;
-        console.error('[Spatial3D] Failed to load stimulus texture:', imagePath, error);
-        // Keep the active cube visible as a solid white cube rather than
-        // breaking the trial or hiding the spatial stimulus.
+        if (
+          requestId !== textureRequestId
+        ) {
+          return;
+        }
+
+        console.error(
+          '[Spatial3D] Failed to load stimulus texture:',
+          imagePath,
+          error
+        );
+
+        /*
+         * Keep the active cube visible as a white stimulus.
+         * A texture failure must never break the trial.
+         */
         clearActiveTexture();
       }
     );
   }
 
-  function setStimulusPosition(index, imagePath = null) {
-    if (!activeCube) return false;
+  function setStimulusPosition(
+    index,
+    imagePath = null
+  ) {
+    if (!activeCube) {
+      return false;
+    }
 
-    const safeIndex = Math.max(0, Math.min(26, Math.floor(Number(index) || 0)));
-    const x = (safeIndex % 3) - 1;
-    const y = (Math.floor(safeIndex / 3) % 3) - 1;
-    const z = Math.floor(safeIndex / 9) - 1;
+    const safeIndex =
+      Math.max(
+        0,
+        Math.min(
+          26,
+          Math.floor(
+            Number(index) || 0
+          )
+        )
+      );
 
-    activeCube.position.set(x * SPACING, y * SPACING, z * SPACING);
+    const x =
+      (safeIndex % 3) - 1;
+
+    const y =
+      (
+        Math.floor(
+          safeIndex / 3
+        ) % 3
+      ) - 1;
+
+    const z =
+      Math.floor(
+        safeIndex / 9
+      ) - 1;
+
+    activeCube.position.set(
+      x * SPACING,
+      y * SPACING,
+      z * SPACING
+    );
+
+    /*
+     * Reset local rotation before the animation loop applies
+     * the camera-facing billboard quaternion.
+     */
+    activeCube.quaternion.identity();
+
     activeCube.visible = true;
 
-    if (imagePath) loadStimulusTexture(imagePath);
-    else clearActiveTexture();
+    if (imagePath) {
+      loadStimulusTexture(
+        imagePath
+      );
+    } else {
+      clearActiveTexture();
+    }
 
     return true;
   }
 
   function clearStimulus() {
-    if (activeCube) activeCube.visible = false;
+    if (activeCube) {
+      activeCube.visible = false;
+    }
+
     ++textureRequestId;
+
     clearActiveTexture();
   }
 
   function dispose() {
     ++textureRequestId;
 
-    if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+    if (
+      animationFrame !== null
+    ) {
+      cancelAnimationFrame(
+        animationFrame
+      );
+    }
+
     animationFrame = null;
 
-    if (resizeObserver) resizeObserver.disconnect();
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+    }
+
     resizeObserver = null;
 
-    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+    if (resizeHandler) {
+      window.removeEventListener(
+        'resize',
+        resizeHandler
+      );
+    }
+
     resizeHandler = null;
 
     clearActiveTexture();
 
     if (activeCube) {
-      activeCube.geometry?.dispose();
-      if (Array.isArray(activeCube.material)) {
-        activeCube.material.forEach(material => material.dispose());
+      if (activeCube.geometry) {
+        activeCube.geometry.dispose();
+      }
+
+      if (
+        Array.isArray(
+          activeCube.material
+        )
+      ) {
+        activeCube.material.forEach(
+          material =>
+            material.dispose()
+        );
       }
     }
 
-    if (latticeGroup) {
-      latticeGroup.traverse(object => {
-        if (object.geometry && object !== activeCube) object.geometry.dispose();
-        if (object.material && object !== activeCube) {
-          if (Array.isArray(object.material)) object.material.forEach(m => m.dispose());
-          else object.material.dispose();
-        }
-      });
+    if (latticeGeometry) {
+      latticeGeometry.dispose();
+      latticeGeometry = null;
+    }
+
+    if (latticeMaterial) {
+      latticeMaterial.dispose();
+      latticeMaterial = null;
     }
 
     if (renderer) {
       renderer.dispose();
-      if (renderer.domElement && renderer.domElement.parentNode) {
-        renderer.domElement.parentNode.removeChild(renderer.domElement);
+
+      if (
+        renderer.domElement &&
+        renderer.domElement.parentNode
+      ) {
+        renderer.domElement.parentNode.removeChild(
+          renderer.domElement
+        );
       }
     }
 
@@ -1295,7 +1707,12 @@ const Spatial3D = (() => {
     container = null;
   }
 
-  return { init3D, setStimulusPosition, clearStimulus, dispose };
+  return {
+    init3D,
+    setStimulusPosition,
+    clearStimulus,
+    dispose
+  };
 })();
 
 // ==================== GAME ENGINE ====================
