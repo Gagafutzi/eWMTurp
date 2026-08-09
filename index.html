@@ -531,11 +531,12 @@ const FACES = [
 
 // Nested visual stimulus manifests. Each sub-mode has its own asset folder.
 const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
-  standard: Object.freeze([
-    'assets/stimuli/anime_standard/10234.png','assets/stimuli/anime_standard/10228.png','assets/stimuli/anime_standard/10224.png',
-    'assets/stimuli/anime_standard/10223.png','assets/stimuli/anime_standard/1020.png','assets/stimuli/anime_standard/1018.png',
-    'assets/stimuli/anime_standard/10174.png','assets/stimuli/anime_standard/10170.png','assets/stimuli/anime_standard/10171.png','assets/stimuli/anime_standard/10154.png'
-  ]),
+  // Standard Anime Faces are stored as 1.png ... 100.png.
+  standard: Object.freeze(
+    Array.from({length: 100}, (_, i) =>
+      `assets/stimuli/anime_standard/${i + 1}.png`
+    )
+  ),
   waifu: Object.freeze([]),
   hentai: Object.freeze([]),
   gore: Object.freeze([])
@@ -568,7 +569,7 @@ const ANIME_FACE_PRELOAD_PROMISES = Object.fromEntries(Object.entries(ANIME_FACE
 function createPreloadedFaceImage(path, altText, cache) {
   const cached = cache?.[path] || FACE_IMAGE_CACHE[path] || null;
   const img = cached ? cached.cloneNode(false) : new Image();
-  img.src = path;
+
   img.alt = altText || '';
   img.decoding = 'sync';
   img.loading = 'eager';
@@ -580,6 +581,11 @@ function createPreloadedFaceImage(path, altText, cache) {
   img.style.objectFit = 'cover';
   img.style.imageRendering = 'pixelated';
   img.style.pointerEvents = 'none';
+
+  // Cached images are already loaded. Cache misses still resolve naturally,
+  // while the renderer's error handler swaps in the visual fallback.
+  if (!cached) img.src = path;
+
   return img;
 }
 
@@ -892,10 +898,29 @@ class GameEngine {
 
   async preloadImages() {
     await FACE_PRELOAD_PROMISE;
-    FACES.forEach(face => { this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file]; });
-    await Promise.all(Object.values(ANIME_FACE_PRELOAD_PROMISES));
+    FACES.forEach(face => {
+      this.imageCache[face.file] = !!FACE_IMAGE_CACHE[face.file];
+    });
+
+    // Wait for every anime manifest preload. Failed requests remain null;
+    // pickAnimeFace() only selects successfully cached images.
+    const animeResults = await Promise.all(
+      Object.values(ANIME_FACE_PRELOAD_PROMISES)
+    );
+
     this.imagesLoaded = true;
     this.animeImagesLoaded = true;
+
+    const standardPaths = ANIME_FACE_ASSET_MANIFEST.standard;
+    const standardCached = standardPaths.filter(
+      path => !!ANIME_IMAGE_CACHE.standard[path]
+    ).length;
+
+    console.info(
+      `[ATTENTIONAL SHIELD] Anime Standard preload: ${standardCached}/${standardPaths.length} images cached.`
+    );
+
+    return animeResults;
   }
 
   initVoices() {
