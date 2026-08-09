@@ -164,8 +164,8 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d.active { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,240,255,0.15),inset 0 0 16px rgba(0,240,255,0.05); }
 .cell-2d .face-img,
 .stimulus-image,
-.mini-face img { width:100%; height:100%; object-fit:cover; opacity:0.92; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
-.cell-2d .face-img { object-position:center; }
+.mini-face img { width:100%; height:100%; display:block; object-fit:cover; opacity:0.92; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
+.cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
 .scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 150px),calc(100vh - 80px)); max-height:min(calc(100vw - 150px),calc(100vh - 80px)); aspect-ratio:1/1; perspective:1500px; align-items:center; justify-content:center; overflow:visible; }
@@ -176,10 +176,9 @@ select:focus, input:focus { border-color:var(--cyan); }
 .mini-cube { position:absolute; width:clamp(46px,9vmin,86px); height:clamp(46px,9vmin,86px); left:clamp(-43px,-4.5vmin,-23px); top:clamp(-43px,-4.5vmin,-23px); transform-style:preserve-3d; }
 .mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; box-shadow:0 0 4px rgba(190,220,255,0.08); }
 .mini-face.active { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,240,255,0.45),inset 0 0 18px rgba(0,240,255,0.12); background:rgba(0,240,255,0.10); }
-.mini-face img { width:100%; height:100%; display:block; object-fit:contain; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
+.mini-face img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
 .mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
 .mini-face .face-fallback { display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.5rem; color:var(--text-dim); }
-.cell-2d .face-img { width:100%; height:100%; object-fit:contain; display:block; max-width:100%; max-height:100%; pointer-events:none; user-select:none; -webkit-user-drag:none; }
 .mf-front { transform:translateZ(clamp(23px,4.5vmin,43px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(23px,4.5vmin,43px)); }
 .mf-right { transform:rotateY(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
 .mf-top { transform:rotateX(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-bottom { transform:rotateX(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
@@ -530,290 +529,145 @@ const FACES = [
   {file:'face_9.jpg', emotion:'negative', valence:-1}
 ];
 
-// ============================================================
-// DYNAMIC ANIME ASSET PIPELINE
-// ============================================================
-// The browser cannot enumerate a filesystem directly. We therefore support
-// two server-side discovery mechanisms, in this order:
-//   1) assets/stimuli/anime_standard/manifest.json
-//   2) an HTTP directory listing at assets/stimuli/anime_standard/
-//
-// No numeric filename range is assumed anywhere in the application.
-// A build/server may also inject window.ANIME_ASSET_MANIFEST before this
-// script executes.
-// ============================================================
-const ANIME_MANIFEST_URL = 'assets/stimuli/anime_standard/manifest.json';
-const ANIME_ASSET_DIRECTORY = 'assets/stimuli/anime_standard/';
-const ANIME_MODES = Object.freeze(['standard', 'waifu', 'hentai', 'gore']);
-
+// ==================== VISUAL ASSET PIPELINE ====================
+// The browser cannot enumerate a directory by itself. We therefore support
+// an optional runtime manifest while retaining the known local Standard set
+// as a non-fatal fallback for local/static deployments.
 const ANIME_FACE_ASSET_MANIFEST = {
-  standard: [],
+  standard: Array.from({length:100}, (_, i) => `assets/stimuli/anime_standard/${i + 1}.png`),
   waifu: [],
   hentai: [],
   gore: []
 };
 
+const ANIME_MANIFEST_URL = 'assets/stimuli/anime_standard/manifest.json';
+const ANIME_MODES = Object.freeze(['standard','waifu','hentai','gore']);
+
 const FACE_IMAGE_CACHE = Object.create(null);
 const ANIME_IMAGE_CACHE = Object.create(null);
-
-// Explicitly initialize every bucket before any async work begins.
 ANIME_MODES.forEach(mode => {
   ANIME_IMAGE_CACHE[mode] = Object.create(null);
 });
 
-let ANIME_MANIFEST_READY = null;
-
-function normalizeAnimeAssetPath(path) {
+function normalizeAnimePath(path) {
   if (typeof path !== 'string') return null;
-  const value = path.trim();
-  if (!value) return null;
-  if (/^(?:javascript|data|blob):/i.test(value)) return null;
-  return value.replace(/^\.\/+/, '').replace(/^\/+/, '');
+  const value = path.trim().replace(/^\.\//, '').replace(/^\//, '');
+  if (!value || /^(javascript:|data:|blob:)/i.test(value)) return null;
+  return value;
 }
 
-function normalizeAnimeManifest(raw) {
-  const source = raw && typeof raw === 'object' ? raw : {};
-  const result = {};
-
-  ANIME_MODES.forEach(mode => {
-    const paths = Array.isArray(source[mode]) ? source[mode] : [];
-    result[mode] = [...new Set(paths.map(normalizeAnimeAssetPath).filter(Boolean))];
-  });
-
-  return result;
-}
-
-async function fetchAnimeManifestJSON() {
-  const response = await fetch(ANIME_MANIFEST_URL, {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'same-origin'
-  });
-
-  if (!response.ok) {
-    throw new Error(`Manifest request failed: ${response.status} ${response.statusText}`);
+async function loadAnimeManifest() {
+  try {
+    const response = await fetch(ANIME_MANIFEST_URL, {cache:'no-store', credentials:'same-origin'});
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    const raw = await response.json();
+    ANIME_MODES.forEach(mode => {
+      if (Array.isArray(raw?.[mode])) {
+        ANIME_FACE_ASSET_MANIFEST[mode] = [...new Set(raw[mode].map(normalizeAnimePath).filter(Boolean))];
+      }
+    });
+    console.info('[ATTENTIONAL SHIELD] Anime asset manifest loaded.');
+  } catch (error) {
+    // Local file:// execution commonly cannot fetch a manifest. Keep the
+    // built-in Standard candidates and continue; failure is not fatal.
+    console.warn('[ATTENTIONAL SHIELD] Anime manifest unavailable; using local Standard asset candidates.', error);
   }
-
-  return normalizeAnimeManifest(await response.json());
+  return ANIME_FACE_ASSET_MANIFEST;
 }
 
-async function discoverAnimeDirectoryListing() {
-  const response = await fetch(ANIME_ASSET_DIRECTORY, {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'same-origin'
-  });
-
-  if (!response.ok) {
-    throw new Error(`Directory listing request failed: ${response.status}`);
-  }
-
-  const html = await response.text();
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const paths = [];
-
-  doc.querySelectorAll('a[href]').forEach(link => {
-    const href = link.getAttribute('href');
-    if (!href || href === '../' || href.endsWith('/')) return;
-
-    const normalized = normalizeAnimeAssetPath(href);
-    if (!normalized) return;
-
-    const lower = normalized.toLowerCase();
-    if (!/\.(?:png|jpe?g|webp|gif|avif)$/i.test(lower)) return;
-
-    // Directory listings commonly return just the filename. Prefix it with
-    // the known asset directory; absolute same-origin paths are normalized.
-    if (!normalized.startsWith(ANIME_ASSET_DIRECTORY)) {
-      paths.push(ANIME_ASSET_DIRECTORY + normalized.split('/').pop());
-    } else {
-      paths.push(normalized);
-    }
-  });
-
-  return {
-    standard: [...new Set(paths)],
-    waifu: [],
-    hentai: [],
-    gore: []
-  };
-}
-
-async function loadAnimeAssetManifest() {
-  if (ANIME_MANIFEST_READY) return ANIME_MANIFEST_READY;
-
-  ANIME_MANIFEST_READY = (async () => {
-    // Optional server/build-time injection.
-    if (window.ANIME_ASSET_MANIFEST) {
-      return normalizeAnimeManifest(window.ANIME_ASSET_MANIFEST);
-    }
-
-    try {
-      return await fetchAnimeManifestJSON();
-    } catch (manifestError) {
-      console.warn('[ATTENTIONAL SHIELD] JSON anime manifest unavailable; trying directory discovery.', manifestError);
-    }
-
-    try {
-      return await discoverAnimeDirectoryListing();
-    } catch (directoryError) {
-      console.error('[ATTENTIONAL SHIELD] Unable to discover anime assets:', directoryError);
-      return normalizeAnimeManifest({});
-    }
-  })();
-
-  return ANIME_MANIFEST_READY;
-}
-
-async function preloadImage(path, targetCache) {
-  if (!path || !targetCache) return false;
-
-  const existing = targetCache[path];
-  if (
-    existing instanceof HTMLImageElement &&
-    existing.complete &&
-    existing.naturalWidth > 0
-  ) {
-    return true;
-  }
-
-  // Failed/stale entries are removed rather than represented by null.
-  delete targetCache[path];
-
+function preloadImage(path, targetCache) {
   return new Promise(resolve => {
+    if (!path || !targetCache) return resolve(false);
+    delete targetCache[path];
+
     const img = new Image();
     img.decoding = 'async';
     img.loading = 'eager';
-    img.draggable = false;
-
     let settled = false;
 
     const fail = reason => {
       if (settled) return;
       settled = true;
       delete targetCache[path];
-      console.error('[ATTENTIONAL SHIELD] Failed to preload image:', path, reason || '');
+      console.warn('[ATTENTIONAL SHIELD] Could not preload ' + path, reason || '');
       resolve(false);
     };
 
-    img.onerror = () => fail('network/image decode error');
-
+    img.onerror = () => fail('load error');
     img.onload = async () => {
-      if (img.naturalWidth <= 0 || img.naturalHeight <= 0) {
-        fail('naturalWidth/naturalHeight is zero');
+      if (!(img.naturalWidth > 0) || !(img.naturalHeight > 0)) {
+        fail('zero natural dimensions');
         return;
       }
-
       if (typeof img.decode === 'function') {
-        try {
-          await img.decode();
-        } catch (error) {
-          fail(error);
-          return;
-        }
+        try { await img.decode(); }
+        catch (error) { fail(error); return; }
       }
-
-      if (img.naturalWidth <= 0 || img.naturalHeight <= 0) {
-        fail('image became invalid after decode');
+      if (!(img.naturalWidth > 0)) {
+        fail('zero naturalWidth after decode');
         return;
       }
-
       if (settled) return;
       settled = true;
       targetCache[path] = img;
       resolve(true);
     };
-
     img.src = path;
   });
 }
 
 function getCachedAnimePaths(mode = 'standard') {
   const safeMode = ANIME_MODES.includes(mode) ? mode : 'standard';
-  const manifest = ANIME_FACE_ASSET_MANIFEST[safeMode] || [];
-  const cache = ANIME_IMAGE_CACHE[safeMode] || Object.create(null);
-
-  return manifest.filter(path => {
+  const cache = ANIME_IMAGE_CACHE[safeMode] || {};
+  const paths = ANIME_FACE_ASSET_MANIFEST[safeMode] || [];
+  return paths.filter(path => {
     const img = cache[path];
-    return (
-      img instanceof HTMLImageElement &&
-      img.complete &&
-      img.naturalWidth > 0 &&
-      img.naturalHeight > 0
-    );
+    return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
   });
 }
 
-// ONE unified readiness Promise for the entire image pipeline.
-const ANIME_PRELOAD_READY = (async () => {
-  const manifest = await loadAnimeAssetManifest();
+const FACE_PRELOAD_PROMISE = Promise.all(
+  FACES.map(face => preloadImage(face.file, FACE_IMAGE_CACHE))
+);
 
+let ANIME_PRELOAD_READY = (async () => {
+  await loadAnimeManifest();
+  const results = {};
+  for (const mode of ANIME_MODES) {
+    if (!ANIME_IMAGE_CACHE[mode]) ANIME_IMAGE_CACHE[mode] = Object.create(null);
+    const paths = ANIME_FACE_ASSET_MANIFEST[mode] || [];
+    results[mode] = await Promise.all(paths.map(path => preloadImage(path, ANIME_IMAGE_CACHE[mode])));
+  }
+  return results;
+})().catch(error => {
+  console.warn('[ATTENTIONAL SHIELD] Anime preload pipeline failed; continuing without anime assets.', error);
   ANIME_MODES.forEach(mode => {
-    ANIME_FACE_ASSET_MANIFEST[mode] = manifest[mode] || [];
-    if (!ANIME_IMAGE_CACHE[mode]) {
-      ANIME_IMAGE_CACHE[mode] = Object.create(null);
-    }
+    if (!ANIME_IMAGE_CACHE[mode]) ANIME_IMAGE_CACHE[mode] = Object.create(null);
   });
+  return {};
+});
 
-  const humanResults = await Promise.all(
-    FACES.map(face => preloadImage(face.file, FACE_IMAGE_CACHE))
-  );
-
-  const animeResults = await Promise.all(
-    ANIME_MODES.map(async mode => {
-      const paths = ANIME_FACE_ASSET_MANIFEST[mode] || [];
-      return Promise.all(
-        paths.map(path => preloadImage(path, ANIME_IMAGE_CACHE[mode]))
-      );
-    })
-  );
-
-  const standardPaths = getCachedAnimePaths('standard');
-  const standardManifest = ANIME_FACE_ASSET_MANIFEST.standard || [];
-
-  console.info('[ATTENTIONAL SHIELD] Anime Standard preload complete:', {
-    discovered: standardManifest.length,
-    cached: standardPaths.length,
-    failed: standardManifest.length - standardPaths.length
-  });
-
-  return {
-    humanLoaded: humanResults.filter(Boolean).length,
-    animeLoaded: standardPaths.length,
-    animeTotal: standardManifest.length,
-    animeReady: standardPaths.length > 0,
-    animeResults
-  };
-})();
+const ANIME_FACE_PRELOAD_PROMISES = Object.fromEntries(
+  ANIME_MODES.map(mode => [mode, ANIME_PRELOAD_READY.then(result => result[mode] || [])])
+);
 
 function createPreloadedFaceImage(path, altText, cache) {
   const cached = cache?.[path] || FACE_IMAGE_CACHE[path] || null;
-
-  if (
-    !(cached instanceof HTMLImageElement) ||
-    !cached.complete ||
-    cached.naturalWidth <= 0
-  ) {
-    throw new Error(`Attempted to render uncached image: ${path}`);
-  }
-
-  const img = cached.cloneNode(false);
+  const img = cached instanceof HTMLImageElement ? cached.cloneNode(false) : new Image();
+  img.src = path;
   img.alt = altText || '';
   img.decoding = 'async';
   img.loading = 'eager';
   img.draggable = false;
   img.className = 'stimulus-image';
-
   img.style.width = '100%';
   img.style.height = '100%';
-  img.style.objectFit = 'contain';
   img.style.display = 'block';
+  img.style.objectFit = 'cover';
   img.style.maxWidth = '100%';
   img.style.maxHeight = '100%';
   img.style.pointerEvents = 'none';
-  img.style.userSelect = 'none';
-  img.style.webkitUserDrag = 'none';
-
+  img.style.imageRendering = 'pixelated';
   return img;
 }
 
@@ -1114,7 +968,6 @@ class GameEngine {
     this.animeImagesLoaded = false;
     this.stimulusType = 'human_faces';
     this.animeMode = 'standard';
-    this._preloadPromise = null;
   }
   reset() {
     this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
@@ -1129,33 +982,33 @@ class GameEngine {
     if (this._preloadPromise) return this._preloadPromise;
 
     this._preloadPromise = (async () => {
-      const result = await ANIME_PRELOAD_READY;
+      try {
+        await FACE_PRELOAD_PROMISE;
+        FACES.forEach(face => {
+          this.imageCache[face.file] = FACE_IMAGE_CACHE[face.file] instanceof HTMLImageElement;
+        });
 
-      FACES.forEach(face => {
-        const img = FACE_IMAGE_CACHE[face.file];
-        this.imageCache[face.file] =
-          img instanceof HTMLImageElement &&
-          img.complete &&
-          img.naturalWidth > 0;
-      });
+        await ANIME_PRELOAD_READY;
 
-      const cachedAnime = getCachedAnimePaths('standard');
+        const cachedAnime = getCachedAnimePaths('standard');
+        this.imagesLoaded = true;
+        this.animeImagesLoaded = cachedAnime.length > 0;
 
-      this.imagesLoaded = true;
-      this.animeImagesLoaded = cachedAnime.length > 0;
+        console.info('[ATTENTIONAL SHIELD] Image preload complete:', {
+          humanFaces: Object.values(this.imageCache).filter(Boolean).length,
+          animeStandard: cachedAnime.length,
+          animeReady: this.animeImagesLoaded
+        });
 
-      console.info('[ATTENTIONAL SHIELD] Engine image readiness:', {
-        animeStandard: cachedAnime.length,
-        animeStandardTotal: ANIME_FACE_ASSET_MANIFEST.standard.length,
-        animeReady: this.animeImagesLoaded
-      });
-
-      return result;
-    })().catch(error => {
-      this.imagesLoaded = false;
-      this.animeImagesLoaded = false;
-      throw error;
-    });
+        return {animeReady:this.animeImagesLoaded, animeLoaded:cachedAnime.length};
+      } catch (error) {
+        // Never let an optional visual asset prevent the WMT engine from starting.
+        this.imagesLoaded = true;
+        this.animeImagesLoaded = getCachedAnimePaths('standard').length > 0;
+        console.warn('[ATTENTIONAL SHIELD] Non-fatal image preload issue; session can continue.', error);
+        return {animeReady:this.animeImagesLoaded, animeLoaded:getCachedAnimePaths('standard').length};
+      }
+    })();
 
     return this._preloadPromise;
   }
@@ -1248,26 +1101,28 @@ class GameEngine {
   }
 
   pickAnimeFace(mode = this.animeMode) {
-    const safeMode = ANIME_MODES.includes(mode) ? mode : 'standard';
+    const safeMode = mode === 'standard' ? 'standard' : 'standard';
     const available = getCachedAnimePaths(safeMode);
-
-    if (!available.length) {
-      console.error('[ATTENTIONAL SHIELD] No valid cached anime faces available:', safeMode);
-      return null;
-    }
-
+    if (!available.length) return null;
     return available[Math.floor(Math.random() * available.length)];
   }
 
   pickVisualStimulus(emoLoad) {
     if (this.stimulusType === 'anime_faces') {
       const animePath = this.pickAnimeFace('standard');
-      if (animePath) return { type: 'anime_faces', path: animePath, emotion: 'anime', animeMode: 'standard', fallbackFromAnime: false };
-      // No human fallback: preserve the selected stimulus family.
-      return { type: 'anime_faces', path: null, emotion: 'anime', animeMode: 'standard', fallbackFromAnime: false };
+      if (animePath) {
+        return {type:'anime_faces', path:animePath, emotion:'anime', animeMode:'standard', fallbackFromAnime:false};
+      }
+
+      // Anime is optional. If its files are unavailable, continue the actual
+      // training session using a verified human face rather than throwing.
+      console.warn('[ATTENTIONAL SHIELD] Anime assets unavailable; falling back to human face stimuli for this trial.');
+      const face = this.pickFace(emoLoad);
+      return {type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null, fallbackFromAnime:true};
     }
+
     const face = this.pickFace(emoLoad);
-    return { type: 'standard_faces', path: face.file, emotion: face.emotion, fallbackFromAnime: false, animeMode: null };
+    return {type:'standard_faces', path:face.file, emotion:face.emotion, fallbackFromAnime:false, animeMode:null};
   }
 
   pickWord(emoLoad) {
@@ -1304,86 +1159,38 @@ class GameEngine {
 
   generateBlock() {
     const s = this.getSettings();
-
-    if (this.stimulusType === 'anime_faces') {
-      const standardCache = ANIME_IMAGE_CACHE.standard;
-      const availableAnime = getCachedAnimePaths('standard');
-
-      if (!standardCache || !availableAnime.length) {
-        throw new Error(
-          '[ATTENTIONAL SHIELD] Cannot generate Anime Faces block: ' +
-          'ANIME_IMAGE_CACHE.standard contains no valid images.'
-        );
-      }
-
-      if (!this.animeImagesLoaded) {
-        throw new Error(
-          '[ATTENTIONAL SHIELD] Cannot generate Anime Faces block: ' +
-          'animeImagesLoaded is false.'
-        );
-      }
-    }
-
     this.blockTrials = 20 + (this.currentN * this.currentN);
     this.kSeq = [];
-
     const minK = s.variableN ? s.varMin : this.currentN;
     const maxK = s.variableN ? Math.min(s.varMax, this.currentN) : this.currentN;
 
     for (let i = 0; i < this.blockTrials; i++) {
-      if (!s.variableN) {
-        this.kSeq.push(this.currentN);
-        continue;
-      }
+      if (!s.variableN) { this.kSeq.push(this.currentN); continue; }
       const maxAllowed = Math.min(i, maxK);
-      if (maxAllowed < minK) {
-        this.kSeq.push(this.currentN);
-      } else {
-        this.kSeq.push(Math.floor(Math.random() * (maxAllowed - minK + 1)) + minK);
-      }
+      if (maxAllowed < minK) this.kSeq.push(this.currentN);
+      else this.kSeq.push(Math.floor(Math.random() * (maxAllowed - minK + 1)) + minK);
     }
 
-    const posCount = this.getPosCount();
-    const posSeq = this.genSequence(posCount, this.kSeq, s.matchRate, s.interference / 100);
+    const posSeq = this.genSequence(this.getPosCount(), this.kSeq, s.matchRate, s.interference / 100);
     const colSeq = this.genSequence(COLORS.length, this.kSeq, s.matchRate, s.interference / 100);
     const audSeq = this.genSequence(AFFECTIVE_AUDIO_WORDS.length, this.kSeq, s.matchRate, s.interference / 100);
     const shpSeq = this.genSequence(SHAPES_SVG.length, this.kSeq, s.matchRate, s.interference / 100);
 
     this.trials = [];
-
     for (let i = 0; i < this.blockTrials; i++) {
       const visual = this.pickVisualStimulus(s.emoLoad);
-
-      if (this.stimulusType === 'anime_faces') {
-        const cached = visual.path && ANIME_IMAGE_CACHE.standard[visual.path];
-        if (
-          visual.type !== 'anime_faces' ||
-          !visual.path ||
-          !(cached instanceof HTMLImageElement) ||
-          !cached.complete ||
-          cached.naturalWidth <= 0
-        ) {
-          throw new Error(
-            `[ATTENTIONAL SHIELD] Invalid anime asset for trial ${i}: ${visual.path}`
-          );
-        }
-      }
-
       const word = this.pickWord(s.emoLoad);
       const audWord = AFFECTIVE_AUDIO_WORDS[audSeq[i]];
 
       this.trials.push({
-        pos: posSeq[i],
-        col: colSeq[i],
-        aud: audSeq[i],
-        shp: shpSeq[i],
-        visualType: this.stimulusType === 'anime_faces' ? 'anime_faces' : visual.type,
-        face: visual.path,
-        faceEmotion: visual.emotion,
-        animeAsset: this.stimulusType === 'anime_faces' ? visual.path : null,
-        animeMode: this.stimulusType === 'anime_faces' ? 'standard' : null,
-        word,
-        audWord
+        pos:posSeq[i], col:colSeq[i], aud:audSeq[i], shp:shpSeq[i],
+        face:visual.path,
+        faceEmotion:visual.emotion,
+        visualType:visual.type,
+        animeAsset:visual.type === 'anime_faces' ? visual.path : null,
+        animeMode:visual.type === 'anime_faces' ? 'standard' : null,
+        fallbackFromAnime:!!visual.fallbackFromAnime,
+        word, audWord
       });
     }
 
@@ -1391,9 +1198,7 @@ class GameEngine {
     this.responses = {};
     this.activeStimuli.forEach(t => {
       this.responses[t] = Array(this.blockTrials).fill(false);
-      if (!this.stats[t]) {
-        this.stats[t] = {hits:0, misses:0, falseAlarms:0, correctRejects:0};
-      }
+      if (!this.stats[t]) this.stats[t] = {hits:0, misses:0, falseAlarms:0, correctRejects:0};
     });
   }
 
@@ -1559,10 +1364,8 @@ const App = {
     this.onISIModeChange();
     this.saveSettings();
 
-    // Begin the idempotent preload pipeline. Session start still awaits it.
-    this.engine.preloadImages().catch(error => {
-      console.error('[ATTENTIONAL SHIELD] Background image preload failed:', error);
-    });
+    // Preload images non-blocking
+    this.engine.preloadImages();
   },
 
   getPersistentControlIds() {
@@ -1839,31 +1642,20 @@ const App = {
   async startSession() {
     const s = this.engine.getSettings();
 
-    // HARD SESSION GATE: preload must complete before any block can start.
+    // Asset loading is deliberately non-fatal. Await it before the game screen
+    // is entered, then use human faces if Anime Standard is unavailable.
     try {
       await this.engine.preloadImages();
     } catch (error) {
-      console.error('[ATTENTIONAL SHIELD] Session blocked: image preload failed.', error);
-      this.showInterMsg('IMAGE PRELOAD FAILED — OPEN CONSOLE', 4000);
-      return;
-    }
-
-    if (s.stimulusType === 'anime_faces') {
-      const cachedAnime = getCachedAnimePaths('standard');
-      if (!this.engine.animeImagesLoaded || !cachedAnime.length) {
-        console.error(
-          '[ATTENTIONAL SHIELD] Session blocked: Anime Faces selected but no valid Standard images are cached.',
-          {cachedAnime: cachedAnime.length, manifest: ANIME_FACE_ASSET_MANIFEST.standard}
-        );
-        this.showInterMsg('ANIME IMAGES NOT AVAILABLE — OPEN CONSOLE', 4000);
-        return;
-      }
+      console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
+      this.engine.imagesLoaded = true;
+      this.engine.animeImagesLoaded = getCachedAnimePaths('standard').length > 0;
     }
 
     this.engine.reset();
     this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
     this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-    this.engine.animeMode = s.stimulusType === 'anime_faces' ? 'standard' : (s.animeMode || 'standard');
+    this.engine.animeMode = s.animeMode || 'standard';
     this.engine.setActiveStimuli();
     this.engine.currentN = s.startN;
     this.engine.highestN = s.startN;
@@ -1872,19 +1664,31 @@ const App = {
     this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
     this.engine.isRunning = true;
 
-    AudioEngine.init();
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') {
-      AudioEngine.ctx.resume().catch(() => {});
+    if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
+      console.warn('[ATTENTIONAL SHIELD] Anime Standard assets are unavailable. Human faces will be used as a non-fatal fallback.');
     }
+
+    AudioEngine.init();
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
 
     this.buildGrid();
     this.buildSideControls();
     this.switchScreen('game');
     this.showInterMsg('GET READY', 800);
-
     setTimeout(() => {
-      if (this.engine.isRunning && !this.engine.isPaused) {
+      if (!this.engine.isRunning || this.engine.isPaused) return;
+      try {
         this.startBlock();
+      } catch (error) {
+        console.error('[ATTENTIONAL SHIELD] Block initialization failed:', error);
+        // Last-resort recovery: switch the engine to human faces and retry.
+        this.engine.stimulusType = 'human_faces';
+        this.engine.animeMode = 'standard';
+        try { this.startBlock(); }
+        catch (retryError) {
+          console.error('[ATTENTIONAL SHIELD] Session recovery failed:', retryError);
+          this.endSession('error');
+        }
       }
     }, 850);
 
@@ -2004,146 +1808,6 @@ const App = {
     this.runTrial();
   },
 
-  renderFaceFallback(targetEl, gridType, label) {
-    if (gridType === '3d') {
-      targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-        faceEl.replaceChildren();
-        faceEl.classList.add('active');
-        const fb = document.createElement('div');
-        fb.className = 'face-fallback';
-        fb.textContent = label;
-        faceEl.appendChild(fb);
-      });
-      return;
-    }
-
-    const img = targetEl.querySelector('.face-img');
-    const fb = targetEl.querySelector('.face-fallback');
-    if (img) img.style.display = 'none';
-    if (fb) {
-      fb.textContent = label;
-      fb.style.display = 'flex';
-    }
-    targetEl.classList.add('active');
-  },
-
-  renderPosition(trial, settings) {
-    if (!this.engine.activeStimuli.includes('pos')) return;
-
-    const targetEl = document.getElementById('pos-' + trial.pos);
-    if (!targetEl) {
-      console.error('[ATTENTIONAL SHIELD] Position target not found:', trial.pos);
-      return;
-    }
-
-    const isAnime = trial.visualType === 'anime_faces';
-    const mode = isAnime ? 'standard' : null;
-    const imageCache = isAnime ? ANIME_IMAGE_CACHE[mode] : this.engine.imageCache;
-    const facePath = trial.face;
-
-    if (isAnime) {
-      const cachedImage = facePath && imageCache && imageCache[facePath];
-      const valid =
-        !!facePath &&
-        cachedImage instanceof HTMLImageElement &&
-        cachedImage.complete &&
-        cachedImage.naturalWidth > 0;
-
-      if (!valid) {
-        console.error('Failed to load anime face path:', facePath);
-        this.renderFaceFallback(targetEl, settings.gridType, 'ANIME');
-        return;
-      }
-    }
-
-    if (settings.gridType === '3d') {
-      targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-        faceEl.replaceChildren();
-        faceEl.classList.add('active');
-
-        try {
-          const img = createPreloadedFaceImage(
-            facePath,
-            isAnime ? 'Anime face visual stimulus' : `${trial.faceEmotion || 'Face'} visual stimulus`,
-            imageCache
-          );
-
-          img.style.width = '100%';
-          img.style.height = '100%';
-          img.style.objectFit = 'contain';
-          img.style.display = 'block';
-          img.style.maxWidth = '100%';
-          img.style.maxHeight = '100%';
-          img.style.pointerEvents = 'none';
-
-          img.addEventListener('error', () => {
-            if (isAnime) console.error('Failed to load anime face path:', facePath);
-            img.remove();
-            const fb = document.createElement('div');
-            fb.className = 'face-fallback';
-            fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
-            faceEl.appendChild(fb);
-          }, {once:true});
-
-          faceEl.appendChild(img);
-        } catch (error) {
-          if (isAnime) console.error('Failed to load anime face path:', facePath);
-          const fb = document.createElement('div');
-          fb.className = 'face-fallback';
-          fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
-          faceEl.appendChild(fb);
-        }
-      });
-      return;
-    }
-
-    const img = targetEl.querySelector('.face-img');
-    const fb = targetEl.querySelector('.face-fallback');
-
-    if (!img) {
-      console.error('[ATTENTIONAL SHIELD] 2D cell missing .face-img:', targetEl.id);
-      return;
-    }
-
-    if (!facePath) {
-      if (isAnime) console.error('Failed to load anime face path:', facePath);
-      img.style.display = 'none';
-      if (fb) {
-        fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
-        fb.style.display = 'flex';
-      }
-      targetEl.classList.add('active');
-      return;
-    }
-
-    img.className = 'face-img stimulus-image';
-    img.alt = isAnime ? 'Anime face visual stimulus' : `${trial.faceEmotion || 'Face'} emotional face`;
-    img.decoding = 'async';
-    img.loading = 'eager';
-    img.draggable = false;
-
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'contain';
-    img.style.display = 'block';
-    img.style.maxWidth = '100%';
-    img.style.maxHeight = '100%';
-    img.style.pointerEvents = 'none';
-
-    img.onerror = () => {
-      if (isAnime) console.error('Failed to load anime face path:', facePath);
-      img.style.display = 'none';
-      if (fb) {
-        fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
-        fb.style.display = 'flex';
-      }
-    };
-
-    img.src = facePath;
-    if (fb) fb.style.display = 'none';
-    targetEl.classList.add('active');
-  },
-
   runTrial() {
     if (!this.engine.isRunning || this.engine.isPaused) return;
     if (this.engine.currentTrial >= this.engine.blockTrials) {
@@ -2176,7 +1840,70 @@ const App = {
     this.clearGrid();
 
     // Position stimulus
-    this.renderPosition(trial, s);
+    if (this.engine.activeStimuli.includes('pos')) {
+      const targetEl = document.getElementById('pos-' + trial.pos);
+      const isAnime = trial.visualType === 'anime_faces';
+      const imageCache = isAnime ? (ANIME_IMAGE_CACHE.standard || {}) : this.engine.imageCache;
+      const imagePath = trial.face;
+
+      const showFallback = (label) => {
+        if (!targetEl) return;
+        if (s.gridType === '3d') {
+          targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
+            faceEl.replaceChildren();
+            faceEl.classList.add('active');
+            const fb = document.createElement('div');
+            fb.className = 'face-fallback';
+            fb.textContent = label;
+            faceEl.appendChild(fb);
+          });
+        } else {
+          const img = targetEl.querySelector('.face-img');
+          const fb = targetEl.querySelector('.face-fallback');
+          if (img) img.style.display = 'none';
+          if (fb) { fb.textContent = label; fb.style.display = 'flex'; }
+          targetEl.classList.add('active');
+        }
+      };
+
+      if (isAnime && !(imagePath && imageCache[imagePath] instanceof HTMLImageElement && imageCache[imagePath].naturalWidth > 0)) {
+        console.error('Failed to load anime face path:', imagePath);
+        showFallback('ANIME');
+      } else if (targetEl && s.gridType === '3d') {
+        targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
+          faceEl.replaceChildren();
+          faceEl.classList.add('active');
+          const img = createPreloadedFaceImage(imagePath, isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' visual stimulus', imageCache);
+          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
+          img.onerror = () => {
+            if (isAnime) console.error('Failed to load anime face path:', imagePath);
+            img.remove();
+            const fb = document.createElement('div'); fb.className = 'face-fallback'; fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
+            faceEl.appendChild(fb);
+          };
+          faceEl.appendChild(img);
+        });
+      } else if (targetEl) {
+        const img = targetEl.querySelector('.face-img');
+        const fb = targetEl.querySelector('.face-fallback');
+        if (imagePath && img) {
+          img.className = 'face-img stimulus-image';
+          img.alt = isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' emotional face';
+          img.decoding = 'async'; img.loading = 'eager';
+          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
+          img.onerror = () => {
+            if (isAnime) console.error('Failed to load anime face path:', imagePath);
+            img.style.display = 'none';
+            if (fb) { fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase(); fb.style.display = 'flex'; }
+          };
+          img.src = imagePath;
+          if (fb) fb.style.display = 'none';
+        } else {
+          showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
+        }
+        targetEl.classList.add('active');
+      }
+    }
 
     // Top stimulus (shape/color). No random word is rendered above the grid.
     const shapeDisp = document.getElementById('shape-display');
