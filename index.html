@@ -138,18 +138,20 @@ select:focus, input:focus { border-color:var(--cyan); }
 .hud-btn:hover { border-color:var(--text-muted); color:var(--text); }
 .hud-btn.danger { border-color:var(--red); color:var(--red); } .hud-btn.danger:hover { background:var(--red-dim); }
 .hud-btn.warning { border-color:var(--amber); color:var(--amber); }
-.game-stage {
-  flex:1;
+ .game-stage {
+  flex:1 1 auto;
   display:flex;
   flex-direction:row;
   align-items:stretch;
   justify-content:stretch;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
   padding:4px;
   gap:8px;
   position:relative;
   overflow:hidden;
-  min-height:0;
-  min-width:0;
 }
 .side-controls { display:flex; flex-direction:column; gap:10px; width:80px; min-width:65px; height:100%; justify-content:center; z-index:10; }
 .modality-btn { flex:1; max-height:130px; min-height:60px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; transition:all 0.15s ease; user-select:none; touch-action:manipulation; position:relative; overflow:hidden; }
@@ -162,12 +164,14 @@ select:focus, input:focus { border-color:var(--cyan); }
 .modality-btn.wrong .mod-initial { color:var(--red); }
 .modality-btn.neutral { border-color:var(--text-dim); background:rgba(255,255,255,0.03); }
 .modality-btn.neutral .mod-initial { color:var(--text-dim); }
-.center-display {
+ .center-display {
   flex:1 1 auto;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
+  width:100%;
+  height:100%;
   min-width:0;
   min-height:0;
   gap:6px;
@@ -191,7 +195,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
-.scene-3d {
+ .scene-3d {
   display:none;
   position:relative;
   flex:1 1 auto;
@@ -201,13 +205,12 @@ select:focus, input:focus { border-color:var(--cyan); }
   min-height:0;
   max-width:none;
   max-height:none;
-  aspect-ratio:auto;
-  margin:auto;
+  margin:0;
   padding:0;
-  overflow:hidden;
+  aspect-ratio:auto;
   align-items:center;
   justify-content:center;
-  place-items:center;
+  overflow:hidden;
 }
 .scene-3d.active { display:flex; }
 .cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
@@ -249,6 +252,57 @@ select:focus, input:focus { border-color:var(--cyan); }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
   .modal-panel { padding:16px; }
 }
+
+/* FINAL 3D VIEWPORT OVERRIDE: full available center-stage area. */
+.scene-3d {
+  position:relative !important;
+  display:flex;
+  flex:1 1 auto;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 auto !important;
+  padding:0 !important;
+  aspect-ratio:auto !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden;
+}
+
+.scene-3d canvas {
+  position:relative !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  display:block !important;
+}
+
+@media (max-width:700px) {
+  .game-stage,
+  .center-display,
+  .scene-3d {
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:none !important;
+    max-height:none !important;
+  }
+
+  .scene-3d canvas {
+    width:100% !important;
+    height:100% !important;
+    max-width:none !important;
+    max-height:none !important;
+  }
+}
+
 </style>
 <style>
 /* Refactor safety/responsiveness */
@@ -291,12 +345,18 @@ button, input, select { position:relative; z-index:1; }
 .scene-3d canvas {
   position:relative !important;
   inset:auto !important;
+  top:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+  left:auto !important;
+  display:block !important;
   width:100% !important;
   height:100% !important;
   max-width:none !important;
   max-height:none !important;
-  margin:auto !important;
-  display:block !important;
+  margin:0 !important;
+  padding:0;
+  flex:1 1 auto;
 }
 
 @media (max-width:700px) {
@@ -1250,9 +1310,9 @@ const Spatial3D = (() => {
 
     // Symmetric camera placement around the lattice origin.
     camera.position.set(
-      4.7,
-      4.0,
-      6.15
+      3.1,
+      2.6,
+      4.0
     );
 
     camera.lookAt(0, 0, 0);
@@ -1263,7 +1323,7 @@ const Spatial3D = (() => {
      * Increase the physical footprint without changing the
      * logical 3×3×3 coordinates.
      */
-    latticeGroup.scale.setScalar(0.92);
+    latticeGroup.scale.setScalar(1.45);
 
     scene.add(latticeGroup);
 
