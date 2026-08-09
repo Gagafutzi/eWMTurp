@@ -230,6 +230,7 @@ button, input, select { position:relative; z-index:1; }
   .hud-btn { padding:5px 8px; }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
 
@@ -532,7 +533,7 @@ const FACES = [
 // ==================== VISUAL ASSET PIPELINE ====================
 // Standard Anime Faces use the exact WebP files committed under
 // assets/stimuli/anime/. No manifest.json or filename transformation is required.
-// The repository contains the Standard Anime PNGs directly in:
+// The repository contains the Standard Anime WebP files directly in:
 //   assets/stimuli/anime/
 //
 // This manifest is intentionally embedded in index.html so GitHub Pages
@@ -541,6 +542,7 @@ const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
   standard: Object.freeze([
     'assets/stimuli/anime/a.webp',
     'assets/stimuli/anime/b.webp',
+    'assets/stimuli/anime/c.webp',
     'assets/stimuli/anime/d.webp',
     'assets/stimuli/anime/e.webp',
     'assets/stimuli/anime/f.webp',
@@ -1034,6 +1036,141 @@ const ChartRenderer = {
     });
   }
 };
+
+// ==================== THREE.JS 3D SPATIAL ENGINE ====================
+// Classic Dual N-Back 3×3×3 rotating wireframe lattice.
+const Spatial3D = (() => {
+  let container = null;
+  let renderer = null;
+  let camera = null;
+  let scene = null;
+  let latticeGroup = null;
+  let activeCube = null;
+  let animationFrame = null;
+  let resizeObserver = null;
+  let resizeHandler = null;
+
+  const CELL_SIZE = 1;
+  const GAP = 0.05;
+  const SPACING = CELL_SIZE + GAP;
+
+  function init3D(containerElement) {
+    if (!containerElement || typeof THREE === 'undefined') {
+      console.error('[Spatial3D] Three.js or the 3D container is unavailable.');
+      return false;
+    }
+
+    dispose();
+    container = containerElement;
+    scene = new THREE.Scene();
+    scene.background = null;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x090d16, 0);
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    container.appendChild(renderer.domElement);
+
+    camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(4.8, 4.2, 6.4);
+    camera.lookAt(0, 0, 0);
+
+    latticeGroup = new THREE.Group();
+    scene.add(latticeGroup);
+
+    const cellGeometry = new THREE.BoxGeometry(CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    const edgeGeometry = new THREE.EdgesGeometry(cellGeometry);
+    const edgeMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.35
+    });
+
+    for (let z = -1; z <= 1; z++) {
+      for (let y = -1; y <= 1; y++) {
+        for (let x = -1; x <= 1; x++) {
+          const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+          edges.position.set(x * SPACING, y * SPACING, z * SPACING);
+          latticeGroup.add(edges);
+        }
+      }
+    }
+
+    const activeGeometry = new THREE.BoxGeometry(0.88, 0.88, 0.88);
+    const activeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    activeCube = new THREE.Mesh(activeGeometry, activeMaterial);
+    activeCube.visible = false;
+    latticeGroup.add(activeCube);
+
+    resizeHandler = () => resizeRenderer();
+    window.addEventListener('resize', resizeHandler, { passive: true });
+
+    if ('ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver(resizeHandler);
+      resizeObserver.observe(container);
+    }
+
+    resizeRenderer();
+
+    const animate = () => {
+      animationFrame = requestAnimationFrame(animate);
+      if (latticeGroup) latticeGroup.rotation.y += 0.005;
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    };
+    animate();
+    return true;
+  }
+
+  function resizeRenderer() {
+    if (!container || !renderer || !camera) return;
+    const rect = container.getBoundingClientRect();
+    const width = Math.max(1, Math.round(rect.width || container.clientWidth || 1));
+    const height = Math.max(1, Math.round(rect.height || container.clientHeight || 1));
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
+
+  function setStimulusPosition(index) {
+    if (!activeCube) return false;
+    const safeIndex = Math.max(0, Math.min(26, Math.floor(Number(index) || 0)));
+    const x = (safeIndex % 3) - 1;
+    const y = (Math.floor(safeIndex / 3) % 3) - 1;
+    const z = Math.floor(safeIndex / 9) - 1;
+    activeCube.position.set(x * SPACING, y * SPACING, z * SPACING);
+    activeCube.visible = true;
+    return true;
+  }
+
+  function clearStimulus() {
+    if (activeCube) activeCube.visible = false;
+  }
+
+  function dispose() {
+    if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+    animationFrame = null;
+    if (resizeObserver) resizeObserver.disconnect();
+    resizeObserver = null;
+    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+    resizeHandler = null;
+    if (renderer) {
+      renderer.dispose();
+      if (renderer.domElement && renderer.domElement.parentNode) {
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      }
+    }
+    renderer = null;
+    camera = null;
+    scene = null;
+    latticeGroup = null;
+    activeCube = null;
+    container = null;
+  }
+
+  return { init3D, setStimulusPosition, clearStimulus, dispose };
+})();
 
 // ==================== GAME ENGINE ====================
 class GameEngine {
@@ -1805,19 +1942,8 @@ const App = {
 
     if (s.gridType === '3d') {
       if (s3d) s3d.classList.add('active');
-      const speed = s.speed3d;
-      const dur = 35 - (speed / 100) * 32;
-      if (cube) cube.style.setProperty('--rot-speed', Math.max(3, dur) + 's');
-      for (let i = 0; i < 27; i++) {
-        const spacing = 14.5;
-        const x = ((i % 3) - 1) * spacing, y = ((Math.floor(i / 3) % 3) - 1) * spacing, z = (Math.floor(i / 9) - 1) * spacing;
-        const div = document.createElement('div');
-        div.className = 'mini-cube';
-        div.id = 'pos-' + i;
-        div.style.transform = 'translate3d(' + x + 'vmin,' + y + 'vmin,' + z + 'vmin)';
-        div.innerHTML = '<div class="mini-face mf-front"></div><div class="mini-face mf-back"></div><div class="mini-face mf-right"></div><div class="mini-face mf-left"></div><div class="mini-face mf-top"></div><div class="mini-face mf-bottom"></div>';
-        cube.appendChild(div);
-      }
+      if (cube) cube.innerHTML = '';
+      Spatial3D.init3D(s3d);
     } else {
       if (g2d) g2d.classList.add('active');
       const sz = s.gridSize;
@@ -1957,20 +2083,10 @@ const App = {
       if (isAnime && !(imagePath && imageCache[imagePath] instanceof HTMLImageElement && imageCache[imagePath].naturalWidth > 0)) {
         console.error('Failed to load anime face path:', imagePath);
         showFallback('ANIME');
-      } else if (targetEl && s.gridType === '3d') {
-        targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-          faceEl.replaceChildren();
-          faceEl.classList.add('active');
-          const img = createPreloadedFaceImage(imagePath, isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' visual stimulus', imageCache);
-          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
-          img.onerror = () => {
-            if (isAnime) console.error('Failed to load anime face path:', imagePath);
-            img.remove();
-            const fb = document.createElement('div'); fb.className = 'face-fallback'; fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
-            faceEl.appendChild(fb);
-          };
-          faceEl.appendChild(img);
-        });
+      } else if (s.gridType === '3d') {
+        // Three.js owns the 3D position stimulus. The solid active cube is
+        // deliberately independent of the 2D face-image rendering path.
+        Spatial3D.setStimulusPosition(trial.pos);
       } else if (targetEl) {
         const img = targetEl.querySelector('.face-img');
         const fb = targetEl.querySelector('.face-fallback');
@@ -2073,7 +2189,7 @@ const App = {
   clearGrid() {
     const s = this.engine.getSettings();
     if (s.gridType === '3d') {
-      document.querySelectorAll('.mini-face').forEach(f => { f.innerHTML = ''; f.classList.remove('active'); });
+      Spatial3D.clearStimulus();
     } else {
       document.querySelectorAll('.cell-2d').forEach(c => {
         c.classList.remove('active');
