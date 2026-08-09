@@ -168,7 +168,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
-.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 150px),calc(100vh - 80px)); max-height:min(calc(100vw - 150px),calc(100vh - 80px)); aspect-ratio:1/1; perspective:1500px; align-items:center; justify-content:center; overflow:visible; }
+.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 95px),calc(100vh - 55px)); max-height:min(calc(100vw - 95px),calc(100vh - 55px)); aspect-ratio:1/1; perspective:1800px; align-items:center; justify-content:center; overflow:visible; }
 .scene-3d.active { display:flex; }
 .cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
 @keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
@@ -203,7 +203,7 @@ select:focus, input:focus { border-color:var(--cyan); }
   .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
-  .scene-3d { max-width:min(calc(100vw - 120px),calc(100vh - 90px)); max-height:min(calc(100vw - 120px),calc(100vh - 90px)); perspective:1250px; }
+  .scene-3d { max-width:min(calc(100vw - 92px),calc(100vh - 72px)); max-height:min(calc(100vw - 92px),calc(100vh - 72px)); perspective:1500px; }
   .results-grid { grid-template-columns:1fr 1fr; }
   .setup-wrap { padding:12px; }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
@@ -224,7 +224,7 @@ button, input, select { position:relative; z-index:1; }
   .game-stage { gap:6px; padding:5px; }
   .side-controls { width:52px; min-width:46px; }
   .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:calc(100vw - 108px); max-height:calc(100vh - 125px); perspective:1000px; }
+  .scene-3d { max-width:calc(100vw - 82px); max-height:calc(100vh - 108px); perspective:1250px; }
   .cube-3d { animation-name:rotate3dMobile; }
   .hud-stat .hud-lbl { display:none; }
   .hud-btn { padding:5px 8px; }
@@ -1038,7 +1038,8 @@ const ChartRenderer = {
 };
 
 // ==================== THREE.JS 3D SPATIAL ENGINE ====================
-// Classic Dual N-Back 3×3×3 rotating wireframe lattice.
+// Classic Dual N-Back 3×3×3 rotating wireframe lattice with dynamic
+// human/anime face textures on the active cube.
 const Spatial3D = (() => {
   let container = null;
   let renderer = null;
@@ -1049,6 +1050,10 @@ const Spatial3D = (() => {
   let animationFrame = null;
   let resizeObserver = null;
   let resizeHandler = null;
+  let textureLoader = null;
+  let textureRequestId = 0;
+  let activeTexture = null;
+  let activeMaterials = null;
 
   const CELL_SIZE = 1;
   const GAP = 0.05;
@@ -1064,6 +1069,7 @@ const Spatial3D = (() => {
     container = containerElement;
     scene = new THREE.Scene();
     scene.background = null;
+    textureLoader = new THREE.TextureLoader();
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -1071,10 +1077,13 @@ const Spatial3D = (() => {
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     renderer.domElement.style.display = 'block';
+    renderer.domElement.setAttribute('aria-label', '3D spatial stimulus');
     container.appendChild(renderer.domElement);
 
+    // Slightly closer camera / narrower FOV makes the 3×3×3 lattice occupy
+    // substantially more of the available center display area.
     camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(4.8, 4.2, 6.4);
+    camera.position.set(4.25, 3.75, 5.65);
     camera.lookAt(0, 0, 0);
 
     latticeGroup = new THREE.Group();
@@ -1085,7 +1094,8 @@ const Spatial3D = (() => {
     const edgeMaterial = new THREE.LineBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.35,
+      depthTest: true
     });
 
     for (let z = -1; z <= 1; z++) {
@@ -1099,8 +1109,10 @@ const Spatial3D = (() => {
     }
 
     const activeGeometry = new THREE.BoxGeometry(0.88, 0.88, 0.88);
-    const activeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    activeCube = new THREE.Mesh(activeGeometry, activeMaterial);
+    activeMaterials = Array.from({ length: 6 }, () =>
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    activeCube = new THREE.Mesh(activeGeometry, activeMaterials);
     activeCube.visible = false;
     latticeGroup.add(activeCube);
 
@@ -1116,9 +1128,17 @@ const Spatial3D = (() => {
 
     const animate = () => {
       animationFrame = requestAnimationFrame(animate);
-      if (latticeGroup) latticeGroup.rotation.y += 0.005;
+
+      if (latticeGroup) {
+        // Simultaneous X/Y/Z rotation produces continuous diagonal motion.
+        latticeGroup.rotation.x += 0.0035;
+        latticeGroup.rotation.y += 0.0050;
+        latticeGroup.rotation.z += 0.0025;
+      }
+
       if (renderer && scene && camera) renderer.render(scene, camera);
     };
+
     animate();
     return true;
   }
@@ -1133,39 +1153,145 @@ const Spatial3D = (() => {
     camera.updateProjectionMatrix();
   }
 
-  function setStimulusPosition(index) {
+  function clearActiveTexture() {
+    if (!activeMaterials) return;
+    activeMaterials.forEach(material => {
+      material.map = null;
+      material.color.set(0xffffff);
+      material.needsUpdate = true;
+    });
+
+    if (activeTexture) {
+      activeTexture.dispose();
+      activeTexture = null;
+    }
+  }
+
+  function applyTexture(texture) {
+    if (!activeMaterials || !texture) return;
+
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+
+    activeMaterials.forEach(material => {
+      material.map = texture;
+      material.color.set(0xffffff);
+      material.needsUpdate = true;
+    });
+
+    activeTexture = texture;
+  }
+
+  function loadStimulusTexture(imagePath) {
+    const requestId = ++textureRequestId;
+
+    clearActiveTexture();
+
+    if (!imagePath || !textureLoader) return;
+
+    // Prefer the application's already-verified image cache where available.
+    const cachedImage =
+      (typeof ANIME_IMAGE_CACHE !== 'undefined' && ANIME_IMAGE_CACHE.standard && ANIME_IMAGE_CACHE.standard[imagePath]) ||
+      (typeof App !== 'undefined' && App.engine && App.engine.imageCache && App.engine.imageCache[imagePath]);
+
+    if (cachedImage instanceof HTMLImageElement && cachedImage.naturalWidth > 0) {
+      const texture = new THREE.Texture(cachedImage);
+      texture.needsUpdate = true;
+      if (THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+      if (requestId === textureRequestId) applyTexture(texture);
+      return;
+    }
+
+    // TextureLoader remains the network/path fallback for uncached stimuli.
+    textureLoader.load(
+      imagePath,
+      texture => {
+        if (requestId !== textureRequestId || !activeCube) {
+          texture.dispose();
+          return;
+        }
+        applyTexture(texture);
+      },
+      undefined,
+      error => {
+        if (requestId !== textureRequestId) return;
+        console.error('[Spatial3D] Failed to load stimulus texture:', imagePath, error);
+        // Keep the active cube visible as a solid white cube rather than
+        // breaking the trial or hiding the spatial stimulus.
+        clearActiveTexture();
+      }
+    );
+  }
+
+  function setStimulusPosition(index, imagePath = null) {
     if (!activeCube) return false;
+
     const safeIndex = Math.max(0, Math.min(26, Math.floor(Number(index) || 0)));
     const x = (safeIndex % 3) - 1;
     const y = (Math.floor(safeIndex / 3) % 3) - 1;
     const z = Math.floor(safeIndex / 9) - 1;
+
     activeCube.position.set(x * SPACING, y * SPACING, z * SPACING);
     activeCube.visible = true;
+
+    if (imagePath) loadStimulusTexture(imagePath);
+    else clearActiveTexture();
+
     return true;
   }
 
   function clearStimulus() {
     if (activeCube) activeCube.visible = false;
+    ++textureRequestId;
+    clearActiveTexture();
   }
 
   function dispose() {
+    ++textureRequestId;
+
     if (animationFrame !== null) cancelAnimationFrame(animationFrame);
     animationFrame = null;
+
     if (resizeObserver) resizeObserver.disconnect();
     resizeObserver = null;
+
     if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     resizeHandler = null;
+
+    clearActiveTexture();
+
+    if (activeCube) {
+      activeCube.geometry?.dispose();
+      if (Array.isArray(activeCube.material)) {
+        activeCube.material.forEach(material => material.dispose());
+      }
+    }
+
+    if (latticeGroup) {
+      latticeGroup.traverse(object => {
+        if (object.geometry && object !== activeCube) object.geometry.dispose();
+        if (object.material && object !== activeCube) {
+          if (Array.isArray(object.material)) object.material.forEach(m => m.dispose());
+          else object.material.dispose();
+        }
+      });
+    }
+
     if (renderer) {
       renderer.dispose();
       if (renderer.domElement && renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     }
+
     renderer = null;
     camera = null;
     scene = null;
     latticeGroup = null;
     activeCube = null;
+    activeMaterials = null;
+    textureLoader = null;
+    activeTexture = null;
     container = null;
   }
 
@@ -2086,7 +2212,7 @@ const App = {
       } else if (s.gridType === '3d') {
         // Three.js owns the 3D position stimulus. The solid active cube is
         // deliberately independent of the 2D face-image rendering path.
-        Spatial3D.setStimulusPosition(trial.pos);
+        Spatial3D.setStimulusPosition(trial.pos, imagePath);
       } else if (targetEl) {
         const img = targetEl.querySelector('.face-img');
         const fb = targetEl.querySelector('.face-fallback');
