@@ -25,93 +25,52 @@ html,body { width:100%; height:100%; background:var(--bg); color:var(--text); fo
 .setup-header { text-align:center; padding:16px 0 6px; }
 .setup-header h1 { font-family:var(--font-mono); font-size:clamp(1.4rem,4vw,2rem); font-weight:800; letter-spacing:2px; background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .setup-header .subtitle { font-family:var(--font-mono); font-size:0.6rem; color:var(--text-muted); letter-spacing:4px; text-transform:uppercase; margin-top:4px; }
-.discord-community { max-width:600px; width:100%; margin:0 auto 16px; padding:14px 18px; border:1px solid rgba(88,101,242,0.45); border-radius:10px; background:rgba(88,101,242,0.10); text-align:center; box-shadow:0 0 18px rgba(88,101,242,0.08); }
-.discord-community a { color:#9aa7ff; font-weight:800; text-decoration:none; }
-.discord-community a:hover { text-decoration:underline; color:#c1c8ff; }
-.discord-community strong { font-weight:800; }
 
-.stats-bar { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; padding:10px 14px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; max-width:600px; margin:0 auto 16px; width:100%; }
-.stat-chip { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.stat-chip .val { font-family:var(--font-mono); font-size:1.1rem; font-weight:700; color:var(--cyan); }
-.stat-chip .lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
 .primary-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:20px; max-width:600px; margin:0 auto 12px; width:100%; }
 .panel-title { font-family:var(--font-mono); font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
 .panel-title::before { content:''; display:block; width:6px; height:6px; background:var(--cyan); border-radius:1px; }
-.panel-title.magenta::before { background:var(--magenta); }
+
 .control-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
 .control-row:last-child { margin-bottom:0; }
 .control-label { font-size:0.85rem; font-weight:500; color:var(--text); }
-.control-label small { display:block; font-size:0.65rem; color:var(--text-dim); font-weight:400; margin-top:2px; }
 input[type="range"] { -webkit-appearance:none; appearance:none; width:140px; height:4px; background:var(--border); border-radius:2px; outline:none; }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:var(--cyan); cursor:pointer; box-shadow:0 0 8px rgba(0,240,255,0.4); }
-input[type="range"]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--cyan); cursor:pointer; border:none; }
 .range-display { font-family:var(--font-mono); font-size:0.8rem; color:var(--cyan); min-width:45px; text-align:right; }
-select, input[type="number"] { background:var(--bg-elevated); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:6px 10px; font-family:var(--font-sans); font-size:0.85rem; outline:none; min-width:80px; }
-select:focus, input:focus { border-color:var(--cyan); }
-.mode-cards { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-.mode-card { background:var(--bg-elevated); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:pointer; text-align:center; transition:all 0.2s; }
-.mode-card:hover { border-color:var(--border-hover); }
-.mode-card.active { border-color:var(--cyan); background:var(--cyan-dim); box-shadow:0 0 16px rgba(0,240,255,0.08); }
-.mode-card .mode-name { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:2px; }
-.mode-card .mode-desc { font-size:0.65rem; color:var(--text-muted); line-height:1.3; }
+select { background:var(--bg-elevated); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:6px 10px; font-family:var(--font-sans); font-size:0.85rem; outline:none; min-width:80px; }
+
 .stimulus-primary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 8px; }
-.stimulus-primary-card { width:100%; text-align:left; font:inherit; color:inherit; }
-.anime-submode-panel { margin:8px 0 10px; padding:10px; border:1px solid rgba(0,240,255,.22); border-radius:10px; background:rgba(0,240,255,.035); }
-.anime-submode-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.8px; color:var(--text-muted); text-transform:uppercase; }
-.anime-submode-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
-.anime-submode-btn { min-height:58px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.025); color:var(--text-muted); cursor:pointer; padding:8px; text-align:left; transition:.18s ease; }
-.anime-submode-btn strong { display:block; color:var(--text); font-size:.65rem; line-height:1.15; }
-.anime-submode-btn small { display:block; margin-top:4px; color:var(--text-dim); font-size:.52rem; text-transform:uppercase; letter-spacing:.6px; }
-.anime-submode-btn:hover { border-color:rgba(0,240,255,.45); transform:translateY(-1px); }
-.anime-submode-btn.active { border-color:var(--cyan); background:rgba(0,240,255,.08); box-shadow:0 0 14px rgba(0,240,255,.1), inset 0 0 12px rgba(0,240,255,.03); }
-.stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0 14px; padding:14px 16px; border:1px solid rgba(255,0,110,0.55); border-radius:10px; background:linear-gradient(135deg,rgba(255,0,110,0.10),rgba(0,240,255,0.06)); cursor:pointer; transition:all .2s ease; box-shadow:0 0 18px rgba(255,0,110,0.06); }
-.stimulus-feature-card:hover { border-color:var(--magenta); box-shadow:0 0 24px rgba(255,0,110,0.14); transform:translateY(-1px); }
-.stimulus-feature-card.active { border-color:var(--cyan); background:linear-gradient(135deg,rgba(0,240,255,0.13),rgba(255,0,110,0.09)); box-shadow:0 0 22px rgba(0,240,255,0.13), inset 0 0 18px rgba(255,0,110,0.04); }
-.stimulus-feature-main { display:flex; align-items:center; gap:12px; min-width:0; }
-.stimulus-feature-icon { width:42px; height:42px; flex:0 0 42px; border-radius:8px; display:grid; place-items:center; font-size:1.25rem; background:rgba(0,240,255,0.10); border:1px solid rgba(0,240,255,0.32); }
-.stimulus-feature-title { font-family:var(--font-mono); font-size:.78rem; font-weight:800; letter-spacing:.4px; }
-.stimulus-feature-desc { font-size:.62rem; color:var(--text-muted); margin-top:3px; line-height:1.35; }
-.stimulus-feature-badge { align-self:flex-start; flex:0 0 auto; padding:3px 7px; border-radius:999px; font-family:var(--font-mono); font-size:.55rem; font-weight:800; letter-spacing:1px; color:#fff; background:linear-gradient(90deg,var(--magenta),#ff3b9d); box-shadow:0 0 12px rgba(255,0,110,.22); }
-.stimulus-type-status { font-family:var(--font-mono); font-size:.58rem; color:var(--text-dim); margin:-6px 0 12px; }
-.btn { padding:12px 20px; border-radius:8px; font-family:var(--font-sans); font-size:0.9rem; font-weight:700; border:none; cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; }
+.stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-elevated); cursor:pointer; transition:all .2s ease; text-align:left; color:inherit; }
+.stimulus-feature-card:hover { border-color:var(--border-hover); }
+.stimulus-feature-card.active { border-color:var(--cyan); background:linear-gradient(135deg,rgba(0,240,255,0.12),rgba(255,0,110,0.08)); box-shadow:0 0 18px rgba(0,240,255,0.15); }
+.stimulus-feature-main { display:flex; align-items:center; gap:10px; }
+.stimulus-feature-icon { font-size:1.2rem; color:var(--cyan); }
+.stimulus-feature-title { font-family:var(--font-mono); font-size:.78rem; font-weight:800; display:block; }
+.stimulus-feature-desc { font-size:.62rem; color:var(--text-muted); margin-top:2px; display:block; }
+.stimulus-feature-badge { padding:2px 6px; border-radius:999px; font-family:var(--font-mono); font-size:.55rem; font-weight:800; color:#fff; background:var(--magenta); }
+
+.stimulus-type-status { font-family:var(--font-mono); font-size:.65rem; color:var(--cyan); margin:-2px 0 14px; font-weight:600; }
+.btn { padding:12px 20px; border-radius:8px; font-family:var(--font-sans); font-size:0.9rem; font-weight:700; border:none; cursor:pointer; transition:all 0.2s; }
 .btn-primary { background:linear-gradient(135deg,var(--cyan),#0088ff); color:var(--bg); box-shadow:0 4px 16px rgba(0,240,255,0.25); width:100%; }
 .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,240,255,0.35); }
-.btn-secondary { background:var(--bg-elevated); color:var(--text); border:1px solid var(--border); }
 .btn-row { display:flex; gap:10px; max-width:600px; margin:0 auto 30px; width:100%; }
 
 .game-hud { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; background:var(--bg-panel); border-bottom:1px solid var(--border); flex-shrink:0; }
-.hud-left,.hud-right { display:flex; align-items:center; gap:14px; }
+.hud-left, .hud-right { display:flex; align-items:center; gap:14px; }
 .hud-stat { display:flex; flex-direction:column; align-items:flex-start; }
 .hud-stat .hud-val { font-family:var(--font-mono); font-size:1rem; font-weight:700; }
 .hud-stat .hud-lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
-.hud-stat .hud-val.cyan { color:var(--cyan); } .hud-stat .hud-val.magenta { color:var(--magenta); } .hud-stat .hud-val.amber { color:var(--amber); } .hud-stat .hud-val.green { color:var(--green); }
+.hud-stat .hud-val.cyan { color:var(--cyan); } .hud-stat .hud-val.magenta { color:var(--magenta); }
 .hud-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:5px 12px; border-radius:5px; font-size:0.7rem; font-weight:600; cursor:pointer; }
-.hud-btn.danger { border-color:var(--red); color:var(--red); } .hud-btn.warning { border-color:var(--amber); color:var(--amber); }
+.hud-btn.danger { border-color:var(--red); color:var(--red); }
 
 .game-stage { flex:1; display:flex; flex-direction:row; align-items:center; justify-content:center; padding:8px; gap:12px; position:relative; overflow:hidden; min-height:0; }
-.side-controls { display:flex; flex-direction:column; gap:10px; width:80px; min-width:65px; height:100%; justify-content:center; z-index:10; }
-.modality-btn { flex:1; max-height:130px; min-height:60px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; user-select:none; }
-.modality-btn .mod-initial { font-family:var(--font-mono); font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:var(--text); }
-.modality-btn .mod-key { font-family:var(--font-mono); font-size:0.55rem; color:var(--text-dim); background:var(--bg-elevated); padding:2px 6px; border-radius:3px; border:1px solid var(--border); }
-.center-display { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; min-height:0; gap:10px; position:relative; width:100%; height:100%; }
+.center-display { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; min-height:0; position:relative; width:100%; height:100%; }
 
-/* FIXED FULL-BLEED GRID FIT CSS */
 .grid-2d { display:none; gap:min(2vmin,8px); width:100%; max-width:min(calc(100vw - 200px),calc(100vh - 200px)); max-height:min(calc(100vw - 200px),calc(100vh - 200px)); aspect-ratio:1/1; }
 .grid-2d.active { display:grid; }
-.cell-2d { background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; transition:all 0.15s ease; width:100%; height:100%; padding:0; margin:0; display:flex; align-items:center; justify-content:center; }
+.cell-2d { background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; transition:all 0.15s ease; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
 .cell-2d.active { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,240,255,0.25); }
-.cell-2d .stimulus-image, .cell-2d img, .cell-2d svg { position:absolute; inset:0; width:100% !important; height:100% !important; object-fit:cover !important; display:block !important; border:none; margin:0; padding:0; }
-.scene-3d { display:none; width:100%; height:100%; max-width:min(calc(100vw - 150px),calc(100vh - 80px)); max-height:min(calc(100vw - 150px),calc(100vh - 80px)); aspect-ratio:1/1; perspective:1500px; align-items:center; justify-content:center; }
-.scene-3d.active { display:flex; }
-.cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d 20s infinite linear; }
-@keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg);} }
-.mini-cube { position:absolute; width:clamp(46px,9vmin,86px); height:clamp(46px,9vmin,86px); left:clamp(-43px,-4.5vmin,-23px); top:clamp(-43px,-4.5vmin,-23px); transform-style:preserve-3d; }
-.mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; }
-.mini-face.active { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,240,255,0.45); }
-.mini-face .stimulus-image, .mini-face img, .mini-face svg { position:absolute; inset:0; width:100% !important; height:100% !important; object-fit:cover !important; display:block !important; }
-.mf-front { transform:translateZ(clamp(23px,4.5vmin,43px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.mf-right { transform:rotateY(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.mf-top { transform:rotateX(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-bottom { transform:rotateX(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
+.cell-2d svg { position:absolute; inset:0; width:100% !important; height:100% !important; object-fit:cover !important; display:block !important; }
 
 .results-container { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
 .results-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:560px; width:100%; text-align:center; }
@@ -136,28 +95,31 @@ select:focus, input:focus { border-color:var(--cyan); }
       <div class="stimulus-selector" id="stimulus-selector">
         <div class="stimulus-primary-grid">
           <button type="button" class="stimulus-feature-card stimulus-primary-card active" id="stimulus-human-card" data-stimulus-type="human_faces">
-            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◎</span><span><span class="stimulus-feature-title">Human Faces</span><span class="stimulus-feature-desc">Standard affective face stimuli</span></span></span>
+            <span class="stimulus-feature-main">
+              <span class="stimulus-feature-icon">◎</span>
+              <span>
+                <span class="stimulus-feature-title">Human Faces</span>
+                <span class="stimulus-feature-desc">Standard realistic faces</span>
+              </span>
+            </span>
           </button>
           <button type="button" class="stimulus-feature-card stimulus-primary-card" id="stimulus-anime-card" data-stimulus-type="anime_faces">
-            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◉</span><span><span class="stimulus-feature-title">Anime Faces</span><span class="stimulus-feature-desc">Featured visual stimulus family</span></span></span>
+            <span class="stimulus-feature-main">
+              <span class="stimulus-feature-icon">◉</span>
+              <span>
+                <span class="stimulus-feature-title">Anime Faces</span>
+                <span class="stimulus-feature-desc">Stylized visual anime art</span>
+              </span>
+            </span>
             <span class="stimulus-feature-badge">NEW</span>
           </button>
         </div>
-        <div class="anime-submode-panel" id="anime-submode-panel" style="display:none;">
-          <div class="anime-submode-heading"><span>Anime Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
-          <div class="anime-submode-grid">
-            <button type="button" class="anime-submode-btn active" data-anime-mode="standard"><strong>Anime Faces</strong><small>Standard</small></button>
-          </div>
-        </div>
       </div>
-      <div class="stimulus-type-status" id="stimulus-type-status">Human Faces • Standard affective faces</div>
+      <div class="stimulus-type-status" id="stimulus-type-status">Active Mode: Human Faces</div>
+      
       <div class="control-row">
         <div class="control-label">Grid Size</div>
         <select id="sel-grid-size"><option value="3">3 x 3</option><option value="4">4 x 4</option></select>
-      </div>
-      <div class="control-row">
-        <div class="control-label">Grid Type</div>
-        <select id="sel-grid-type"><option value="2d">2D Grid</option><option value="3d">3D Rotating Cube</option></select>
       </div>
       <div class="control-row">
         <div class="control-label">N-Back Level</div>
@@ -183,15 +145,8 @@ select:focus, input:focus { border-color:var(--cyan); }
     </div>
   </div>
   <div class="game-stage">
-    <div class="side-controls" id="side-left">
-      <div class="modality-btn" id="btn-mod-pos"><span class="mod-initial">P</span><span class="mod-key">Pos</span></div>
-    </div>
     <div class="center-display">
       <div class="grid-2d active" id="grid-2d"></div>
-      <div class="scene-3d" id="scene-3d"><div class="cube-3d" id="cube-3d"></div></div>
-    </div>
-    <div class="side-controls" id="side-right">
-      <div class="modality-btn" id="btn-mod-aud"><span class="mod-initial">A</span><span class="mod-key">Aud</span></div>
     </div>
   </div>
 </div>
@@ -214,25 +169,57 @@ select:focus, input:focus { border-color:var(--cyan); }
 (function() {
 'use strict';
 
-// PROCEDURAL SVG FALLBACK STIMULI (Ensures 100% session responsiveness & full-fit guarantees)
+// REALISTIC HUMAN FACES (Standard baseline)
 const SVG_HUMAN_FACES = [
-  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#2d3748"/><circle cx="50" cy="45" r="28" fill="#fbd38d"/><circle cx="38" cy="40" r="4" fill="#1a202c"/><circle cx="62" cy="40" r="4" fill="#1a202c"/><path d="M 38 60 Q 50 70 62 60" stroke="#1a202c" stroke-width="4" fill="none"/></svg>`,
-  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#1a202c"/><circle cx="50" cy="45" r="28" fill="#e2e8f0"/><circle cx="38" cy="40" r="5" fill="#3182ce"/><circle cx="62" cy="40" r="5" fill="#3182ce"/><path d="M 38 62 Q 50 52 62 62" stroke="#e53e3e" stroke-width="4" fill="none"/></svg>`,
-  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#4a5568"/><circle cx="50" cy="45" r="28" fill="#f6ad55"/><ellipse cx="38" cy="40" rx="4" ry="6" fill="#2d3748"/><ellipse cx="62" cy="40" rx="4" ry="6" fill="#2d3748"/><line x1="38" y1="60" x2="62" y2="60" stroke="#2d3748" stroke-width="4"/></svg>`
+  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#2d3748"/><circle cx="50" cy="48" r="28" fill="#fbd38d"/><circle cx="38" cy="42" r="4" fill="#1a202c"/><circle cx="62" cy="42" r="4" fill="#1a202c"/><path d="M 38 62 Q 50 72 62 62" stroke="#1a202c" stroke-width="4" fill="none"/></svg>`,
+  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#1a202c"/><circle cx="50" cy="48" r="28" fill="#e2e8f0"/><circle cx="38" cy="42" r="5" fill="#3182ce"/><circle cx="62" cy="42" r="5" fill="#3182ce"/><path d="M 38 64 Q 50 54 62 64" stroke="#e53e3e" stroke-width="4" fill="none"/></svg>`
 ];
 
+// HIGHLY DISTINCT ANIME FACES (Large eyes, iris highlights, anime bangs silhouette)
 const SVG_ANIME_FACES = [
-  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#4c1d95"/><polygon points="20,10 50,30 80,10 70,50 30,50" fill="#c084fc"/><circle cx="50" cy="55" r="26" fill="#fde047"/><ellipse cx="36" cy="52" rx="6" ry="9" fill="#00f0ff"/><ellipse cx="64" cy="52" rx="6" ry="9" fill="#00f0ff"/><path d="M 44 68 Q 50 74 56 68" stroke="#ff006e" stroke-width="3" fill="none"/></svg>`,
-  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#831843"/><polygon points="10,20 30,5 50,25 70,5 90,20 80,65 20,65" fill="#f472b6"/><circle cx="50" cy="55" r="25" fill="#fff1f2"/><ellipse cx="35" cy="50" rx="7" ry="10" fill="#ff006e"/><ellipse cx="65" cy="50" rx="7" ry="10" fill="#ff006e"/><path d="M 42 70 Q 50 62 58 70" stroke="#9f1239" stroke-width="3" fill="none"/></svg>`,
-  `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#064e3b"/><polygon points="15,15 50,2 85,15 75,55 25,55" fill="#34d399"/><circle cx="50" cy="52" r="24" fill="#fef3c7"/><ellipse cx="37" cy="48" rx="6" ry="8" fill="#10b981"/><ellipse cx="63" cy="48" rx="6" ry="8" fill="#10b981"/><line x1="42" y1="66" x2="58" y2="66" stroke="#065f46" stroke-width="3"/></svg>`
+  `<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <rect width="100" height="100" fill="#2e1065"/>
+    <!-- Anime Hair Back -->
+    <path d="M 15 80 L 10 20 L 50 5 L 90 20 L 85 80 Z" fill="#7e22ce"/>
+    <!-- Face -->
+    <polygon points="25,30 75,30 65,78 50,88 35,78" fill="#fef08a"/>
+    <!-- Anime Bangs -->
+    <path d="M 20 30 Q 35 50 45 35 Q 55 55 80 30 Q 50 15 20 30 Z" fill="#9333ea"/>
+    <!-- Huge Anime Eyes -->
+    <ellipse cx="38" cy="52" rx="8" ry="13" fill="#00f0ff"/>
+    <ellipse cx="62" cy="52" rx="8" ry="13" fill="#00f0ff"/>
+    <ellipse cx="38" cy="52" rx="5" ry="9" fill="#09090b"/>
+    <ellipse cx="62" cy="52" rx="5" ry="9" fill="#09090b"/>
+    <!-- Eye Highlights -->
+    <circle cx="36" cy="47" r="3" fill="#ffffff"/>
+    <circle cx="60" cy="47" r="3" fill="#ffffff"/>
+    <!-- Small Anime Mouth -->
+    <path d="M 45 72 Q 50 76 55 72" stroke="#ff006e" stroke-width="2.5" fill="none"/>
+  </svg>`,
+  `<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <rect width="100" height="100" fill="#831843"/>
+    <!-- Anime Spiky Hair -->
+    <polygon points="10,40 25,10 40,25 50,2 60,25 75,10 90,40 80,85 20,85" fill="#f43f5e"/>
+    <!-- Face -->
+    <polygon points="28,32 72,32 62,75 50,85 38,75" fill="#fff1f2"/>
+    <!-- Spiky Bangs -->
+    <polygon points="25,32 40,48 50,35 60,48 75,32 50,20" fill="#fb7185"/>
+    <!-- Magenta Anime Eyes -->
+    <ellipse cx="37" cy="50" rx="9" ry="14" fill="#ff006e"/>
+    <ellipse cx="63" cy="50" rx="9" ry="14" fill="#ff006e"/>
+    <ellipse cx="37" cy="50" rx="5" ry="9" fill="#4c0519"/>
+    <ellipse cx="63" cy="50" rx="5" ry="9" fill="#4c0519"/>
+    <!-- Eye Highlights -->
+    <circle cx="35" cy="45" r="3.5" fill="#ffffff"/>
+    <circle cx="61" cy="45" r="3.5" fill="#ffffff"/>
+    <path d="M 44 70 Q 50 64 56 70" stroke="#be123c" stroke-width="2.5" fill="none"/>
+  </svg>`
 ];
 
 class GameEngine {
   constructor() {
     this.stimulusType = 'human_faces';
-    this.animeMode = 'standard';
     this.gridSize = 3;
-    this.gridType = '2d';
     this.nLevel = 2;
     this.isRunning = false;
     this.timer = null;
@@ -253,10 +240,11 @@ const App = {
   engine: new GameEngine(),
 
   init() {
-    // Bind Stimulus Type Buttons
-    document.querySelectorAll('[data-stimulus-type]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const type = btn.dataset.stimulusType || 'human_faces';
+    // Bind selection handlers with event currentTarget delegation
+    document.querySelectorAll('.stimulus-primary-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        const targetCard = e.currentTarget;
+        const type = targetCard.getAttribute('data-stimulus-type') || 'human_faces';
         this.setStimulusType(type);
       });
     });
@@ -268,19 +256,17 @@ const App = {
 
   setStimulusType(type) {
     this.engine.stimulusType = type;
-    document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-      const active = card.dataset.stimulusType === type;
-      card.classList.toggle('active', active);
+    
+    document.querySelectorAll('.stimulus-primary-card').forEach(card => {
+      const isActive = card.getAttribute('data-stimulus-type') === type;
+      card.classList.toggle('active', isActive);
     });
 
-    const panel = document.getElementById('anime-submode-panel');
     const status = document.getElementById('stimulus-type-status');
-    if (type === 'anime_faces') {
-      if (panel) panel.style.display = 'block';
-      if (status) status.textContent = 'Anime Faces • Featured visual stimulus family';
-    } else {
-      if (panel) panel.style.display = 'none';
-      if (status) status.textContent = 'Human Faces • Standard affective faces';
+    if (status) {
+      status.textContent = type === 'anime_faces' 
+        ? 'Active Mode: Anime Faces (Stylized)' 
+        : 'Active Mode: Human Faces (Standard)';
     }
   },
 
@@ -291,33 +277,29 @@ const App = {
 
   buildGrid() {
     const grid2d = document.getElementById('grid-2d');
-    const scene3d = document.getElementById('scene-3d');
     const size = parseInt(document.getElementById('sel-grid-size').value) || 3;
-    const type = document.getElementById('sel-grid-type').value;
-    
     this.engine.gridSize = size;
-    this.engine.gridType = type;
 
-    if (type === '2d') {
-      grid2d.classList.add('active');
-      scene3d.classList.remove('active');
-      grid2d.innerHTML = '';
-      grid2d.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
-      grid2d.style.gridTemplateRows = `repeat(${size}, 1fr)`;
+    grid2d.classList.add('active');
+    grid2d.innerHTML = '';
+    grid2d.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+    grid2d.style.gridTemplateRows = `repeat(${size}, 1fr)`;
 
-      for (let i = 0; i < size * size; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell-2d';
-        cell.id = `cell-${i}`;
-        grid2d.appendChild(cell);
-      }
-    } else {
-      grid2d.classList.remove('active');
-      scene3d.classList.add('active');
+    for (let i = 0; i < size * size; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell-2d';
+      cell.id = `cell-${i}`;
+      grid2d.appendChild(cell);
     }
   },
 
   startSession() {
+    // Explicitly sync selected state directly from active UI card
+    const activeCard = document.querySelector('.stimulus-primary-card.active');
+    if (activeCard) {
+      this.engine.stimulusType = activeCard.getAttribute('data-stimulus-type') || 'human_faces';
+    }
+
     this.engine.nLevel = parseInt(document.getElementById('rng-start-n').value) || 2;
     document.getElementById('hud-nlevel').textContent = `${this.engine.nLevel}-Back`;
     this.buildGrid();
@@ -326,7 +308,6 @@ const App = {
     this.engine.isRunning = true;
     this.engine.sessionSec = 0;
     
-    // Timer
     clearInterval(this.engine.timer);
     this.engine.timer = setInterval(() => {
       this.engine.sessionSec++;
@@ -341,24 +322,20 @@ const App = {
   runTrialLoop() {
     if (!this.engine.isRunning) return;
 
-    // Pick random grid cell
     const totalCells = this.engine.gridSize * this.engine.gridSize;
     const targetIdx = Math.floor(Math.random() * totalCells);
     const cell = document.getElementById(`cell-${targetIdx}`);
 
-    if (cell && this.engine.gridType === '2d') {
-      // Clear previous
+    if (cell) {
       document.querySelectorAll('.cell-2d').forEach(c => {
         c.classList.remove('active');
         c.innerHTML = '';
       });
 
-      // Render Face SVG fitted full-bleed
       cell.classList.add('active');
       cell.innerHTML = this.engine.getVisualStimulus();
     }
 
-    // Schedule next stimulus
     setTimeout(() => {
       if (cell) {
         cell.classList.remove('active');
