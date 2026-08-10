@@ -311,6 +311,103 @@ select:focus, input:focus { border-color:var(--cyan); }
 .asset-loading-label { color:var(--cyan); font-size:0.85rem; font-weight:800; letter-spacing:2px; animation:assetPulse 0.9s ease-in-out infinite alternate; }
 .asset-loading-detail { margin-top:8px; color:var(--text-muted); font-size:0.62rem; letter-spacing:1px; }
 @keyframes assetPulse { from { opacity:0.45; } to { opacity:1; } }
+
+/* ================================================================
+   RENDERER EXCLUSIVITY
+   Only one spatial renderer is allowed to be visible at a time.
+   ================================================================ */
+#grid-2d { display:none; }
+#grid-2d.active { display:grid; }
+
+#scene-3d {
+  display:none !important;
+}
+#scene-3d.active {
+  display:flex !important;
+}
+#scene-3d canvas {
+  display:block !important;
+  width:100% !important;
+  height:100% !important;
+}
+
+/* Persistent N-back HUD indicator. */
+.hud-stat .hud-val.level {
+  color:var(--magenta);
+  text-shadow:0 0 10px rgba(255,0,110,.28);
+}
+
+/* ================================================================
+   18+ AGE VERIFICATION MODAL
+   ================================================================ */
+.age-gate {
+  position:fixed;
+  inset:0;
+  z-index:3000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(3,5,8,.90);
+  backdrop-filter:blur(8px);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .18s ease, visibility .18s ease;
+}
+.age-gate.active {
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+.age-gate-panel {
+  width:min(500px,92vw);
+  padding:30px 26px 24px;
+  background:var(--bg-panel);
+  border:1px solid var(--magenta);
+  border-radius:12px;
+  box-shadow:
+    0 0 45px rgba(255,0,110,.16),
+    inset 0 0 24px rgba(255,0,110,.035);
+}
+.age-gate-kicker {
+  color:var(--magenta);
+  font-family:var(--font-mono);
+  font-size:.62rem;
+  font-weight:800;
+  letter-spacing:3px;
+  margin-bottom:10px;
+}
+.age-gate-title {
+  color:var(--text);
+  font-family:var(--font-mono);
+  font-size:1.35rem;
+  font-weight:900;
+  letter-spacing:1px;
+  margin:0 0 12px;
+}
+.age-gate-copy {
+  color:var(--text-muted);
+  font-size:.78rem;
+  line-height:1.65;
+  margin:0;
+}
+.age-gate-actions {
+  display:flex;
+  gap:10px;
+  margin-top:22px;
+}
+.age-gate-actions .btn {
+  flex:1;
+}
+.age-gate-error {
+  display:none;
+  margin-top:12px;
+  color:var(--red);
+  font-family:var(--font-mono);
+  font-size:.62rem;
+}
+
 </style>
 <style>
 /* Refactor safety/responsiveness */
@@ -448,6 +545,146 @@ button, input, select { position:relative; z-index:1; }
   .response-controls .modality-btn .mod-key { font-size:.43rem; padding:1px 4px; }
   .word-interference { font-size:.52rem; padding:3px 5px; letter-spacing:.5px; }
 }
+
+/* ================================================================
+   PURE CSS 3D CUBE GRID + MOBILE RESPONSE CONTROLS
+   ================================================================ */
+#scene-3d {
+  perspective:1000px !important;
+  perspective-origin:50% 50%;
+  overflow:hidden !important;
+}
+#scene-3d.active { display:flex !important; }
+#grid-2d:not(.active) { display:none !important; }
+
+.cube-3d {
+  width:0;
+  height:0;
+  position:relative;
+  transform-style:preserve-3d;
+  transform-origin:50% 50%;
+  animation:rotate3d var(--rot-speed,20s) infinite linear;
+  will-change:transform;
+}
+@keyframes rotate3d {
+  0%   { transform:rotate3d(1,1,0,0deg); }
+  100% { transform:rotate3d(1,1,0,360deg) rotateZ(360deg); }
+}
+@keyframes rotate3dMobile {
+  0%   { transform:rotate3d(1,1,0,0deg); }
+  100% { transform:rotate3d(1,1,0,360deg) rotateZ(360deg); }
+}
+.mini-cube {
+  position:absolute;
+  width:var(--cell-size,64px);
+  height:var(--cell-size,64px);
+  left:calc(var(--cell-size,64px) / -2);
+  top:calc(var(--cell-size,64px) / -2);
+  transform-style:preserve-3d;
+  transition:filter .12s ease, opacity .12s ease;
+}
+.mini-cube.active { filter:drop-shadow(0 0 12px rgba(0,240,255,.55)); }
+.mini-face {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:rgba(12,18,30,.48);
+  border:1.5px solid rgba(225,235,250,.62);
+  border-radius:2px;
+  backface-visibility:visible;
+  -webkit-backface-visibility:visible;
+  box-shadow:0 0 5px rgba(190,220,255,.08);
+  box-sizing:border-box;
+}
+.mini-cube.active .mini-face {
+  border-color:var(--cyan);
+  background:rgba(0,240,255,.10);
+  box-shadow:0 0 18px rgba(0,240,255,.45),inset 0 0 14px rgba(0,240,255,.12);
+}
+.mini-face img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+.mini-face .face-fallback {
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text-dim);
+  font-family:var(--font-mono);
+  font-size:.5rem;
+}
+.mf-front  { transform:translateZ(calc(var(--cell-size,64px) / 2)); }
+.mf-back   { transform:rotateY(180deg) translateZ(calc(var(--cell-size,64px) / 2)); }
+.mf-right  { transform:rotateY(90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
+.mf-left   { transform:rotateY(-90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
+.mf-top    { transform:rotateX(90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
+.mf-bottom { transform:rotateX(-90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
+
+/* Mobile interaction remains available even though side controls are hidden. */
+@media (max-width:767px) {
+  .game-stage {
+    flex-direction:column !important;
+    width:100% !important;
+    max-width:100vw !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+  .center-display {
+    order:1 !important;
+    flex:1 1 auto !important;
+    width:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+  .side-controls { display:none !important; }
+  .response-controls {
+    order:2 !important;
+    display:flex !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    min-height:64px !important;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom)) !important;
+    box-sizing:border-box !important;
+    position:relative !important;
+    z-index:200 !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+  }
+  .response-controls .modality-btn {
+    display:flex !important;
+    flex:1 1 0 !important;
+    min-width:0 !important;
+    min-height:48px !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+  }
+  #scene-3d {
+    flex:1 1 auto !important;
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    perspective:1000px !important;
+  }
+  #grid-2d {
+    width:100% !important;
+    max-width:none !important;
+    max-height:none !important;
+  }
+}
+
 </style>
 
 </head>
@@ -674,6 +911,8 @@ button, input, select { position:relative; z-index:1; }
     <div class="hud-left">
       <div class="hud-stat"><span class="hud-val cyan" id="hud-timer">0:00</span><span class="hud-lbl">Session</span></div>
       <div class="hud-stat"><span class="hud-val amber" id="hud-trial">0 / 0</span><span class="hud-lbl">Trial</span></div>
+      <!-- Persistent active N-back level. Updated whenever a block/level changes. -->
+      <div class="hud-stat"><span class="hud-val level" id="hud-nlevel">N-BACK: 2</span><span class="hud-lbl">Level</span></div>
     </div>
     <div class="hud-right">
       <div class="hud-stat" style="align-items:flex-end"><span class="hud-val green" id="hud-dprime">0.00</span><span class="hud-lbl">D Prime</span></div>
@@ -706,6 +945,26 @@ button, input, select { position:relative; z-index:1; }
     <div class="block-transition-next" data-transition-level>Advancing to 2-Back</div>
     <div class="block-transition-progress">Next block starting automatically</div>
     <button type="button" class="btn btn-primary block-transition-button" data-transition-start>START NEXT BLOCK</button>
+  </div>
+</div>
+
+
+<!-- 18+ AGE VERIFICATION -->
+<div id="age-gate" class="age-gate" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
+  <div class="age-gate-panel">
+    <div class="age-gate-kicker">AGE VERIFICATION</div>
+    <h2 class="age-gate-title" id="age-gate-title">18+ ADULT CONTENT</h2>
+    <p class="age-gate-copy">
+      This stimulus option contains adult/18+ visual content.
+      Are you 18 years of age or older?
+    </p>
+    <div class="age-gate-error" id="age-gate-error">
+      You must confirm that you are 18 or older to use this stimulus option.
+    </div>
+    <div class="age-gate-actions">
+      <button type="button" class="btn btn-secondary" id="age-gate-cancel">CANCEL</button>
+      <button type="button" class="btn btn-primary" id="age-gate-confirm">I AM 18 OR OLDER</button>
+    </div>
   </div>
 </div>
 
@@ -1381,28 +1640,89 @@ const ChartRenderer = {
   },
   drawBars(canvas, labels, values, colors) {
     if (!canvas || typeof canvas.getContext !== 'function') return;
+
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-    const w = rect.width, h = rect.height;
-    ctx.clearRect(0,0,w,h);
-    if (!values || values.length === 0) return;
-    const pad = {t:20, r:20, b:30, l:40};
-    const maxV = Math.max(...values, 1);
-    const barW = (w - pad.l - pad.r) / values.length * 0.6;
-    const gap = (w - pad.l - pad.r) / values.length;
-    values.forEach((v,i) => {
-      const x = pad.l + i * gap + (gap - barW) / 2;
-      const barH = (v / maxV) * (h - pad.t - pad.b);
-      const y = h - pad.b - barH;
-      ctx.fillStyle = colors[i % colors.length];
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = Math.max(1, Math.round(rect.width || canvas.clientWidth || 1));
+    const h = Math.max(1, Math.round(rect.height || canvas.clientHeight || 1));
+
+    // Reset the bitmap before scaling so repeated redraws never compound
+    // the Hi-DPI transform.
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const safeValues = Array.isArray(values)
+      ? values.map(v => Number.isFinite(Number(v)) ? Number(v) : 0)
+      : [];
+    const safeLabels = Array.isArray(labels) ? labels : [];
+    const safeColors = Array.isArray(colors) && colors.length ? colors : ['#00f0ff'];
+
+    if (!safeValues.length) {
+      ctx.fillStyle = '#4b5563';
+      ctx.font = '12px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('No data yet', w / 2, h / 2);
+      return;
+    }
+
+    const pad = {
+      t: 24,
+      r: 18,
+      b: 34,
+      l: 42
+    };
+
+    const chartW = Math.max(1, w - pad.l - pad.r);
+    const chartH = Math.max(1, h - pad.t - pad.b);
+    const maxV = Math.max(1, ...safeValues);
+    const minV = Math.min(0, ...safeValues);
+    const range = Math.max(1, maxV - minV);
+    const slot = chartW / safeValues.length;
+    const barW = Math.max(2, slot * 0.62);
+
+    // Baseline/grid.
+    ctx.strokeStyle = '#1e2330';
+    ctx.lineWidth = 1;
+    ctx.font = '9px JetBrains Mono, monospace';
+
+    for (let tick = 0; tick <= 4; tick++) {
+      const y = pad.t + chartH * tick / 4;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y + 0.5);
+      ctx.lineTo(w - pad.r, y + 0.5);
+      ctx.stroke();
+
+      const value = maxV - range * tick / 4;
+      ctx.fillStyle = '#6b7280';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(value.toFixed(1), pad.l - 6, y);
+    }
+
+    safeValues.forEach((value, i) => {
+      const normalized = (value - minV) / range;
+      const barH = Math.max(0, normalized * chartH);
+      const x = pad.l + i * slot + (slot - barW) / 2;
+      const y = pad.t + chartH - barH;
+
+      ctx.fillStyle = safeColors[i % safeColors.length];
       ctx.fillRect(x, y, barW, barH);
-      ctx.fillStyle = '#e8ecf1'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
-      ctx.fillText(v.toFixed(1), x + barW/2, y - 4);
-      ctx.fillStyle = '#6b7280'; ctx.font = '10px JetBrains Mono';
-      ctx.fillText(labels[i], x + barW/2, h - 10);
+
+      ctx.fillStyle = '#e8ecf1';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(value.toFixed(1), x + barW / 2, Math.max(pad.t + 10, y - 4));
+
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '9px JetBrains Mono, monospace';
+      ctx.textBaseline = 'top';
+      const label = String(safeLabels[i] ?? '');
+      ctx.fillText(label.length > 10 ? label.slice(0, 9) + '…' : label, x + barW / 2, h - pad.b + 8);
     });
   }
 };
@@ -2027,15 +2347,22 @@ const Spatial3D = (() => {
     }
 
     if (renderer) {
-      renderer.dispose();
+      const canvas = renderer.domElement;
 
-      if (
-        renderer.domElement &&
-        renderer.domElement.parentNode
-      ) {
-        renderer.domElement.parentNode.removeChild(
-          renderer.domElement
-        );
+      try {
+        renderer.dispose();
+      } catch (e) {}
+
+      // Explicitly release the WebGL context so a previous session cannot
+      // continue compositing a stale framebuffer into the next session.
+      try {
+        if (typeof renderer.forceContextLoss === 'function') {
+          renderer.forceContextLoss();
+        }
+      } catch (e) {}
+
+      if (canvas && canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas);
       }
     }
 
@@ -2058,6 +2385,230 @@ const Spatial3D = (() => {
   };
 })();
 
+
+// ==================== RENDERER LIFECYCLE SAFETY ====================
+// Strictly tears down whichever spatial renderer is not active.
+// This is called before every new session and on mode changes.
+function cleanupRenderers() {
+  const grid2d = document.getElementById('grid-2d');
+  const scene3d = document.getElementById('scene-3d');
+
+  // Cancel the Three.js animation loop and dispose its WebGL resources.
+  try {
+    if (typeof Spatial3D !== 'undefined' && Spatial3D && typeof Spatial3D.dispose === 'function') {
+      Spatial3D.dispose();
+    }
+  } catch (error) {
+    console.warn('[Renderer] Spatial3D teardown warning:', error);
+  }
+
+  // Remove any stale WebGL canvases that may have been appended directly.
+  if (scene3d) {
+    scene3d.querySelectorAll('canvas').forEach(canvas => {
+      try {
+        const gl =
+          canvas.getContext('webgl2') ||
+          canvas.getContext('webgl') ||
+          canvas.getContext('experimental-webgl');
+
+        if (gl && typeof gl.getExtension === 'function') {
+          const loseContext = gl.getExtension('WEBGL_lose_context');
+          if (loseContext && typeof loseContext.loseContext === 'function') {
+            loseContext.loseContext();
+          }
+        }
+      } catch (e) {}
+
+      canvas.remove();
+    });
+
+    scene3d.classList.remove('active');
+    scene3d.style.setProperty('display', 'none', 'important');
+    scene3d.setAttribute('aria-hidden', 'true');
+  }
+
+  // Clear the CSS 3D fallback DOM as well.
+  const cube = document.getElementById('cube-3d');
+  if (cube) cube.replaceChildren();
+
+  if (grid2d) {
+    grid2d.classList.remove('active');
+    grid2d.style.setProperty('display', 'none', 'important');
+    grid2d.setAttribute('aria-hidden', 'true');
+  }
+
+  // Clear stale word-interference overlays from either renderer.
+  document.querySelectorAll('.word-interference').forEach(el => el.remove());
+}
+
+function activate2DRenderer() {
+  const grid2d = document.getElementById('grid-2d');
+  const scene3d = document.getElementById('scene-3d');
+
+  if (scene3d) {
+    scene3d.classList.remove('active');
+    scene3d.style.setProperty('display', 'none', 'important');
+    scene3d.setAttribute('aria-hidden', 'true');
+  }
+
+  if (grid2d) {
+    grid2d.classList.add('active');
+    grid2d.style.setProperty('display', 'grid', 'important');
+    grid2d.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function activate3DRenderer() {
+  const grid2d = document.getElementById('grid-2d');
+  const scene3d = document.getElementById('scene-3d');
+
+  if (grid2d) {
+    grid2d.classList.remove('active');
+    grid2d.style.setProperty('display', 'none', 'important');
+    grid2d.setAttribute('aria-hidden', 'true');
+    grid2d.replaceChildren();
+  }
+
+  if (scene3d) {
+    scene3d.classList.add('active');
+    scene3d.style.setProperty('display', 'flex', 'important');
+    scene3d.setAttribute('aria-hidden', 'false');
+  }
+}
+
+
+// ==================== PURE CSS 3D GRID ====================
+const CSS3D_FACES = [
+  ['front','mf-front'], ['back','mf-back'],
+  ['right','mf-right'], ['left','mf-left'],
+  ['top','mf-top'], ['bottom','mf-bottom']
+];
+
+function createCSS3DCubeGrid(container) {
+  if (!container) return null;
+
+  const cube = document.getElementById('cube-3d');
+  if (!cube) return null;
+
+  cube.replaceChildren();
+
+  const rect = container.getBoundingClientRect();
+  const size = Math.max(44, Math.min(82, Math.min(rect.width || 360, rect.height || 360) * 0.18));
+  const step = size * 1.16;
+
+  cube.style.setProperty('--cell-size', `${size}px`);
+
+  for (let index = 0; index < 27; index++) {
+    const x = (index % 3) - 1;
+    const y = (Math.floor(index / 3) % 3) - 1;
+    const z = Math.floor(index / 9) - 1;
+
+    const mini = document.createElement('div');
+    mini.className = 'mini-cube';
+    mini.id = `mini-pos-${index}`;
+    mini.dataset.index = String(index);
+
+    // Keep the logical N-back coordinates unchanged; only the visual
+    // CSS coordinate system is centered on the cube.
+    mini.style.transform = `translate3d(${x * step}px, ${-y * step}px, ${z * step}px)`;
+
+    CSS3D_FACES.forEach(([name, className]) => {
+      const face = document.createElement('div');
+      face.className = `mini-face ${className}`;
+      face.dataset.face = name;
+
+      const img = document.createElement('img');
+      img.alt = '';
+      img.draggable = false;
+      img.style.display = 'none';
+
+      const fallback = document.createElement('div');
+      fallback.className = 'face-fallback';
+      fallback.textContent = '•';
+
+      face.appendChild(img);
+      face.appendChild(fallback);
+      mini.appendChild(face);
+    });
+
+    cube.appendChild(mini);
+  }
+
+  return cube;
+}
+
+function setCSS3DStimulus(index, image) {
+  const cube = document.getElementById('cube-3d');
+  if (!cube) return;
+
+  cube.querySelectorAll('.mini-cube').forEach(node => node.classList.remove('active'));
+
+  const target = document.getElementById(`mini-pos-${Math.max(0, Math.min(26, Number(index) || 0))}`);
+  if (!target) return;
+
+  target.classList.add('active');
+
+  const source =
+    image instanceof HTMLImageElement && image.naturalWidth > 0
+      ? (image.currentSrc || image.src)
+      : (typeof image === 'string' ? image : '');
+
+  target.querySelectorAll('.mini-face').forEach(face => {
+    const img = face.querySelector('img');
+    const fallback = face.querySelector('.face-fallback');
+
+    if (source && img) {
+      img.onerror = () => {
+        img.style.display = 'none';
+        if (fallback) {
+          fallback.textContent = 'FACE';
+          fallback.style.display = 'flex';
+        }
+      };
+      img.src = source;
+      img.style.display = 'block';
+      if (fallback) fallback.style.display = 'none';
+    } else {
+      if (img) img.style.display = 'none';
+      if (fallback) {
+        fallback.textContent = 'FACE';
+        fallback.style.display = 'flex';
+      }
+    }
+  });
+}
+
+function clearCSS3DStimulus() {
+  const cube = document.getElementById('cube-3d');
+  if (!cube) return;
+
+  cube.querySelectorAll('.mini-cube').forEach(node => {
+    node.classList.remove('active');
+    node.querySelectorAll('.mini-face').forEach(face => {
+      const img = face.querySelector('img');
+      const fallback = face.querySelector('.face-fallback');
+      if (img) {
+        img.removeAttribute('src');
+        img.style.display = 'none';
+      }
+      if (fallback) {
+        fallback.textContent = '•';
+        fallback.style.display = 'flex';
+      }
+    });
+  });
+}
+
+function setCSS3DRotationSpeed(value) {
+  const cube = document.getElementById('cube-3d');
+  if (!cube) return;
+
+  const numeric = Math.max(1, Math.min(100, Number(value) || 40));
+  // 1 = slowest, 100 = fastest. CSS animation duration is inverse.
+  const seconds = 34 - ((numeric - 1) / 99) * 28;
+  cube.style.setProperty('--rot-speed', `${seconds.toFixed(2)}s`);
+}
+
 // ==================== GAME ENGINE ====================
 class GameEngine {
   constructor() {
@@ -2065,7 +2616,7 @@ class GameEngine {
     this.voices = [];
     this.selectedVoice = null;
     this.mode = 'dual';
-    this.keys = {pos:'ArrowLeft', col:'ArrowUp', aud:'ArrowRight', shp:'ArrowDown'};
+    this.keys = {pos:'a', aud:'l', shp:'s', col:'d'};
     this.listeningBind = null;
     this.activeStimuli = [];
     this.imageCache = {};
@@ -2444,6 +2995,19 @@ const App = {
     if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
     if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
     if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
+    // 18+ age verification controls.
+    const ageConfirm = document.getElementById('age-gate-confirm');
+    const ageCancel = document.getElementById('age-gate-cancel');
+    const ageOverlay = document.getElementById('age-gate');
+
+    if (ageConfirm) ageConfirm.addEventListener('click', () => this.confirmAgeGate());
+    if (ageCancel) ageCancel.addEventListener('click', () => this.cancelAgeGate());
+
+    if (ageOverlay) {
+      ageOverlay.addEventListener('click', (e) => {
+        if (e.target === ageOverlay) this.cancelAgeGate();
+      });
+    }
     // Modal overlay click-to-close
     const modalOverlay = document.getElementById('modal-dashboard');
     if (modalOverlay) {
@@ -2453,17 +3017,27 @@ const App = {
     }
 
     // Keyboard
-    document.addEventListener('keydown', (e) => this.handleKeydown(e));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const ageGate = document.getElementById('age-gate');
+        if (ageGate?.classList.contains('active')) {
+          this.cancelAgeGate();
+          return;
+        }
+      }
+      this.handleKeydown(e);
+    });
 
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
-    this.setStimulusType(this._savedStimulusType || 'human_faces', false);
-    this.setAnimeMode(this._savedAnimeMode || 'standard', false);
+    this.setStimulusType(this._savedStimulusType || 'human_faces', false, { skipAgeGate: true });
+    this.setAnimeMode(this._savedAnimeMode || 'standard', false, { skipAgeGate: true });
     this.refreshSettingDisplays();
     this.updateGlobalStats();
     this.onStimChange();
     this.onVariableNToggle();
     this.onGridTypeChange();
+    this.update3DSpeedDisplay();
     this.onISIModeChange();
     this.saveSettings();
 
@@ -2515,7 +3089,23 @@ const App = {
         if (el.type === 'checkbox') el.checked = !!values[id];
         else el.value = values[id];
       });
-      if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
+      if (saved?.keys && typeof saved.keys === 'object') {
+        this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
+
+        // Migrate the older arrow-key defaults to the requested A/L/S/D layout.
+        const legacy = {
+          pos: 'ArrowLeft',
+          aud: 'ArrowRight',
+          shp: 'ArrowDown',
+          col: 'ArrowUp'
+        };
+        const modern = { pos:'a', aud:'l', shp:'s', col:'d' };
+        Object.keys(legacy).forEach(type => {
+          if (this.engine.keys[type] === legacy[type]) {
+            this.engine.keys[type] = modern[type];
+          }
+        });
+      }
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
       this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
       this._savedAnimeMode = ['standard', 'waifu', 'hentai'].includes(saved?.animeMode)
@@ -2551,8 +3141,20 @@ const App = {
   },
 
   switchScreen(id) {
-    Object.values(this.screens).forEach(s => { if (s) s.classList.remove('active'); });
-    if (this.screens[id]) this.screens[id].classList.add('active');
+    // Leaving the game screen must terminate the previous renderer before
+    // another screen becomes visible.
+    if (id !== 'game') {
+      cleanupRenderers();
+    }
+
+    Object.values(this.screens).forEach(s => {
+      if (s) s.classList.remove('active');
+    });
+
+    if (this.screens[id]) {
+      this.screens[id].classList.add('active');
+    }
+
     if (id === 'setup') {
       this.updateGlobalStats();
     }
@@ -2577,8 +3179,23 @@ const App = {
     if (persist) this.saveSettings();
   },
 
-  setStimulusType(type, persist = true) {
-    const normalized = type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces';
+  setStimulusType(type, persist = true, options = {}) {
+    const normalized = type === 'anime_faces' || type === 'anime_standard'
+      ? 'anime_faces'
+      : 'human_faces';
+
+    if (
+      normalized === 'anime_faces' &&
+      !options.skipAgeGate &&
+      !this.ageVerified
+    ) {
+      this.pendingAgeAction = {
+        type: 'set-stimulus-type',
+        value: normalized
+      };
+      this.openAgeGate();
+      return;
+    }
 
     // Preserve the selected Anime subtype when switching the visual family.
     if (normalized === 'anime_faces') {
@@ -2615,7 +3232,21 @@ const App = {
     if (persist) this.saveSettings();
   },
 
-  setAnimeMode(mode, persist = true) {
+  setAnimeMode(mode, persist = true, options = {}) {
+    // Standard, Waifu, and Hentai are adult/restricted visual datasets.
+    if (
+      ['standard', 'waifu', 'hentai'].includes(mode) &&
+      !options.skipAgeGate &&
+      !this.ageVerified
+    ) {
+      this.pendingAgeAction = {
+        type: 'set-anime-mode',
+        value: mode
+      };
+      this.openAgeGate();
+      return;
+    }
+
     // Standard, Waifu, and Hentai are active Anime datasets.
     // Gore remains locked until its asset family is available.
     const normalized = ['standard', 'waifu', 'hentai'].includes(mode)
@@ -2667,6 +3298,8 @@ const App = {
     if (rng && disp) {
       const v = parseInt(rng.value);
       disp.textContent = v < 30 ? 'Slow' : v < 70 ? 'Normal' : 'Fast';
+      setCSS3DRotationSpeed(v);
+      this.saveSettings();
     }
   },
 
@@ -2741,8 +3374,14 @@ const App = {
     if (!this.screens.game || !this.screens.game.classList.contains('active')) return;
     if (!this.engine.isRunning || this.engine.isPaused) return;
     if (this.engine.isTrialActive && this.engine.currentTrial < this.engine.blockTrials) {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
+
+      const pressed = String(e.key || '').toLowerCase();
       this.engine.activeStimuli.forEach(type => {
-        if (e.key === this.engine.keys[type] && !this.engine.responses[type][this.engine.currentTrial]) {
+        const bound = String(this.engine.keys[type] || '').toLowerCase();
+        if (pressed === bound && !this.engine.responses[type][this.engine.currentTrial]) {
+          e.preventDefault();
           this.processFeedback(type);
         }
       });
@@ -2758,7 +3397,73 @@ const App = {
     if (el) el.classList.toggle('open');
   },
 
-  async startSession() {
+  isRestrictedStimulusSelection() {
+    return this.engine.stimulusType === 'anime_faces' &&
+      ['standard', 'waifu', 'hentai'].includes(this.engine.animeMode);
+  },
+
+  openAgeGate() {
+    const overlay = document.getElementById('age-gate');
+    const error = document.getElementById('age-gate-error');
+    if (!overlay) return;
+
+    if (error) error.style.display = 'none';
+
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+
+    setTimeout(() => {
+      document.getElementById('age-gate-confirm')?.focus();
+    }, 0);
+  },
+
+  closeAgeGate() {
+    const overlay = document.getElementById('age-gate');
+    if (!overlay) return;
+
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+
+    const error = document.getElementById('age-gate-error');
+    if (error) error.style.display = 'none';
+
+    this.pendingAgeAction = null;
+  },
+
+  confirmAgeGate() {
+    // Verification is session-scoped: it is not written to persistent settings.
+    this.ageVerified = true;
+
+    const pending = this.pendingAgeAction;
+    this.closeAgeGate();
+
+    if (!pending) return;
+
+    if (pending.type === 'set-stimulus-type') {
+      this.setStimulusType(pending.value, true, { skipAgeGate: true });
+    } else if (pending.type === 'set-anime-mode') {
+      this.setAnimeMode(pending.value, true, { skipAgeGate: true });
+    } else if (pending.type === 'start-session') {
+      this.startSession({ skipAgeGate: true });
+    }
+  },
+
+  cancelAgeGate() {
+    // Do not change the selected dataset and do not start a session.
+    this.closeAgeGate();
+  },
+
+  async startSession(options = {}) {
+    // A new session always starts from a clean rendering state.
+    cleanupRenderers();
+
+    // Adult/anime content requires an explicit 18+ confirmation.
+    if (!options.skipAgeGate && this.isRestrictedStimulusSelection()) {
+      this.pendingAgeAction = { type: 'start-session' };
+      this.openAgeGate();
+      return;
+    }
+
     const s = this.engine.getSettings();
     const loading = document.getElementById('asset-loading-overlay');
     const startButton = document.getElementById('btn-init-session');
@@ -2768,7 +3473,9 @@ const App = {
     this.engine.reset();
     this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
     this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-    this.engine.animeMode = ANIME_MODES.includes(s.animeMode) ? s.animeMode : 'standard';
+    this.engine.animeMode = ['standard', 'waifu', 'hentai'].includes(s.animeMode)
+      ? s.animeMode
+      : 'standard';
 
     if (loading) {
       loading.classList.add('active');
@@ -2830,6 +3537,14 @@ const App = {
     this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
   },
 
+  updateLevelHUD() {
+    const el = document.getElementById('hud-nlevel');
+    if (!el) return;
+    const n = Number(this.engine.currentN) || 1;
+    el.textContent = 'N-BACK: ' + n;
+    el.setAttribute('aria-label', 'Current N-back level ' + n);
+  },
+
   updateTimer() {
     if (!this.engine.isRunning || this.engine.isPaused) return;
     const now = Date.now();
@@ -2849,49 +3564,59 @@ const App = {
 
   buildGrid() {
     const s = this.engine.getSettings();
+
+    // Always tear down any previous WebGL/DOM renderer first.
+    cleanupRenderers();
+
     const g2d = document.getElementById('grid-2d');
     const s3d = document.getElementById('scene-3d');
-    const cube = document.getElementById('cube-3d');
-    if (g2d) { g2d.classList.remove('active'); g2d.innerHTML = ''; }
-    if (s3d) { s3d.classList.remove('active'); }
-    if (cube) { cube.innerHTML = ''; }
 
     if (s.gridType === '3d') {
-      if (s3d) s3d.classList.add('active');
-      if (cube) cube.innerHTML = '';
-      Spatial3D.init3D(s3d);
-    } else {
-      if (g2d) g2d.classList.add('active');
-      const sz = s.gridSize;
-      g2d.style.gridTemplateColumns = 'repeat(' + sz + ', 1fr)';
-      g2d.style.gridTemplateRows = 'repeat(' + sz + ', 1fr)';
-      for (let i = 0; i < sz * sz; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell-2d';
-        cell.id = 'pos-' + i;
-        const img = document.createElement('img');
-        img.className = 'face-img stimulus-image';
-        img.alt = '';
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        img.style.display = 'none';
-        img.style.maxWidth = '100%';
-        img.style.maxHeight = '100%';
-        img.style.pointerEvents = 'none';
-        const fallback = document.createElement('div');
-        fallback.className = 'face-fallback';
-        fallback.style.display = 'none';
-        const overlay = document.createElement('div');
-        overlay.className = 'cell-overlay';
-        cell.appendChild(img);
-        cell.appendChild(fallback);
-        cell.appendChild(overlay);
-        g2d.appendChild(cell);
-      }
+      activate3DRenderer();
+      createCSS3DCubeGrid(s3d);
+
+      const speed = document.getElementById('rng-3d-speed')?.value || 40;
+      setCSS3DRotationSpeed(speed);
+      return;
+    }
+
+    activate2DRenderer();
+
+    if (!g2d) return;
+
+    const sz = s.gridSize;
+    g2d.style.gridTemplateColumns = `repeat(${sz}, 1fr)`;
+    g2d.style.gridTemplateRows = `repeat(${sz}, 1fr)`;
+
+    for (let i = 0; i < sz * sz; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell-2d';
+      cell.id = 'pos-' + i;
+
+      const img = document.createElement('img');
+      img.className = 'face-img stimulus-image';
+      img.alt = '';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.display = 'none';
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '100%';
+      img.style.pointerEvents = 'none';
+
+      const fallback = document.createElement('div');
+      fallback.className = 'face-fallback';
+      fallback.style.display = 'none';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'cell-overlay';
+
+      cell.appendChild(img);
+      cell.appendChild(fallback);
+      cell.appendChild(overlay);
+      g2d.appendChild(cell);
     }
   },
-
   buildSideControls() {
     const left = document.getElementById('side-left');
     const right = document.getElementById('side-right');
@@ -2987,6 +3712,7 @@ const App = {
   startBlock() {
     this.engine.generateBlock();
     this.updateHUD();
+    this.updateLevelHUD();
     this.runTrial();
   },
 
@@ -3047,9 +3773,9 @@ const App = {
         console.error('Failed to load anime face path:', imagePath);
         showFallback('ANIME');
       } else if (s.gridType === '3d') {
-        // Three.js owns the 3D position stimulus. The solid active cube is
-        // deliberately independent of the 2D face-image rendering path.
-        Spatial3D.setStimulusPosition(trial.pos, imagePath);
+        // Pure HTML/CSS 3D renderer: all six mini-cube faces receive
+        // the same preloaded image, while the cube itself rotates with CSS.
+        setCSS3DStimulus(trial.pos, preloadedImage || imagePath);
       } else if (targetEl) {
         const img = targetEl.querySelector('.face-img');
         const fb = targetEl.querySelector('.face-fallback');
@@ -3154,7 +3880,7 @@ const App = {
     this.clearWordInterference();
     const s = this.engine.getSettings();
     if (s.gridType === '3d') {
-      Spatial3D.clearStimulus();
+      clearCSS3DStimulus();
     } else {
       document.querySelectorAll('.cell-2d').forEach(c => {
         c.classList.remove('active');
@@ -3267,6 +3993,7 @@ const App = {
     const dprime = document.getElementById('hud-dprime');
     if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
     if (dprime) dprime.textContent = '0.00';
+    this.updateLevelHUD();
   },
 
   togglePause() {
@@ -3293,6 +4020,9 @@ const App = {
   },
 
   endSession(reason = 'manual') {
+    // Stop WebGL immediately, not after the results screen appears.
+    cleanupRenderers();
+
     this.engine.isRunning = false;
     this.engine.isTrialActive = false;
     clearTimeout(this.engine.trialTimeout);
