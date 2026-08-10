@@ -195,7 +195,8 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
- .scene-3d {
+/* Unified 2D / 3D viewport containers */
+.scene-3d {
   display:none;
   position:relative;
   flex:1 1 auto;
@@ -212,7 +213,23 @@ select:focus, input:focus { border-color:var(--cyan); }
   justify-content:center;
   overflow:hidden;
 }
-.scene-3d.active { display:flex; }
+
+.scene-3d.active {
+  display:flex !important;
+}
+
+.scene-3d canvas {
+  position:relative;
+  inset:auto;
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  margin:0;
+  padding:0;
+  flex:1 1 auto;
+}
 .cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
 @keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
 @keyframes rotate3dMobile { 0%{transform:scale(1.02) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.02) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
@@ -246,61 +263,10 @@ select:focus, input:focus { border-color:var(--cyan); }
   .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
-  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; perspective:none; }
   .results-grid { grid-template-columns:1fr 1fr; }
   .setup-wrap { padding:12px; }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
   .modal-panel { padding:16px; }
-}
-
-/* FINAL 3D VIEWPORT OVERRIDE: full available center-stage area. */
-.scene-3d {
-  position:relative !important;
-  display:flex;
-  flex:1 1 auto;
-  width:100% !important;
-  height:100% !important;
-  min-width:0 !important;
-  min-height:0 !important;
-  max-width:none !important;
-  max-height:none !important;
-  margin:0 auto !important;
-  padding:0 !important;
-  aspect-ratio:auto !important;
-  align-items:center !important;
-  justify-content:center !important;
-  overflow:hidden;
-}
-
-.scene-3d canvas {
-  position:relative !important;
-  inset:auto !important;
-  width:100% !important;
-  height:100% !important;
-  max-width:none !important;
-  max-height:none !important;
-  margin:0 !important;
-  display:block !important;
-}
-
-@media (max-width:700px) {
-  .game-stage,
-  .center-display,
-  .scene-3d {
-    width:100% !important;
-    height:100% !important;
-    min-width:0 !important;
-    min-height:0 !important;
-    max-width:none !important;
-    max-height:none !important;
-  }
-
-  .scene-3d canvas {
-    width:100% !important;
-    height:100% !important;
-    max-width:none !important;
-    max-height:none !important;
-  }
 }
 
 
@@ -326,7 +292,6 @@ button, input, select { position:relative; z-index:1; }
   .game-stage { gap:6px; padding:5px; }
   .side-controls { width:52px; min-width:46px; }
   .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; perspective:none; }
   .cube-3d { animation-name:rotate3dMobile; }
   .hud-stat .hud-lbl { display:none; }
   .hud-btn { padding:5px 8px; }
@@ -751,6 +716,14 @@ button, input, select { position:relative; z-index:1; }
 
 (function() {
 'use strict';
+
+// ============================================================================
+// RENDERER LIFECYCLE STATE
+// Surgical 2D/3D teardown fix: one globally tracked RAF handle ensures the
+// active Three.js loop is cancelled before a renderer is replaced or removed.
+// ============================================================================
+let animationFrameId = null;
+let activeRendererMode = null;
 
 // Defensive DOM helpers: missing optional controls must never crash startup.
 const $ = (id) => document.getElementById(id);
@@ -1400,40 +1373,47 @@ const ChartRenderer = {
 // Classic Dual N-Back 3×3×3 rotating wireframe lattice with dynamic
 // human/anime face textures on the active cube.
 const Spatial3D = (() => {
+  /*
+   * These two references intentionally live inside the IIFE so the module
+   * can independently stop its own render loop without relying on globals.
+   */
+  let activeRendererMode = null;
+  let animationFrameId = null;
+
   let container = null;
   let renderer = null;
   let camera = null;
   let scene = null;
+
   let latticeGroup = null;
-  let activeCube = null;
-  let animationFrame = null;
+  let activePlane = null;
+
   let resizeObserver = null;
   let resizeHandler = null;
+  let orientationHandler = null;
+
   let textureLoader = null;
   let textureRequestId = 0;
   let activeTexture = null;
-  let activeMaterials = null;
+
   let latticeGeometry = null;
   let latticeMaterial = null;
 
   const CELL_SIZE = 1;
   const GAP = 0.05;
   const SPACING = CELL_SIZE + GAP;
+
+  // Local half-width of the unscaled 3x3x3 matrix.
   const GRID_HALF = (SPACING * 3) / 2;
+
+  // At least 10% clearance around the complete projected matrix.
+  const FIT_PADDING = 1.10;
 
   function addSegment(vertices, ax, ay, az, bx, by, bz) {
     vertices.push(ax, ay, az, bx, by, bz);
   }
 
   function buildUnifiedLatticeGeometry() {
-    /*
-     * One consolidated 3×3×3 matrix.
-     *
-     * Four coordinates on each axis define the outer boundary and
-     * the two internal partitions. Drawing 4×4 lines in each of
-     * the X/Y/Z directions creates every compartment edge exactly
-     * once, with no overlapping BoxGeometry edges.
-     */
     const vertices = [];
     const h = GRID_HALF;
 
@@ -1477,203 +1457,106 @@ const Spatial3D = (() => {
     return geometry;
   }
 
-  function init3D(containerElement) {
-    if (!containerElement || typeof THREE === 'undefined') {
-      console.error('[Spatial3D] Three.js or the 3D container is unavailable.');
-      return false;
-    }
+  /*
+   * Returns the camera distance needed to fit the complete 3D matrix.
+   *
+   * A bounding sphere is deliberately used instead of only width/height
+   * because the lattice rotates. This guarantees that corners remain inside
+   * the frustum even when the matrix is angled.
+   */
+  function calculateFitDistance(width, height) {
+    const aspect = Math.max(0.01, width / height);
 
-    dispose();
-
-    container = containerElement;
-
-    scene = new THREE.Scene();
-    scene.background = null;
-
-    textureLoader = new THREE.TextureLoader();
-
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true
-    });
-
-    renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, 2)
-    );
-
-    renderer.setClearColor(0x090d16, 0);
-
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.display = 'block';
-    renderer.domElement.style.maxWidth = 'none';
-    renderer.domElement.style.maxHeight = 'none';
-    renderer.domElement.setAttribute(
-      'aria-label',
-      '3D spatial stimulus'
-    );
-
-    container.appendChild(renderer.domElement);
-
-    /*
-     * Large viewport framing:
-     * the lattice itself is scaled up while the camera is moved
-     * closer with a narrower FOV so the 3D structure occupies
-     * approximately 85–90% of the available center display.
-     */
     const isMobile = window.innerWidth < 768;
     const isSmallMobile = window.innerWidth < 480;
-    const initialFov = isSmallMobile ? 72 : (isMobile ? 68 : 48);
-    const initialZ = isSmallMobile ? 13.5 : (isMobile ? 12.5 : 4.0);
 
-    camera = new THREE.PerspectiveCamera(
-      initialFov,
-      1,
-      0.1,
-      100
-    );
+    const fov = isSmallMobile
+      ? 72
+      : (isMobile ? 68 : 52);
 
-    camera.position.set(
-      isMobile ? 0 : 3.1,
-      isMobile ? 0 : 2.6,
-      initialZ
-    );
-
-    camera.lookAt(0, 0, 0);
-
-    latticeGroup = new THREE.Group();
+    const verticalFov = THREE.MathUtils.degToRad(fov);
+    const horizontalFov =
+      2 * Math.atan(
+        Math.tan(verticalFov / 2) * aspect
+      );
 
     /*
-     * Increase the physical footprint without changing the
-     * logical 3×3×3 coordinates.
-     */
-    latticeGroup.scale.setScalar(1.45);
-
-    scene.add(latticeGroup);
-
-    /*
-     * ONE unified LineSegments object.
+     * latticeGroup is scaled to 1.45 below.
      *
-     * This replaces 27 individual BoxGeometry/EdgesGeometry
-     * objects and therefore eliminates overlapping/double edges.
-     */
-    latticeGeometry =
-      buildUnifiedLatticeGeometry();
-
-    latticeMaterial =
-      new THREE.LineBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.35,
-        depthTest: true,
-        depthWrite: false
-      });
-
-    const latticeLines =
-      new THREE.LineSegments(
-        latticeGeometry,
-        latticeMaterial
-      );
-
-    latticeLines.frustumCulled = true;
-
-    latticeGroup.add(latticeLines);
-
-    /*
-     * Active stimulus cube.
+     * The furthest corner of a cube centered at the origin has:
      *
-     * It is a direct child of latticeGroup, so after its initial
-     * camera alignment it rotates naturally with the entire matrix.
+     *     radius = sqrt(3) * halfExtent
+     *
+     * Using the sphere makes the fit valid for every rotation angle.
      */
-    const activeGeometry =
-      new THREE.BoxGeometry(
-        0.88,
-        0.88,
-        0.88
-      );
+    const worldHalfExtent =
+      GRID_HALF * 1.45;
 
-    activeMaterials =
-      Array.from(
-        { length: 6 },
-        () =>
-          new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            transparent: false
-          })
-      );
+    const boundingRadius =
+      Math.sqrt(3) * worldHalfExtent;
 
-    activeCube =
-      new THREE.Mesh(
-        activeGeometry,
-        activeMaterials
-      );
+    const verticalDistance =
+      (boundingRadius * FIT_PADDING) /
+      Math.tan(verticalFov / 2);
 
-    activeCube.visible = false;
+    const horizontalDistance =
+      (boundingRadius * FIT_PADDING) /
+      Math.tan(horizontalFov / 2);
 
-    latticeGroup.add(activeCube);
+    return {
+      fov,
+      distance: Math.max(
+        verticalDistance,
+        horizontalDistance
+      )
+    };
+  }
 
-    resizeHandler =
-      () => resizeRenderer();
-
-    window.addEventListener(
-      'resize',
-      resizeHandler,
-      { passive: true }
-    );
-
-    if ('ResizeObserver' in window) {
-      resizeObserver =
-        new ResizeObserver(
-          resizeHandler
-        );
-
-      resizeObserver.observe(container);
+  function updateBillboardTransform() {
+    if (
+      !activePlane ||
+      !camera ||
+      !latticeGroup
+    ) {
+      return;
     }
 
-    resizeRenderer();
+    /*
+     * The billboard is a child of the scene, NOT latticeGroup.
+     *
+     * Therefore it does not inherit lattice rotation itself.
+     * Instead, its stored unrotated node coordinate is transformed by
+     * latticeGroup.matrixWorld every frame.
+     *
+     * This keeps the face at exactly the same rotating node as the
+     * wireframe while allowing the plane itself to remain camera-facing.
+     */
+    if (
+      activePlane.userData &&
+      activePlane.userData.basePosition
+    ) {
+      latticeGroup.updateMatrixWorld(true);
 
-    let responsiveResizeRAF = null;
-    const scheduleResponsiveResize = () => {
-      if (responsiveResizeRAF) cancelAnimationFrame(responsiveResizeRAF);
-      responsiveResizeRAF = requestAnimationFrame(() => {
-        responsiveResizeRAF = null;
-        resizeRenderer();
-      });
-    };
-    window.addEventListener('orientationchange', () => setTimeout(scheduleResponsiveResize, 100), {passive:true});
+      const worldPosition =
+        activePlane.userData.basePosition
+          .clone()
+          .applyMatrix4(
+            latticeGroup.matrixWorld
+          );
 
-    const animate = () => {
-      animationFrame =
-        requestAnimationFrame(
-          animate
-        );
+      activePlane.position.copy(
+        worldPosition
+      );
+    }
 
-      if (latticeGroup) {
-        /*
-         * Continuous multi-axis rotation.
-         * The active face is NOT counter-rotated here; it is a
-         * normal child of this group and therefore rotates with it.
-         */
-        latticeGroup.rotation.x += 0.0028;
-        latticeGroup.rotation.y += 0.0048;
-        latticeGroup.rotation.z += 0.0022;
-      }
-
-      if (
-        renderer &&
-        scene &&
-        camera
-      ) {
-        renderer.render(
-          scene,
-          camera
-        );
-      }
-    };
-
-    animate();
-
-    return true;
+    /*
+     * Billboard orientation:
+     * the image plane always faces the camera and therefore does not
+     * become skewed/warped as the lattice rotates.
+     */
+    activePlane.lookAt(
+      camera.position
+    );
   }
 
   function resizeRenderer() {
@@ -1708,53 +1591,85 @@ const Spatial3D = (() => {
         )
       );
 
-    const isMobile = window.innerWidth < 768;
-    const isSmallMobile = window.innerWidth < 480;
+    const fit =
+      calculateFitDistance(
+        width,
+        height
+      );
 
-    renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2)
+    camera.fov = fit.fov;
+
+    /*
+     * Center the camera on the matrix so the automatic fit has equal
+     * clearance on all four sides.
+     */
+    camera.position.set(
+      0,
+      0,
+      fit.distance
     );
 
-    renderer.setSize(width, height, false);
+    camera.aspect =
+      width / height;
 
-    if (isSmallMobile) {
-      camera.fov = 72;
-      camera.position.set(0, 0, 13.5);
-    } else if (isMobile) {
-      camera.fov = 68;
-      camera.position.set(0, 0, 12.5);
-    } else {
-      camera.fov = 48;
-      camera.position.set(3.1, 2.6, 4.0);
-    }
+    camera.near = 0.1;
+    camera.far =
+      Math.max(
+        100,
+        fit.distance +
+        GRID_HALF * 12
+      );
 
-    camera.aspect = width / height;
+    camera.lookAt(
+      0,
+      0,
+      0
+    );
+
     camera.updateProjectionMatrix();
-    camera.lookAt(0, 0, 0);
+
+    const isMobile =
+      window.innerWidth < 768;
+
+    renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio || 1,
+        isMobile ? 1.5 : 2
+      )
+    );
+
+    renderer.setSize(
+      width,
+      height,
+      false
+    );
+
+    /*
+     * Recalculate the billboard immediately after a viewport change.
+     */
+    updateBillboardTransform();
   }
 
   function clearActiveTexture() {
-    if (activeMaterials) {
-      activeMaterials.forEach(
-        material => {
-          material.map = null;
-          material.color.set(
-            0xffffff
-          );
-          material.needsUpdate = true;
-        }
-      );
+    if (activePlane?.material) {
+      activePlane.material.map = null;
+      activePlane.material.color.set(0xffffff);
+      activePlane.material.needsUpdate = true;
     }
 
     if (activeTexture) {
-      activeTexture.dispose();
+      try {
+        activeTexture.dispose();
+      } catch (e) {}
+
       activeTexture = null;
     }
   }
 
   function applyTexture(texture) {
     if (
-      !activeMaterials ||
+      !activePlane ||
+      !activePlane.material ||
       !texture
     ) {
       return;
@@ -1770,22 +1685,20 @@ const Spatial3D = (() => {
 
     texture.needsUpdate = true;
 
-    activeMaterials.forEach(
-      material => {
-        material.map = texture;
-        material.color.set(
-          0xffffff
-        );
-        material.needsUpdate = true;
-      }
+    activePlane.material.map =
+      texture;
+
+    activePlane.material.color.set(
+      0xffffff
     );
+
+    activePlane.material.needsUpdate =
+      true;
 
     activeTexture = texture;
   }
 
-  function loadStimulusTexture(
-    imagePath
-  ) {
+  function loadStimulusTexture(imagePath) {
     const requestId =
       ++textureRequestId;
 
@@ -1799,31 +1712,55 @@ const Spatial3D = (() => {
     }
 
     /*
-     * Prefer the application's already-verified image cache.
-     * This supports both Anime WebP and human-face images.
+     * Prefer the application's preloaded cache.
      */
     let cachedImage = null;
-    if (typeof ANIME_IMAGE_CACHE !== 'undefined') {
-      for (const mode of ANIME_MODES) {
-        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
-        if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
+
+    if (
+      typeof ANIME_IMAGE_CACHE !==
+        'undefined'
+    ) {
+      for (
+        const mode of ANIME_MODES
+      ) {
+        const candidate =
+          ANIME_IMAGE_CACHE[mode]?.[
+            imagePath
+          ];
+
+        if (
+          candidate instanceof
+            HTMLImageElement &&
+          candidate.naturalWidth > 0 &&
+          candidate.naturalHeight > 0
+        ) {
           cachedImage = candidate;
           break;
         }
       }
     }
-    if (!cachedImage && typeof App !== 'undefined' && App.engine?.imageCache) {
-      const candidate = App.engine.imageCache[imagePath];
-      if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
+
+    if (
+      !cachedImage &&
+      typeof App !== 'undefined' &&
+      App.engine?.imageCache
+    ) {
+      const candidate =
+        App.engine.imageCache[
+          imagePath
+        ];
+
+      if (
+        candidate instanceof
+          HTMLImageElement &&
+        candidate.naturalWidth > 0 &&
+        candidate.naturalHeight > 0
+      ) {
         cachedImage = candidate;
       }
     }
 
-    if (
-      cachedImage instanceof HTMLImageElement &&
-      cachedImage.naturalWidth > 0 &&
-      cachedImage.naturalHeight > 0
-    ) {
+    if (cachedImage) {
       const texture =
         new THREE.Texture(
           cachedImage
@@ -1851,8 +1788,7 @@ const Spatial3D = (() => {
     }
 
     /*
-     * Fallback to TextureLoader for any valid path that has not
-     * already entered the application's image cache.
+     * Graceful fallback for a path that is not in the preload cache.
      */
     textureLoader.load(
       imagePath,
@@ -1860,7 +1796,7 @@ const Spatial3D = (() => {
       texture => {
         if (
           requestId !== textureRequestId ||
-          !activeCube
+          !activePlane
         ) {
           texture.dispose();
           return;
@@ -1884,20 +1820,291 @@ const Spatial3D = (() => {
           error
         );
 
-        /*
-         * Keep the active cube visible as a white stimulus.
-         * A texture failure must never break the trial.
-         */
         clearActiveTexture();
       }
     );
+  }
+
+  function init3D(containerElement) {
+    if (
+      !containerElement ||
+      typeof THREE === 'undefined'
+    ) {
+      console.error(
+        '[Spatial3D] Three.js or the 3D container is unavailable.'
+      );
+
+      return false;
+    }
+
+    /*
+     * Never create a second WebGL context without first destroying the old
+     * renderer.
+     */
+    dispose();
+
+    container =
+      containerElement;
+
+    scene =
+      new THREE.Scene();
+
+    scene.background = null;
+
+    /*
+     * Depth cueing: distant wireframe lines fade progressively.
+     */
+    scene.fog =
+      new THREE.FogExp2(
+        0x06070a,
+        0.08
+      );
+
+    textureLoader =
+      new THREE.TextureLoader();
+
+    renderer =
+      new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+      });
+
+    renderer.setClearColor(
+      0x090d16,
+      0
+    );
+
+    renderer.domElement.style.width =
+      '100%';
+
+    renderer.domElement.style.height =
+      '100%';
+
+    renderer.domElement.style.display =
+      'block';
+
+    renderer.domElement.style.maxWidth =
+      'none';
+
+    renderer.domElement.style.maxHeight =
+      'none';
+
+    renderer.domElement.setAttribute(
+      'aria-label',
+      '3D spatial stimulus'
+    );
+
+    container.appendChild(
+      renderer.domElement
+    );
+
+    camera =
+      new THREE.PerspectiveCamera(
+        52,
+        1,
+        0.1,
+        100
+      );
+
+    camera.position.set(
+      0,
+      0,
+      10
+    );
+
+    camera.lookAt(
+      0,
+      0,
+      0
+    );
+
+    /*
+     * The wireframe remains a rotating group.
+     */
+    latticeGroup =
+      new THREE.Group();
+
+    latticeGroup.scale.setScalar(
+      1.45
+    );
+
+    scene.add(
+      latticeGroup
+    );
+
+    latticeGeometry =
+      buildUnifiedLatticeGeometry();
+
+    latticeMaterial =
+      new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.35,
+        depthTest: true,
+        depthWrite: false,
+        fog: true
+      });
+
+    const latticeLines =
+      new THREE.LineSegments(
+        latticeGeometry,
+        latticeMaterial
+      );
+
+    latticeLines.frustumCulled =
+      true;
+
+    latticeGroup.add(
+      latticeLines
+    );
+
+    /*
+     * Billboard stimulus plane.
+     *
+     * It is deliberately a child of scene rather than latticeGroup.
+     * Its position is synchronized manually with latticeGroup's world
+     * transform, while its rotation always faces the camera.
+     */
+    const planeGeometry =
+      new THREE.PlaneGeometry(
+        0.88,
+        0.88
+      );
+
+    const planeMaterial =
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.98,
+        side: THREE.DoubleSide,
+        depthTest: true,
+        depthWrite: false
+      });
+
+    activePlane =
+      new THREE.Mesh(
+        planeGeometry,
+        planeMaterial
+      );
+
+    activePlane.visible =
+      false;
+
+    activePlane.userData = {
+      basePosition:
+        new THREE.Vector3()
+    };
+
+    scene.add(
+      activePlane
+    );
+
+    resizeHandler =
+      () => resizeRenderer();
+
+    window.addEventListener(
+      'resize',
+      resizeHandler,
+      { passive: true }
+    );
+
+    if (
+      'ResizeObserver' in window
+    ) {
+      resizeObserver =
+        new ResizeObserver(
+          () => resizeRenderer()
+        );
+
+      resizeObserver.observe(
+        container
+      );
+    }
+
+    orientationHandler =
+      () => {
+        setTimeout(
+          resizeRenderer,
+          100
+        );
+      };
+
+    window.addEventListener(
+      'orientationchange',
+      orientationHandler,
+      { passive: true }
+    );
+
+    resizeRenderer();
+
+    activeRendererMode =
+      '3d';
+
+    /*
+     * Exactly one tracked RAF loop.
+     */
+    if (
+      animationFrameId !== null
+    ) {
+      cancelAnimationFrame(
+        animationFrameId
+      );
+    }
+
+    animationFrameId = null;
+
+    const animate = () => {
+      if (
+        activeRendererMode !== '3d' ||
+        !renderer ||
+        !scene ||
+        !camera
+      ) {
+        animationFrameId = null;
+        return;
+      }
+
+      animationFrameId =
+        requestAnimationFrame(
+          animate
+        );
+
+      /*
+       * Rotate the wireframe.
+       */
+      if (latticeGroup) {
+        latticeGroup.rotation.x +=
+          0.0028;
+
+        latticeGroup.rotation.y +=
+          0.0048;
+
+        latticeGroup.rotation.z +=
+          0.0022;
+      }
+
+      /*
+       * The billboard now follows the exact world transform of the
+       * rotating lattice node while remaining camera-facing.
+       */
+      updateBillboardTransform();
+
+      renderer.render(
+        scene,
+        camera
+      );
+    };
+
+    animate();
+
+    return true;
   }
 
   function setStimulusPosition(
     index,
     imagePath = null
   ) {
-    if (!activeCube) {
+    if (!activePlane) {
       return false;
     }
 
@@ -1927,15 +2134,23 @@ const Spatial3D = (() => {
         safeIndex / 9
       ) - 1;
 
-    activeCube.position.set(
-      x * SPACING,
-      y * SPACING,
-      z * SPACING
-    );
+    /*
+     * Store the node in unrotated lattice-local coordinates.
+     *
+     * loop() transforms this coordinate through latticeGroup's current
+     * rotation/scale every frame.
+     */
+    activePlane.userData.basePosition =
+      new THREE.Vector3(
+        x * SPACING,
+        y * SPACING,
+        z * SPACING
+      );
 
-    // Faces use the native texture orientation; no inversion or standard orientation.
-    activeCube.rotation.set(0, 0, 0);
-    activeCube.visible = true;
+    activePlane.visible =
+      true;
+
+    updateBillboardTransform();
 
     if (imagePath) {
       loadStimulusTexture(
@@ -1949,8 +2164,9 @@ const Spatial3D = (() => {
   }
 
   function clearStimulus() {
-    if (activeCube) {
-      activeCube.visible = false;
+    if (activePlane) {
+      activePlane.visible =
+        false;
     }
 
     ++textureRequestId;
@@ -1959,71 +2175,145 @@ const Spatial3D = (() => {
   }
 
   function dispose() {
-    ++textureRequestId;
-
+    /*
+     * Stop the module's RAF before releasing any resources.
+     */
     if (
-      animationFrame !== null
+      animationFrameId !== null
     ) {
       cancelAnimationFrame(
-        animationFrame
+        animationFrameId
       );
+
+      animationFrameId = null;
     }
 
-    animationFrame = null;
+    activeRendererMode =
+      null;
+
+    ++textureRequestId;
 
     if (resizeObserver) {
       resizeObserver.disconnect();
+      resizeObserver = null;
     }
-
-    resizeObserver = null;
 
     if (resizeHandler) {
       window.removeEventListener(
         'resize',
         resizeHandler
       );
+
+      resizeHandler = null;
     }
 
-    resizeHandler = null;
+    if (orientationHandler) {
+      window.removeEventListener(
+        'orientationchange',
+        orientationHandler
+      );
+
+      orientationHandler = null;
+    }
 
     clearActiveTexture();
 
-    if (activeCube) {
-      if (activeCube.geometry) {
-        activeCube.geometry.dispose();
-      }
+    /*
+     * Traverse the scene and dispose every geometry, material and texture.
+     */
+    if (scene) {
+      scene.traverse(
+        object => {
+          if (object.geometry) {
+            try {
+              object.geometry.dispose();
+            } catch (e) {}
+          }
 
-      if (
-        Array.isArray(
-          activeCube.material
-        )
+          if (object.material) {
+            const materials =
+              Array.isArray(
+                object.material
+              )
+                ? object.material
+                : [object.material];
+
+            materials.forEach(
+              material => {
+                if (!material) {
+                  return;
+                }
+
+                Object.keys(
+                  material
+                ).forEach(key => {
+                  const value =
+                    material[key];
+
+                  if (
+                    value &&
+                    value.isTexture
+                  ) {
+                    try {
+                      value.dispose();
+                    } catch (e) {}
+                  }
+                });
+
+                try {
+                  material.dispose();
+                } catch (e) {}
+              }
+            );
+          }
+        }
+      );
+
+      while (
+        scene.children.length
       ) {
-        activeCube.material.forEach(
-          material =>
-            material.dispose()
+        scene.remove(
+          scene.children[0]
         );
       }
     }
 
     if (latticeGeometry) {
-      latticeGeometry.dispose();
-      latticeGeometry = null;
+      try {
+        latticeGeometry.dispose();
+      } catch (e) {}
+
+      latticeGeometry =
+        null;
     }
 
     if (latticeMaterial) {
-      latticeMaterial.dispose();
-      latticeMaterial = null;
+      try {
+        latticeMaterial.dispose();
+      } catch (e) {}
+
+      latticeMaterial =
+        null;
     }
 
     if (renderer) {
-      renderer.dispose();
+      const canvas =
+        renderer.domElement;
+
+      try {
+        renderer.dispose();
+      } catch (e) {}
+
+      try {
+        renderer.forceContextLoss();
+      } catch (e) {}
 
       if (
-        renderer.domElement &&
-        renderer.domElement.parentNode
+        canvas &&
+        canvas.parentNode
       ) {
-        renderer.domElement.parentNode.removeChild(
-          renderer.domElement
+        canvas.parentNode.removeChild(
+          canvas
         );
       }
     }
@@ -2032,8 +2322,7 @@ const Spatial3D = (() => {
     camera = null;
     scene = null;
     latticeGroup = null;
-    activeCube = null;
-    activeMaterials = null;
+    activePlane = null;
     textureLoader = null;
     activeTexture = null;
     container = null;
@@ -2043,9 +2332,11 @@ const Spatial3D = (() => {
     init3D,
     setStimulusPosition,
     clearStimulus,
-    dispose
+    dispose,
+    resizeRenderer
   };
 })();
+
 
 // ==================== GAME ENGINE ====================
 class GameEngine {
@@ -2535,7 +2826,139 @@ const App = {
     Object.entries(map).forEach(([out,[id,fmt]]) => { const input=document.getElementById(id), display=document.getElementById(out); if(input&&display) display.textContent=fmt(input.value); });
   },
 
+  // ==========================================================================
+  // UNIFIED RENDERER CLEANUP
+  // This is intentionally JS-only. No CSS or HTML layout is changed.
+  // ==========================================================================
+  cleanupRenderers() {
+    // Cancel the global RAF immediately.
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+
+    // Stop and dispose the active Three.js renderer. Spatial3D.dispose() also
+    // cancels its private RAF, removes its canvas, and releases WebGL.
+    try {
+      if (typeof Spatial3D !== 'undefined' && typeof Spatial3D.dispose === 'function') {
+        Spatial3D.dispose();
+      }
+    } catch (error) {
+      console.warn('[ATTENTIONAL SHIELD] Three.js cleanup warning:', error);
+    }
+
+    // Remove/hide every stale WebGL canvas that could have survived a previous
+    // session or renderer initialization.
+    const scene3d = document.getElementById('scene-3d');
+    if (scene3d) {
+      scene3d.querySelectorAll('canvas').forEach(canvas => {
+        canvas.style.setProperty('display', 'none', 'important');
+        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      });
+      scene3d.style.setProperty('display', 'none', 'important');
+      scene3d.classList.remove('active');
+    }
+
+    // The 2D renderer is also hidden during cleanup; the next mount explicitly
+    // enables exactly one renderer.
+    const grid2d = document.getElementById('grid-2d');
+    if (grid2d) {
+      grid2d.style.setProperty('display', 'none', 'important');
+      grid2d.classList.remove('active');
+    }
+
+    activeRendererMode = null;
+  },
+
+  // ==========================================================================
+  // STRICT 2D / 3D VISIBILITY
+  // ==========================================================================
+  setRendererVisibility(mode) {
+    const grid2d = document.getElementById('grid-2d');
+    const scene3d = document.getElementById('scene-3d');
+
+    if (mode === '2d') {
+      if (scene3d) {
+        scene3d.style.setProperty('display', 'none', 'important');
+        scene3d.querySelectorAll('canvas').forEach(canvas => {
+          canvas.style.setProperty('display', 'none', 'important');
+        });
+        scene3d.classList.remove('active');
+      }
+
+      if (grid2d) {
+        grid2d.style.setProperty('display', 'grid', 'important');
+        grid2d.classList.add('active');
+      }
+
+      activeRendererMode = '2d';
+      return;
+    }
+
+    if (mode === '3d') {
+      if (grid2d) {
+        grid2d.style.setProperty('display', 'none', 'important');
+        grid2d.classList.remove('active');
+      }
+
+      if (scene3d) {
+        scene3d.style.setProperty('display', 'flex', 'important');
+        scene3d.classList.add('active');
+      }
+
+      activeRendererMode = '3d';
+      return;
+    }
+
+    if (grid2d) grid2d.style.setProperty('display', 'none', 'important');
+    if (scene3d) scene3d.style.setProperty('display', 'none', 'important');
+    activeRendererMode = null;
+  },
+
+  switchRendererMode(gridType) {
+    const mode = gridType === '3d' ? '3d' : '2d';
+
+    // Never create the next renderer before the previous one is gone.
+    this.cleanupRenderers();
+
+    if (mode === '2d') {
+      this.setRendererVisibility('2d');
+      return true;
+    }
+
+    const scene3d = document.getElementById('scene-3d');
+    if (!scene3d) {
+      console.warn('[ATTENTIONAL SHIELD] #scene-3d missing; falling back to 2D.');
+      this.setRendererVisibility('2d');
+      return false;
+    }
+
+    // Show the 3D container before Three.js measures it.
+    this.setRendererVisibility('3d');
+
+    try {
+      const ok = Spatial3D.init3D(scene3d);
+      if (!ok) throw new Error('Spatial3D.init3D() returned false');
+
+      // init3D appends a new canvas; re-assert strict visibility afterward.
+      this.setRendererVisibility('3d');
+      const canvas = scene3d.querySelector('canvas');
+      if (canvas) canvas.style.setProperty('display', 'block', 'important');
+      return true;
+    } catch (error) {
+      console.error('[ATTENTIONAL SHIELD] 3D renderer initialization failed:', error);
+      this.cleanupRenderers();
+      this.setRendererVisibility('2d');
+      return false;
+    }
+  },
+
   switchScreen(id) {
+    // Any transition away from the game screen must release the renderer first.
+    if (id !== 'game' && activeRendererMode !== null) {
+      this.cleanupRenderers();
+    }
+
     Object.values(this.screens).forEach(s => { if (s) s.classList.remove('active'); });
     if (this.screens[id]) this.screens[id].classList.add('active');
     if (id === 'setup') {
@@ -2626,6 +3049,12 @@ const App = {
     const r3d = document.getElementById('row-3d-speed');
     if (r2d) r2d.style.display = is3d ? 'none' : 'flex';
     if (r3d) r3d.style.display = is3d ? 'flex' : 'none';
+
+    // If the user changes renderer type while the game is visible, replace
+    // the active renderer immediately and never leave both on screen.
+    if (this.screens.game?.classList.contains('active')) {
+      this.switchRendererMode(is3d ? '3d' : '2d');
+    }
   },
 
   update3DSpeedDisplay() {
@@ -2725,7 +3154,15 @@ const App = {
     if (el) el.classList.toggle('open');
   },
 
+  initSession() {
+    // Session initialization must never inherit a previous renderer.
+    this.cleanupRenderers();
+  },
+
   async startSession() {
+    // CRITICAL: wipe any previous 2D/WebGL renderer before touching session state.
+    this.cleanupRenderers();
+
     const s = this.engine.getSettings();
     const loading = document.getElementById('asset-loading-overlay');
     const startButton = document.getElementById('btn-init-session');
@@ -2819,23 +3256,54 @@ const App = {
     const g2d = document.getElementById('grid-2d');
     const s3d = document.getElementById('scene-3d');
     const cube = document.getElementById('cube-3d');
-    if (g2d) { g2d.classList.remove('active'); g2d.innerHTML = ''; }
-    if (s3d) { s3d.classList.remove('active'); }
-    if (cube) { cube.innerHTML = ''; }
+
+    // Renderer creation always starts from a completely clean state.
+    this.cleanupRenderers();
+
+    if (g2d) {
+      g2d.classList.remove('active');
+      g2d.innerHTML = '';
+    }
+    if (s3d) {
+      s3d.classList.remove('active');
+    }
+    if (cube) {
+      cube.innerHTML = '';
+    }
 
     if (s.gridType === '3d') {
-      if (s3d) s3d.classList.add('active');
+      // 3D is the only active renderer.
+      if (g2d) g2d.style.setProperty('display', 'none', 'important');
+      if (s3d) s3d.style.setProperty('display', 'flex', 'important');
       if (cube) cube.innerHTML = '';
-      Spatial3D.init3D(s3d);
+
+      const initialized = this.switchRendererMode('3d');
+      if (!initialized) {
+        // switchRendererMode() already restores 2D visibility on failure.
+      }
     } else {
-      if (g2d) g2d.classList.add('active');
+      // 2D is the only active renderer.
+      if (s3d) {
+        s3d.style.setProperty('display', 'none', 'important');
+        s3d.querySelectorAll('canvas').forEach(canvas => {
+          canvas.style.setProperty('display', 'none', 'important');
+        });
+      }
+
+      if (g2d) {
+        g2d.style.setProperty('display', 'grid', 'important');
+        g2d.classList.add('active');
+      }
+
       const sz = s.gridSize;
       g2d.style.gridTemplateColumns = 'repeat(' + sz + ', 1fr)';
       g2d.style.gridTemplateRows = 'repeat(' + sz + ', 1fr)';
+
       for (let i = 0; i < sz * sz; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell-2d';
         cell.id = 'pos-' + i;
+
         const img = document.createElement('img');
         img.className = 'face-img stimulus-image';
         img.alt = '';
@@ -2846,16 +3314,22 @@ const App = {
         img.style.maxWidth = '100%';
         img.style.maxHeight = '100%';
         img.style.pointerEvents = 'none';
+
         const fallback = document.createElement('div');
         fallback.className = 'face-fallback';
         fallback.style.display = 'none';
+
         const overlay = document.createElement('div');
         overlay.className = 'cell-overlay';
+
         cell.appendChild(img);
         cell.appendChild(fallback);
         cell.appendChild(overlay);
         g2d.appendChild(cell);
       }
+
+      activeRendererMode = '2d';
+      this.setRendererVisibility('2d');
     }
   },
 
@@ -3260,6 +3734,9 @@ const App = {
   },
 
   endSession(reason = 'manual') {
+    // Stop RAF/WebGL and remove stale canvas before any screen transition.
+    this.cleanupRenderers();
+
     this.engine.isRunning = false;
     this.engine.isTrialActive = false;
     clearTimeout(this.engine.trialTimeout);
