@@ -645,6 +645,12 @@ button, input, select { position:relative; z-index:1; }
 (function() {
 'use strict';
 
+// Defensive DOM helpers: missing optional controls must never crash startup.
+const $ = (id) => document.getElementById(id);
+const setText = (id, value) => { const el = $(id); if (el) el.textContent = value; };
+const getValue = (id, fallback = '') => { const el = $(id); return el ? el.value : fallback; };
+const getChecked = (id, fallback = false) => { const el = $(id); return el ? !!el.checked : fallback; };
+
 const STORAGE_KEY = 'attentional_shield_v2';
 const SETTINGS_STORAGE_KEY = STORAGE_KEY + '_settings_v3';
 
@@ -1157,6 +1163,7 @@ const StatsManager = {
 // ==================== CHART RENDERER ====================
 const ChartRenderer = {
   drawLine(canvas, data, color, fill) {
+    if (!canvas || typeof canvas.getContext !== 'function') return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -1202,6 +1209,7 @@ const ChartRenderer = {
     data.forEach((d,i) => { if (i % step === 0) ctx.fillText(d.x, getX(i), h - 8); });
   },
   drawBars(canvas, labels, values, colors) {
+    if (!canvas || typeof canvas.getContext !== 'function') return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -2164,7 +2172,6 @@ const App = {
 
   init() {
     if (this._initialized) return;
-    this._initialized = true;
     StatsManager.load();
     this.loadSettings();
     this.screens = {
@@ -2192,20 +2199,20 @@ const App = {
       const el = document.getElementById(id);
       if (el) el.addEventListener(event, handler);
     };
-    bindInput('rng-start-n', 'input', e => { document.getElementById('disp-start-n').textContent = e.target.value; this.onVariableNToggle(); });
-    bindInput('rng-emo-load', 'input', e => { document.getElementById('disp-emo-load').textContent = e.target.value + '%'; });
+    bindInput('rng-start-n', 'input', e => { setText('disp-start-n', e.target.value); this.onVariableNToggle(); });
+    bindInput('rng-emo-load', 'input', e => { setText('disp-emo-load', e.target.value + '%'); });
     bindInput('sel-grid-type', 'change', () => this.onGridTypeChange());
     bindInput('rng-3d-speed', 'input', () => this.update3DSpeedDisplay());
     bindInput('chk-variable-n', 'change', () => this.onVariableNToggle());
-    bindInput('rng-var-min', 'input', e => { document.getElementById('disp-var-min').textContent = e.target.value; });
+    bindInput('rng-var-min', 'input', e => { setText('disp-var-min', e.target.value); });
     bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
-    bindInput('rng-isi-fixed', 'input', e => { document.getElementById('disp-isi-fixed').textContent = e.target.value + 'ms'; });
-    bindInput('rng-isi-min', 'input', e => { document.getElementById('disp-isi-min').textContent = e.target.value + 'ms'; });
-    bindInput('rng-isi-max', 'input', e => { document.getElementById('disp-isi-max').textContent = e.target.value + 'ms'; });
-    bindInput('rng-session-duration', 'input', e => { document.getElementById('disp-session-duration').textContent = e.target.value + ' min'; });
-    bindInput('rng-stim-dur', 'input', e => { document.getElementById('disp-stim-dur').textContent = e.target.value + 'ms'; });
-    bindInput('rng-interference', 'input', e => { document.getElementById('disp-interference').textContent = e.target.value + '%'; });
-    bindInput('rng-match-rate', 'input', e => { document.getElementById('disp-match-rate').textContent = e.target.value + '%'; });
+    bindInput('rng-isi-fixed', 'input', e => { setText('disp-isi-fixed', e.target.value + 'ms'); });
+    bindInput('rng-isi-min', 'input', e => { setText('disp-isi-min', e.target.value + 'ms'); });
+    bindInput('rng-isi-max', 'input', e => { setText('disp-isi-max', e.target.value + 'ms'); });
+    bindInput('rng-session-duration', 'input', e => { setText('disp-session-duration', e.target.value + ' min'); });
+    bindInput('rng-stim-dur', 'input', e => { setText('disp-stim-dur', e.target.value + 'ms'); });
+    bindInput('rng-interference', 'input', e => { setText('disp-interference', e.target.value + '%'); });
+    bindInput('rng-match-rate', 'input', e => { setText('disp-match-rate', e.target.value + '%'); });
     bindInput('chk-pos', 'change', () => this.onStimChange());
     bindInput('chk-aud', 'change', () => this.onStimChange());
     bindInput('chk-shp', 'change', () => this.onStimChange());
@@ -2271,6 +2278,7 @@ const App = {
 
     // Preload images non-blocking
     this.engine.preloadImages();
+    this._initialized = true;
   },
 
   getPersistentControlIds() {
@@ -2319,7 +2327,7 @@ const App = {
       if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
       this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this._savedAnimeMode = saved?.animeMode === 'standard' ? 'standard' : 'standard';
+      this._savedAnimeMode = saved?.animeMode === 'waifu' ? 'waifu' : 'standard';
       this._savedVoiceName = saved?.voiceName || null;
     } catch(e) {
       this._savedMode = 'dual'; this._savedStimulusType = 'human_faces'; this._savedAnimeMode = 'standard'; this._savedVoiceName = null;
