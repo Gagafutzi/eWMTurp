@@ -133,15 +133,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .hud-stat .hud-lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
 .hud-stat .hud-val.cyan { color:var(--cyan); text-shadow:0 0 8px rgba(0,240,255,0.3); }
 .hud-stat .hud-val.magenta { color:var(--magenta); text-shadow:0 0 8px rgba(255,0,110,0.3); }
-.hud-stat .hud-val.amber { color:var(--amber); }
-/* Persistent N-back level HUD: updated at block/level transitions. */
-.hud-stat .hud-val.level {
-  color:var(--magenta);
-  text-shadow:0 0 8px rgba(255,0,110,0.28);
-  min-width:3.8ch;
-  text-align:center;
-}
- .hud-stat .hud-val.green { color:var(--green); }
+.hud-stat .hud-val.amber { color:var(--amber); } .hud-stat .hud-val.green { color:var(--green); }
 .hud-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:5px 12px; border-radius:5px; font-size:0.7rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:var(--font-sans); }
 .hud-btn:hover { border-color:var(--text-muted); color:var(--text); }
 .hud-btn.danger { border-color:var(--red); color:var(--red); } .hud-btn.danger:hover { background:var(--red-dim); }
@@ -225,7 +217,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 @keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
 @keyframes rotate3dMobile { 0%{transform:scale(1.02) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.02) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
 .mini-cube { position:absolute; width:clamp(46px,9vmin,86px); height:clamp(46px,9vmin,86px); left:clamp(-43px,-4.5vmin,-23px); top:clamp(-43px,-4.5vmin,-23px); transform-style:preserve-3d; }
-.mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:visible;-webkit-backface-visibility:visible; box-shadow:0 0 4px rgba(190,220,255,0.08); }
+.mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; box-shadow:0 0 4px rgba(190,220,255,0.08); }
 .mini-face.active { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,240,255,0.45),inset 0 0 18px rgba(0,240,255,0.12); background:rgba(0,240,255,0.10); }
 .mini-face img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
 .mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
@@ -261,6 +253,55 @@ select:focus, input:focus { border-color:var(--cyan); }
   .modal-panel { padding:16px; }
 }
 
+/* FINAL 3D VIEWPORT OVERRIDE: full available center-stage area. */
+.scene-3d {
+  position:relative !important;
+  display:flex;
+  flex:1 1 auto;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 auto !important;
+  padding:0 !important;
+  aspect-ratio:auto !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden;
+}
+
+.scene-3d canvas {
+  position:relative !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  display:block !important;
+}
+
+@media (max-width:700px) {
+  .game-stage,
+  .center-display,
+  .scene-3d {
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:none !important;
+    max-height:none !important;
+  }
+
+  .scene-3d canvas {
+    width:100% !important;
+    height:100% !important;
+    max-width:none !important;
+    max-height:none !important;
+  }
+}
 
 
 /* Asset preload transition overlay */
@@ -270,41 +311,6 @@ select:focus, input:focus { border-color:var(--cyan); }
 .asset-loading-label { color:var(--cyan); font-size:0.85rem; font-weight:800; letter-spacing:2px; animation:assetPulse 0.9s ease-in-out infinite alternate; }
 .asset-loading-detail { margin-top:8px; color:var(--text-muted); font-size:0.62rem; letter-spacing:1px; }
 @keyframes assetPulse { from { opacity:0.45; } to { opacity:1; } }
-
-/* ================================================================
-   MODALITY ERROR FEEDBACK — ENABLED BY DEFAULT
-   ================================================================ */
-.modality-btn.error-feedback {
-  border-color:var(--red) !important;
-  outline:2px solid var(--red);
-  outline-offset:1px;
-  background:var(--red-dim) !important;
-  box-shadow:
-    0 0 0 2px rgba(255,51,51,0.18),
-    0 0 22px rgba(255,51,51,0.55) !important;
-  animation:modalityErrorFlash 300ms ease-out;
-}
-
-.modality-btn.error-feedback .mod-initial {
-  color:var(--red) !important;
-  text-shadow:0 0 10px rgba(255,51,51,0.75);
-}
-
-@keyframes modalityErrorFlash {
-  0% {
-    transform:scale(1);
-    filter:brightness(1);
-  }
-  35% {
-    transform:scale(1.045);
-    filter:brightness(1.45);
-  }
-  100% {
-    transform:scale(1);
-    filter:brightness(1);
-  }
-}
-
 </style>
 <style>
 /* Refactor safety/responsiveness */
@@ -326,7 +332,24 @@ button, input, select { position:relative; z-index:1; }
   .hud-btn { padding:5px 8px; }
 }
 
-/* 3D canvas sizing only; visibility is controlled by .scene-3d / .active. */
+/* 3D viewport: centered, uncapped, and symmetric. */
+.scene-3d {
+  position:relative;
+  display:flex;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  max-width:none;
+  max-height:none;
+  margin:auto;
+  padding:0;
+  overflow:hidden;
+  align-items:center;
+  justify-content:center;
+  place-items:center;
+}
+
 .scene-3d canvas {
   position:relative !important;
   inset:auto !important;
@@ -479,7 +502,7 @@ button, input, select { position:relative; z-index:1; }
           <div class="anime-submode-grid" role="group" aria-label="Anime stimulus subtype">
             <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime Faces</strong><small>Standard</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false"><strong>Anime Waifu Faces</strong><small>Waifu • 56 assets</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false" disabled aria-disabled="true"><strong>Hentai Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Hentai</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false"><strong>Hentai Faces</strong><small>Hentai • 30 assets</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Gore <span class="anime-coming-soon">COMING SOON</span></strong><small>Gore</small></button>
           </div>
         </div>
@@ -767,6 +790,12 @@ const FACES = [
 //
 // This manifest is intentionally embedded in index.html so GitHub Pages
 // never depends on a runtime manifest.json or directory listing.
+/*
+ * Configurable Hentai asset count.
+ * Files are expected to be h1.jpg ... hN.jpg.
+ */
+const HENTAI_COUNT = 30;
+
 const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
   standard: Object.freeze([
     'assets/stimuli/anime/a.webp', 'assets/stimuli/anime/b.webp', 'assets/stimuli/anime/c.webp',
@@ -832,7 +861,12 @@ const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
     'assets/stimuli/waifu/waifu_55.webp',
     'assets/stimuli/waifu/waifu_56.webp'
   ]),
-  hentai: Object.freeze([]),
+  hentai: Object.freeze(
+    Array.from(
+      { length: HENTAI_COUNT },
+      (_, index) => `assets/stimuli/hentai/h${index + 1}.jpg`
+    )
+  ),
   gore: Object.freeze([])
 });
 
@@ -845,56 +879,10 @@ ANIME_MODES.forEach(mode => {
   ANIME_IMAGE_CACHE[mode] = Object.create(null);
 });
 
-function createAssetPlaceholder(label = 'ANIME') {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  canvas.setAttribute('aria-label', `${label} asset placeholder`);
-  canvas.dataset.assetPlaceholder = 'true';
-
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#10141d';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#00f0ff';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(10, 10, 236, 236);
-    ctx.fillStyle = '#00f0ff';
-    ctx.font = '700 22px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, 128, 112);
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '14px monospace';
-    ctx.fillText('ASSET UNAVAILABLE', 128, 148);
-  }
-
-  return canvas;
-}
-
-function cacheAssetPlaceholder(path, targetCache, reason = 'unavailable') {
-  if (!targetCache || !path) return null;
-
-  const isAnimeCache = Object.values(ANIME_IMAGE_CACHE).some(
-    cache => cache === targetCache
-  );
-
-  const placeholder = createAssetPlaceholder(
-    isAnimeCache ? 'ANIME' : 'STIMULUS'
-  );
-
-  placeholder.dataset.assetPath = path;
-  placeholder.dataset.assetFailure = reason;
-  targetCache[path] = placeholder;
-
-  return placeholder;
-}
-
-function preloadImage(path, targetCache, timeoutMs = 3000) {
+function preloadImage(path, targetCache) {
   return new Promise(resolve => {
     if (!path || !targetCache) {
-      resolve({ ok: false, path, reason: 'invalid arguments' });
+      resolve(false);
       return;
     }
 
@@ -906,70 +894,40 @@ function preloadImage(path, targetCache, timeoutMs = 3000) {
       existing.naturalWidth > 0 &&
       existing.naturalHeight > 0
     ) {
-      resolve({ ok: true, path, image: existing });
+      resolve(true);
       return;
     }
 
-    // Remove a previous placeholder before attempting a fresh load.
-    if (existing?.dataset?.assetPlaceholder === 'true') {
-      delete targetCache[path];
-    }
+    delete targetCache[path];
 
     const img = new Image();
     img.decoding = 'async';
     img.loading = 'eager';
 
     let settled = false;
-    let timeoutId = null;
 
-    const finish = (ok, reason = '') => {
+    const fail = reason => {
       if (settled) return;
       settled = true;
+      delete targetCache[path];
 
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-
-      if (ok) {
-        targetCache[path] = img;
-        resolve({ ok: true, path, image: img });
-        return;
-      }
-
-      const placeholder = cacheAssetPlaceholder(
+      console.error(
+        '[ATTENTIONAL SHIELD] Failed to load image:',
         path,
-        targetCache,
-        reason || 'load failed'
+        reason || ''
       );
 
-      console.warn(
-        '[ATTENTIONAL SHIELD] Asset fallback:',
-        path,
-        reason || 'load failed'
-      );
-
-      resolve({
-        ok: false,
-        path,
-        placeholder,
-        reason: reason || 'load failed'
-      });
+      resolve(false);
     };
 
-    timeoutId = setTimeout(() => {
-      try { img.src = ''; } catch (_) {}
-      finish(false, `timeout after ${timeoutMs}ms`);
-    }, timeoutMs);
-
-    img.onerror = () => finish(false, 'load/CORS error');
+    img.onerror = () => fail('load error');
 
     img.onload = async () => {
       if (
         img.naturalWidth <= 0 ||
         img.naturalHeight <= 0
       ) {
-        finish(false, 'zero natural dimensions');
+        fail('zero natural dimensions');
         return;
       }
 
@@ -977,7 +935,7 @@ function preloadImage(path, targetCache, timeoutMs = 3000) {
         try {
           await img.decode();
         } catch (error) {
-          finish(false, 'decode error');
+          fail(error);
           return;
         }
       }
@@ -986,18 +944,18 @@ function preloadImage(path, targetCache, timeoutMs = 3000) {
         img.naturalWidth <= 0 ||
         img.naturalHeight <= 0
       ) {
-        finish(false, 'zero dimensions after decode');
+        fail('zero dimensions after decode');
         return;
       }
 
-      finish(true);
+      if (settled) return;
+
+      settled = true;
+      targetCache[path] = img;
+      resolve(true);
     };
 
-    try {
-      img.src = path;
-    } catch (error) {
-      finish(false, error?.message || 'invalid image URL');
-    }
+    img.src = path;
   });
 }
 
@@ -1031,121 +989,93 @@ function getCachedAnimePaths(mode = 'standard') {
 // Three.js, so the game never starts by racing the first stimulus against a
 // network request. Individual failures remain non-fatal.
 async function preloadAssets(options = {}) {
-  const stimulusType = options.stimulusType === 'anime_faces'
-    ? 'anime_faces'
-    : 'human_faces';
-
-  const animeMode = ANIME_MODES.includes(options.animeMode)
-    ? options.animeMode
-    : 'standard';
-
+  const stimulusType = options.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+  const animeMode = ANIME_MODES.includes(options.animeMode) ? options.animeMode : 'standard';
   const paths = stimulusType === 'anime_faces'
     ? (ANIME_FACE_ASSET_MANIFEST[animeMode] || [])
     : FACES.map(face => face.file);
-
   const cache = stimulusType === 'anime_faces'
     ? (ANIME_IMAGE_CACHE[animeMode] || (ANIME_IMAGE_CACHE[animeMode] = Object.create(null)))
     : FACE_IMAGE_CACHE;
 
-  /*
-   * allSettled is deliberate: one broken asset can never reject the
-   * entire preload operation. preloadImage() also has its own timeout,
-   * so every individual resource is guaranteed to settle.
-   */
-  const settled = await Promise.allSettled(
-    paths.map(path => preloadImage(path, cache, 3000))
-  );
-
-  const results = settled.map((entry, index) => {
-    if (entry.status === 'fulfilled') {
-      return entry.value;
-    }
-
-    const path = paths[index];
-    const placeholder = cacheAssetPlaceholder(
-      path,
-      cache,
-      entry.reason?.message || 'preload rejection'
-    );
-
-    return {
-      ok: false,
-      path,
-      placeholder,
-      reason: entry.reason?.message || 'preload rejection'
-    };
-  });
+  const results = await Promise.all(paths.map(async path => ({
+    path,
+    ok: await preloadImage(path, cache)
+  })));
 
   return {
     stimulusType,
     animeMode,
     requested: paths.length,
-    loaded: results.filter(result => result.ok).map(result => result.path),
-    failed: results.filter(result => !result.ok).map(result => result.path),
-    placeholders: results.filter(result => !result.ok).map(result => result.path),
-    ready: true,
-    complete: true
+    loaded: results.filter(r => r.ok).map(r => r.path),
+    failed: results.filter(r => !r.ok).map(r => r.path),
+    ready: results.some(r => r.ok) || paths.length === 0
   };
-}
-
-function isRenderableCachedAsset(asset) {
-  if (!asset) return false;
-
-  if (asset instanceof HTMLImageElement) {
-    return asset.complete &&
-      asset.naturalWidth > 0 &&
-      asset.naturalHeight > 0;
-  }
-
-  if (asset instanceof HTMLCanvasElement) {
-    return asset.width > 0 && asset.height > 0;
-  }
-
-  return false;
 }
 
 function getPreloadedImage(path, stimulusType = 'human_faces', animeMode = 'standard') {
   if (!path) return null;
-
   if (stimulusType === 'anime_faces') {
     const mode = ANIME_MODES.includes(animeMode) ? animeMode : 'standard';
-    const asset = ANIME_IMAGE_CACHE[mode]?.[path];
-    return isRenderableCachedAsset(asset) ? asset : null;
+    const image = ANIME_IMAGE_CACHE[mode]?.[path];
+    return image instanceof HTMLImageElement && image.naturalWidth > 0 ? image : null;
   }
-
-  const asset = FACE_IMAGE_CACHE[path];
-  return isRenderableCachedAsset(asset) ? asset : null;
+  const image = FACE_IMAGE_CACHE[path];
+  return image instanceof HTMLImageElement && image.naturalWidth > 0 ? image : null;
 }
 
 
-const FACE_PRELOAD_PROMISE = Promise.allSettled(
-  FACES.map(face => preloadImage(face.file, FACE_IMAGE_CACHE, 3000))
-).catch(error => {
-  console.warn('[ATTENTIONAL SHIELD] Face preload gate recovered:', error);
-  return [];
-});
+const FACE_PRELOAD_PROMISE = Promise.all(
+  FACES.map(face =>
+    preloadImage(
+      face.file,
+      FACE_IMAGE_CACHE
+    )
+  )
+);
 
 /*
- * Anime preload gate is intentionally non-rejecting. Every individual
- * image has a 3-second timeout and receives a placeholder on failure.
+ * Single unified Anime preload gate.
+ * It resolves even if an individual image fails, so optional Anime
+ * stimuli can never freeze session initialization.
  */
-const ANIME_PRELOAD_READY = Promise.allSettled(
+const ANIME_PRELOAD_READY = Promise.all(
   ANIME_MODES.map(async mode => {
-    const paths = ANIME_FACE_ASSET_MANIFEST[mode] || [];
-    const cache = ANIME_IMAGE_CACHE[mode] || (ANIME_IMAGE_CACHE[mode] = Object.create(null));
+    const paths =
+      ANIME_FACE_ASSET_MANIFEST[mode] || [];
 
-    return Promise.allSettled(
-      paths.map(path => preloadImage(path, cache, 3000))
+    if (!ANIME_IMAGE_CACHE[mode]) {
+      ANIME_IMAGE_CACHE[mode] =
+        Object.create(null);
+    }
+
+    const results = await Promise.all(
+      paths.map(path =>
+        preloadImage(
+          path,
+          ANIME_IMAGE_CACHE[mode]
+        )
+      )
     );
+
+    return {
+      mode,
+      loaded: results.filter(Boolean).length
+    };
   })
-).then(results => {
-  return results.map((result, index) => ({
-    mode: ANIME_MODES[index],
-    status: result.status,
-    value: result.status === 'fulfilled' ? result.value : []
-  }));
-}).catch(error => {
-  console.error('[ATTENTIONAL SHIELD] Anime preload pipeline recovered:', error);
+).catch(error => {
+  console.error(
+    '[ATTENTIONAL SHIELD] Anime preload pipeline failed:',
+    error
+  );
+
+  ANIME_MODES.forEach(mode => {
+    if (!ANIME_IMAGE_CACHE[mode]) {
+      ANIME_IMAGE_CACHE[mode] =
+        Object.create(null);
+    }
+  });
+
   return [];
 });
 
@@ -1449,73 +1379,30 @@ const ChartRenderer = {
     const step = Math.ceil(data.length / 6);
     data.forEach((d,i) => { if (i % step === 0) ctx.fillText(d.x, getX(i), h - 8); });
   },
-  drawBars(canvas, labels = [], values = [], colors = ['#00f0ff']) {
+  drawBars(canvas, labels, values, colors) {
     if (!canvas || typeof canvas.getContext !== 'function') return;
-
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    const w = Math.max(1, rect.width || canvas.clientWidth || 320);
-    const h = Math.max(1, rect.height || canvas.clientHeight || 180);
-
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-
-    const cleanValues = Array.isArray(values)
-      ? values.map(v => Number.isFinite(Number(v)) ? Number(v) : 0)
-      : [];
-
-    if (!cleanValues.length) return;
-
-    const cleanLabels = Array.isArray(labels) ? labels : [];
-    const cleanColors = Array.isArray(colors) && colors.length
-      ? colors
-      : ['#00f0ff'];
-
-    const pad = {
-      t: 20,
-      r: 20,
-      b: 34,
-      l: 42
-    };
-
-    const plotW = Math.max(1, w - pad.l - pad.r);
-    const plotH = Math.max(1, h - pad.t - pad.b);
-    const maxV = Math.max(1, ...cleanValues);
-    const gap = plotW / cleanValues.length;
-    const barW = Math.max(2, Math.min(gap * 0.68, 64));
-
-    // Baseline.
-    ctx.strokeStyle = '#1e2330';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pad.l, h - pad.b + 0.5);
-    ctx.lineTo(w - pad.r, h - pad.b + 0.5);
-    ctx.stroke();
-
-    cleanValues.forEach((value, i) => {
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const w = rect.width, h = rect.height;
+    ctx.clearRect(0,0,w,h);
+    if (!values || values.length === 0) return;
+    const pad = {t:20, r:20, b:30, l:40};
+    const maxV = Math.max(...values, 1);
+    const barW = (w - pad.l - pad.r) / values.length * 0.6;
+    const gap = (w - pad.l - pad.r) / values.length;
+    values.forEach((v,i) => {
       const x = pad.l + i * gap + (gap - barW) / 2;
-      const barH = Math.max(0, (value / maxV) * plotH);
+      const barH = (v / maxV) * (h - pad.t - pad.b);
       const y = h - pad.b - barH;
-
-      ctx.fillStyle = cleanColors[i % cleanColors.length];
+      ctx.fillStyle = colors[i % colors.length];
       ctx.fillRect(x, y, barW, barH);
-
-      ctx.fillStyle = '#e8ecf1';
-      ctx.font = '10px JetBrains Mono, monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(value.toFixed(1), x + barW / 2, Math.max(12, y - 4));
-
-      ctx.fillStyle = '#6b7280';
-      ctx.textBaseline = 'alphabetic';
-      const label = cleanLabels[i] == null ? '' : String(cleanLabels[i]);
-      ctx.fillText(label, x + barW / 2, h - 10);
+      ctx.fillStyle = '#e8ecf1'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
+      ctx.fillText(v.toFixed(1), x + barW/2, y - 4);
+      ctx.fillStyle = '#6b7280'; ctx.font = '10px JetBrains Mono';
+      ctx.fillText(labels[i], x + barW/2, h - 10);
     });
   }
 };
@@ -1524,511 +1411,81 @@ const ChartRenderer = {
 // Classic Dual N-Back 3×3×3 rotating wireframe lattice with dynamic
 // human/anime face textures on the active cube.
 const Spatial3D = (() => {
-  'use strict';
-
   let container = null;
   let renderer = null;
   let camera = null;
   let scene = null;
   let latticeGroup = null;
   let activeCube = null;
-  let activeOutline = null;
-  let animationFrameId = null;
+  let animationFrame = null;
   let resizeObserver = null;
   let resizeHandler = null;
-  let orientationHandler = null;
   let textureLoader = null;
   let textureRequestId = 0;
   let activeTexture = null;
+  let activeMaterials = null;
   let latticeGeometry = null;
   let latticeMaterial = null;
-  let activeIndex = -1;
 
   const CELL_SIZE = 1;
   const GAP = 0.05;
   const SPACING = CELL_SIZE + GAP;
   const GRID_HALF = (SPACING * 3) / 2;
 
-  // Slightly smaller than the full logical cell so adjacent cubes never overlap.
-  const ACTIVE_SCALE = 1.18;
-  const ACTIVE_SIZE = CELL_SIZE * 0.82;
-  const INACTIVE_SIZE = CELL_SIZE * 0.86;
-  const VIEW_PADDING = 1.12;
-
-  function disposeMaterial(material) {
-    if (!material) return;
-    const list = Array.isArray(material) ? material : [material];
-
-    list.forEach(m => {
-      if (!m) return;
-      ['map', 'emissiveMap', 'alphaMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap']
-        .forEach(key => {
-          const tex = m[key];
-          if (tex && tex.isTexture && tex !== activeTexture) {
-            try { tex.dispose(); } catch (_) {}
-          }
-        });
-      try { m.dispose(); } catch (_) {}
-    });
-  }
-
-  function disposeObject(object, skipTexture = false) {
-    if (!object) return;
-
-    object.traverse(child => {
-      if (child.geometry) {
-        try { child.geometry.dispose(); } catch (_) {}
-      }
-      if (child.material) {
-        const materials = Array.isArray(child.material) ? child.material : [child.material];
-        materials.forEach(material => {
-          if (!material) return;
-          ['map', 'emissiveMap', 'alphaMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap']
-            .forEach(key => {
-              const tex = material[key];
-              if (tex && tex.isTexture && (!skipTexture || tex !== activeTexture)) {
-                try { tex.dispose(); } catch (_) {}
-              }
-            });
-          try { material.dispose(); } catch (_) {}
-        });
-      }
-    });
-  }
-
   function addSegment(vertices, ax, ay, az, bx, by, bz) {
     vertices.push(ax, ay, az, bx, by, bz);
   }
 
-  /*
-   * 3D GRID OUTLINE CLEANUP
-   * -----------------------
-   * Deliberately do NOT draw the large outer bounding cube.
-   *
-   * Individual cell outlines are supplied by createInactiveNode()
-   * below, so every logical 3D slot remains visually identifiable
-   * without enclosing the entire lattice in one large box.
-   *
-   * These subtle internal guide segments only mark the two internal
-   * partition planes on each axis and therefore do not create an
-   * overall perimeter/bounding frame.
-   */
   function buildUnifiedLatticeGeometry() {
+    /*
+     * One consolidated 3×3×3 matrix.
+     *
+     * Four coordinates on each axis define the outer boundary and
+     * the two internal partitions. Drawing 4×4 lines in each of
+     * the X/Y/Z directions creates every compartment edge exactly
+     * once, with no overlapping BoxGeometry edges.
+     */
     const vertices = [];
     const h = GRID_HALF;
-    const inner = [-SPACING / 2, SPACING / 2];
 
-    // X-constant internal planes: four Y/Z border segments each.
-    inner.forEach(x => {
-      addSegment(vertices, x, -h, -h, x, h, -h);
-      addSegment(vertices, x, -h,  h, x, h,  h);
-      addSegment(vertices, x, -h, -h, x, -h, h);
-      addSegment(vertices, x,  h, -h, x,  h, h);
-    });
+    const coords = [
+      -h,
+      -SPACING / 2,
+       SPACING / 2,
+       h
+    ];
 
-    // Y-constant internal planes.
-    inner.forEach(y => {
-      addSegment(vertices, -h, y, -h, h, y, -h);
-      addSegment(vertices, -h, y,  h, h, y,  h);
-      addSegment(vertices, -h, y, -h, -h, y, h);
-      addSegment(vertices,  h, y, -h, h, y, h);
-    });
+    // 16 lines parallel to X.
+    for (const y of coords) {
+      for (const z of coords) {
+        addSegment(vertices, -h, y, z, h, y, z);
+      }
+    }
 
-    // Z-constant internal planes.
-    inner.forEach(z => {
-      addSegment(vertices, -h, -h, z, h, -h, z);
-      addSegment(vertices, -h,  h, z, h,  h, z);
-      addSegment(vertices, -h, -h, z, -h, h, z);
-      addSegment(vertices,  h, -h, z, h, h, z);
-    });
+    // 16 lines parallel to Y.
+    for (const x of coords) {
+      for (const z of coords) {
+        addSegment(vertices, x, -h, z, x, h, z);
+      }
+    }
+
+    // 16 lines parallel to Z.
+    for (const x of coords) {
+      for (const y of coords) {
+        addSegment(vertices, x, y, -h, x, y, h);
+      }
+    }
 
     const geometry = new THREE.BufferGeometry();
+
     geometry.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(vertices, 3)
     );
+
     geometry.computeBoundingSphere();
+
     return geometry;
-  }
-
-  function getNodePosition(index) {
-    const safeIndex = Math.max(0, Math.min(26, Math.floor(Number(index) || 0)));
-    return new THREE.Vector3(
-      ((safeIndex % 3) - 1) * SPACING,
-      ((Math.floor(safeIndex / 3) % 3) - 1) * SPACING,
-      (Math.floor(safeIndex / 9) - 1) * SPACING
-    );
-  }
-
-  function createInactiveNode(index) {
-    const geometry = new THREE.EdgesGeometry(
-      new THREE.BoxGeometry(INACTIVE_SIZE, INACTIVE_SIZE, INACTIVE_SIZE)
-    );
-
-    const material = new THREE.LineBasicMaterial({
-      color: 0x8fa0b8,
-      transparent: true,
-      opacity: 0.28,
-      depthTest: true,
-      depthWrite: false
-    });
-
-    const wire = new THREE.LineSegments(geometry, material);
-    wire.name = `inactiveNode_${index}`;
-    wire.position.copy(getNodePosition(index));
-    wire.userData.nodeIndex = index;
-    wire.renderOrder = 1;
-    latticeGroup.add(wire);
-    return wire;
-  }
-
-  function createInactiveNodes() {
-    for (let i = 0; i < 27; i++) {
-      createInactiveNode(i);
-    }
-  }
-
-  function createActiveCube() {
-    const geometry = new THREE.BoxGeometry(
-      ACTIVE_SIZE,
-      ACTIVE_SIZE,
-      ACTIVE_SIZE
-    );
-
-    const materials = Array.from({ length: 6 }, () => new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: false,
-      opacity: 1,
-      side: THREE.FrontSide
-    }));
-
-    activeCube = new THREE.Mesh(geometry, materials);
-    activeCube.name = 'activeStimulusCube';
-    activeCube.visible = false;
-    activeCube.scale.setScalar(ACTIVE_SCALE);
-    activeCube.renderOrder = 5;
-    activeCube.userData.basePosition = new THREE.Vector3();
-    latticeGroup.add(activeCube);
-
-    return activeCube;
-  }
-
-  function createBoldOutline() {
-    if (!activeCube) return;
-
-    if (activeOutline) {
-      try { activeCube.remove(activeOutline); } catch (_) {}
-      disposeObject(activeOutline, true);
-      activeOutline = null;
-    }
-
-    const geometry = new THREE.EdgesGeometry(activeCube.geometry);
-    const material = new THREE.LineBasicMaterial({
-      color: 0x00f0ff,
-      transparent: true,
-      opacity: 1,
-      depthTest: true,
-      depthWrite: false
-    });
-
-    activeOutline = new THREE.LineSegments(geometry, material);
-    activeOutline.name = 'boldOutline';
-    activeOutline.scale.setScalar(1.035);
-    activeOutline.renderOrder = 10;
-    activeCube.add(activeOutline);
-  }
-
-  function configureTexture(texture) {
-    if (!texture) return null;
-
-    if ('colorSpace' in texture && THREE.SRGBColorSpace) {
-      texture.colorSpace = THREE.SRGBColorSpace;
-    }
-
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.generateMipmaps = false;
-    texture.anisotropy = Math.min(
-      renderer?.capabilities?.getMaxAnisotropy?.() || 1,
-      8
-    );
-    texture.needsUpdate = true;
-    return texture;
-  }
-
-  function clearActiveTexture() {
-    if (activeCube?.material && Array.isArray(activeCube.material)) {
-      activeCube.material.forEach(material => {
-        material.map = null;
-        material.color.set(0xffffff);
-        material.needsUpdate = true;
-      });
-    }
-
-    if (activeTexture) {
-      try { activeTexture.dispose(); } catch (_) {}
-      activeTexture = null;
-    }
-  }
-
-  function setActiveNodeTexture(index, texture) {
-    if (!activeCube || !texture) return;
-
-    configureTexture(texture);
-
-    if (activeTexture && activeTexture !== texture) {
-      try { activeTexture.dispose(); } catch (_) {}
-    }
-    activeTexture = texture;
-
-    /*
-     * The affective image is intentionally mapped to ALL SIX faces.
-     * This makes the active node read as a true volumetric image cube
-     * while the lattice rotates.
-     */
-    const materials = Array.from({ length: 6 }, () => {
-      return new THREE.MeshBasicMaterial({
-        map: texture,
-        color: 0xffffff,
-        transparent: false,
-        opacity: 1,
-        side: THREE.FrontSide
-      });
-    });
-
-    // Dispose the previous six materials without disposing the shared
-    // active texture that is about to be reused.
-    if (activeCube.material) {
-      const oldMaterials = Array.isArray(activeCube.material)
-        ? activeCube.material
-        : [activeCube.material];
-
-      oldMaterials.forEach(material => {
-        if (!material) return;
-        ['map', 'emissiveMap', 'alphaMap'].forEach(key => {
-          if (material[key] && material[key] !== texture) {
-            try { material[key].dispose(); } catch (_) {}
-          }
-        });
-        try { material.dispose(); } catch (_) {}
-      });
-    }
-
-    activeCube.material = materials;
-    activeCube.scale.setScalar(ACTIVE_SCALE);
-    activeCube.visible = true;
-    activeIndex = Number.isFinite(Number(index)) ? Number(index) : activeIndex;
-
-    createBoldOutline();
-
-    // Keep the selected node visually dominant.
-    for (let i = 0; i < 27; i++) {
-      const node = latticeGroup.getObjectByName(`inactiveNode_${i}`);
-      if (node) {
-        node.material.opacity = i === activeIndex ? 0.10 : 0.28;
-        node.material.needsUpdate = true;
-      }
-    }
-  }
-
-  function getCachedStimulusImage(imagePath) {
-    if (!imagePath) return null;
-
-    const renderable = asset => {
-      if (!asset) return false;
-      if (asset instanceof HTMLImageElement) {
-        return asset.complete && asset.naturalWidth > 0 && asset.naturalHeight > 0;
-      }
-      if (asset instanceof HTMLCanvasElement) {
-        return asset.width > 0 && asset.height > 0;
-      }
-      return false;
-    };
-
-    if (typeof ANIME_IMAGE_CACHE !== 'undefined' && Array.isArray(ANIME_MODES)) {
-      for (const mode of ANIME_MODES) {
-        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
-        if (renderable(candidate)) return candidate;
-      }
-    }
-
-    if (typeof App !== 'undefined' && App.engine?.imageCache) {
-      const candidate = App.engine.imageCache[imagePath];
-      if (renderable(candidate)) return candidate;
-    }
-
-    if (typeof FACE_IMAGE_CACHE !== 'undefined') {
-      const candidate = FACE_IMAGE_CACHE[imagePath];
-      if (renderable(candidate)) return candidate;
-    }
-
-    return null;
-  }
-
-  function loadStimulusTexture(imagePath) {
-    const requestId = ++textureRequestId;
-    clearActiveTexture();
-
-    if (!imagePath || !textureLoader || !activeCube) return;
-
-    const cachedImage = getCachedStimulusImage(imagePath);
-
-    if (cachedImage) {
-      const texture = cachedImage instanceof HTMLCanvasElement
-        ? new THREE.CanvasTexture(cachedImage)
-        : new THREE.Texture(cachedImage);
-
-      configureTexture(texture);
-
-      if (requestId === textureRequestId) {
-        setActiveNodeTexture(activeIndex, texture);
-      } else {
-        texture.dispose();
-      }
-      return;
-    }
-
-    textureLoader.load(
-      imagePath,
-      texture => {
-        if (requestId !== textureRequestId || !activeCube) {
-          texture.dispose();
-          return;
-        }
-
-        configureTexture(texture);
-        setActiveNodeTexture(activeIndex, texture);
-      },
-      undefined,
-      error => {
-        if (requestId !== textureRequestId) return;
-
-        console.warn('[Spatial3D] Stimulus texture failed:', imagePath, error);
-
-        // Bright fallback cube remains visible rather than leaving a blank node.
-        const fallbackCanvas = document.createElement('canvas');
-        fallbackCanvas.width = 256;
-        fallbackCanvas.height = 256;
-
-        const ctx = fallbackCanvas.getContext('2d');
-        if (ctx) {
-          ctx.fillStyle = '#00f0ff';
-          ctx.fillRect(0, 0, 256, 256);
-          ctx.fillStyle = '#06070a';
-          ctx.fillRect(16, 16, 224, 224);
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 8;
-          ctx.strokeRect(24, 24, 208, 208);
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 26px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('STIMULUS', 128, 128);
-        }
-
-        const fallbackTexture = configureTexture(
-          new THREE.CanvasTexture(fallbackCanvas)
-        );
-
-        setActiveNodeTexture(activeIndex, fallbackTexture);
-      }
-    );
-  }
-
-  function resetNode(index) {
-    if (!activeCube) return;
-
-    if (activeOutline) {
-      try { activeCube.remove(activeOutline); } catch (_) {}
-      disposeObject(activeOutline, true);
-      activeOutline = null;
-    } else {
-      const namedOutline = activeCube.getObjectByName('boldOutline');
-      if (namedOutline) {
-        try { activeCube.remove(namedOutline); } catch (_) {}
-        disposeObject(namedOutline, true);
-      }
-    }
-
-    clearActiveTexture();
-
-    // Restore six subtle transparent materials.
-    const restored = Array.from({ length: 6 }, () => new THREE.MeshBasicMaterial({
-      color: 0x101820,
-      transparent: true,
-      opacity: 0.18,
-      depthTest: true,
-      depthWrite: false,
-      side: THREE.FrontSide
-    }));
-
-    if (activeCube.material) {
-      const old = Array.isArray(activeCube.material)
-        ? activeCube.material
-        : [activeCube.material];
-      old.forEach(m => {
-        if (!m) return;
-        try { m.dispose(); } catch (_) {}
-      });
-    }
-
-    activeCube.material = restored;
-    activeCube.scale.setScalar(1);
-    activeCube.visible = false;
-    activeIndex = -1;
-
-    for (let i = 0; i < 27; i++) {
-      const node = latticeGroup?.getObjectByName(`inactiveNode_${i}`);
-      if (node) {
-        node.material.opacity = 0.28;
-        node.material.needsUpdate = true;
-      }
-    }
-  }
-
-  function fitCameraToMatrix() {
-    if (!renderer || !camera || !container || !latticeGroup) return;
-
-    const rect = container.getBoundingClientRect();
-    const width = Math.max(1, Math.round(rect.width || container.clientWidth || 1));
-    const height = Math.max(1, Math.round(rect.height || container.clientHeight || 1));
-    const aspect = width / height;
-
-    const isMobile = window.innerWidth < 768;
-    const fov = window.innerWidth < 480 ? 72 : (isMobile ? 68 : 52);
-
-    camera.fov = fov;
-    camera.aspect = aspect;
-
-    // Account for the full 3D matrix plus active cube scale and 12% padding.
-    const halfExtent = GRID_HALF * 1.45;
-    const activeHalfExtent = ACTIVE_SIZE * ACTIVE_SCALE;
-    const extent = Math.max(halfExtent, halfExtent + activeHalfExtent * 0.10);
-    const radius = Math.sqrt(3) * extent * VIEW_PADDING;
-
-    const verticalFov = THREE.MathUtils.degToRad(fov);
-    const horizontalFov = 2 * Math.atan(
-      Math.tan(verticalFov / 2) * Math.max(0.1, aspect)
-    );
-
-    const verticalDistance = radius / Math.tan(verticalFov / 2);
-    const horizontalDistance = radius / Math.tan(horizontalFov / 2);
-
-    camera.position.set(
-      0,
-      0,
-      Math.max(verticalDistance, horizontalDistance) * 1.05
-    );
-
-    camera.near = 0.05;
-    camera.far = Math.max(100, camera.position.z + radius * 8);
-    camera.lookAt(0, 0, 0);
-    camera.updateProjectionMatrix();
-
-    renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2)
-    );
-    renderer.setSize(width, height, false);
   }
 
   function init3D(containerElement) {
@@ -2040,128 +1497,461 @@ const Spatial3D = (() => {
     dispose();
 
     container = containerElement;
-    container.style.width = '100%';
-    container.style.height = '100%';
-    container.style.overflow = 'hidden';
 
     scene = new THREE.Scene();
     scene.background = null;
-    scene.fog = new THREE.FogExp2(0x06070a, 0.045);
-
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance'
-    });
-
-    renderer.setClearColor(0x06070a, 0);
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.display = 'block';
-    renderer.domElement.style.touchAction = 'none';
-    renderer.domElement.setAttribute('aria-label', '3D spatial stimulus grid');
-
-    container.appendChild(renderer.domElement);
-
-    camera = new THREE.PerspectiveCamera(52, 1, 0.05, 100);
-    camera.position.set(0, 0, 10);
-    camera.lookAt(0, 0, 0);
-
-    latticeGroup = new THREE.Group();
-    latticeGroup.name = 'SpatialLattice';
-    latticeGroup.scale.setScalar(1.45);
-    scene.add(latticeGroup);
-
-    // Unified 3D wire lattice remains visible behind the node cubes.
-    latticeGeometry = buildUnifiedLatticeGeometry();
-    latticeMaterial = new THREE.LineBasicMaterial({
-      color: 0x71839a,
-      transparent: true,
-      opacity: 0.16,
-      depthTest: true,
-      depthWrite: false
-    });
-
-    const latticeLines = new THREE.LineSegments(
-      latticeGeometry,
-      latticeMaterial
-    );
-    latticeLines.name = 'UnifiedWireLattice';
-    latticeLines.renderOrder = 0;
-    latticeGroup.add(latticeLines);
-
-    // Every logical spatial slot receives a subtle 3D wireframe box.
-    createInactiveNodes();
-
-    // One solid active cube is reused across trials.
-    createActiveCube();
 
     textureLoader = new THREE.TextureLoader();
 
-    resizeHandler = () => fitCameraToMatrix();
-    window.addEventListener('resize', resizeHandler, { passive: true });
+    renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true
+    });
 
-    orientationHandler = () => setTimeout(fitCameraToMatrix, 100);
-    window.addEventListener('orientationchange', orientationHandler, { passive: true });
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, 2)
+    );
+
+    renderer.setClearColor(0x090d16, 0);
+
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.maxWidth = 'none';
+    renderer.domElement.style.maxHeight = 'none';
+    renderer.domElement.setAttribute(
+      'aria-label',
+      '3D spatial stimulus'
+    );
+
+    container.appendChild(renderer.domElement);
+
+    /*
+     * Large viewport framing:
+     * the lattice itself is scaled up while the camera is moved
+     * closer with a narrower FOV so the 3D structure occupies
+     * approximately 85–90% of the available center display.
+     */
+    const isMobile = window.innerWidth < 768;
+    const isSmallMobile = window.innerWidth < 480;
+    const initialFov = isSmallMobile ? 72 : (isMobile ? 68 : 48);
+    const initialZ = isSmallMobile ? 13.5 : (isMobile ? 12.5 : 4.0);
+
+    camera = new THREE.PerspectiveCamera(
+      initialFov,
+      1,
+      0.1,
+      100
+    );
+
+    camera.position.set(
+      isMobile ? 0 : 3.1,
+      isMobile ? 0 : 2.6,
+      initialZ
+    );
+
+    camera.lookAt(0, 0, 0);
+
+    latticeGroup = new THREE.Group();
+
+    /*
+     * Increase the physical footprint without changing the
+     * logical 3×3×3 coordinates.
+     */
+    latticeGroup.scale.setScalar(1.45);
+
+    scene.add(latticeGroup);
+
+    /*
+     * ONE unified LineSegments object.
+     *
+     * This replaces 27 individual BoxGeometry/EdgesGeometry
+     * objects and therefore eliminates overlapping/double edges.
+     */
+    latticeGeometry =
+      buildUnifiedLatticeGeometry();
+
+    latticeMaterial =
+      new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.35,
+        depthTest: true,
+        depthWrite: false
+      });
+
+    const latticeLines =
+      new THREE.LineSegments(
+        latticeGeometry,
+        latticeMaterial
+      );
+
+    latticeLines.frustumCulled = true;
+
+    latticeGroup.add(latticeLines);
+
+    /*
+     * Active stimulus cube.
+     *
+     * It is a direct child of latticeGroup, so after its initial
+     * camera alignment it rotates naturally with the entire matrix.
+     */
+    const activeGeometry =
+      new THREE.BoxGeometry(
+        0.88,
+        0.88,
+        0.88
+      );
+
+    activeMaterials =
+      Array.from(
+        { length: 6 },
+        () =>
+          new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: false
+          })
+      );
+
+    activeCube =
+      new THREE.Mesh(
+        activeGeometry,
+        activeMaterials
+      );
+
+    activeCube.visible = false;
+
+    latticeGroup.add(activeCube);
+
+    resizeHandler =
+      () => resizeRenderer();
+
+    window.addEventListener(
+      'resize',
+      resizeHandler,
+      { passive: true }
+    );
 
     if ('ResizeObserver' in window) {
-      resizeObserver = new ResizeObserver(() => fitCameraToMatrix());
+      resizeObserver =
+        new ResizeObserver(
+          resizeHandler
+        );
+
       resizeObserver.observe(container);
     }
 
-    fitCameraToMatrix();
+    resizeRenderer();
+
+    let responsiveResizeRAF = null;
+    const scheduleResponsiveResize = () => {
+      if (responsiveResizeRAF) cancelAnimationFrame(responsiveResizeRAF);
+      responsiveResizeRAF = requestAnimationFrame(() => {
+        responsiveResizeRAF = null;
+        resizeRenderer();
+      });
+    };
+    window.addEventListener('orientationchange', () => setTimeout(scheduleResponsiveResize, 100), {passive:true});
+
+    const animate = () => {
+      animationFrame =
+        requestAnimationFrame(
+          animate
+        );
+
+      if (latticeGroup) {
+        /*
+         * Continuous multi-axis rotation.
+         * The active face is NOT counter-rotated here; it is a
+         * normal child of this group and therefore rotates with it.
+         */
+        latticeGroup.rotation.x += 0.0028;
+        latticeGroup.rotation.y += 0.0048;
+        latticeGroup.rotation.z += 0.0022;
+      }
+
+      if (
+        renderer &&
+        scene &&
+        camera
+      ) {
+        renderer.render(
+          scene,
+          camera
+        );
+      }
+    };
+
     animate();
+
     return true;
   }
 
-  function animate() {
-    if (animationFrameId !== null) {
-      cancelAnimationFrame(animationFrameId);
+  function resizeRenderer() {
+    if (
+      !container ||
+      !renderer ||
+      !camera
+    ) {
+      return;
     }
 
-    const frame = () => {
-      if (!renderer || !scene || !camera || !container) {
-        animationFrameId = null;
-        return;
-      }
+    const rect =
+      container.getBoundingClientRect();
 
-      // Slow multi-axis rotation gives the active cube clear volumetric depth.
-      if (latticeGroup) {
-        latticeGroup.rotation.x += 0.0020;
-        latticeGroup.rotation.y += 0.0036;
-        latticeGroup.rotation.z += 0.0014;
-      }
+    const width =
+      Math.max(
+        1,
+        Math.round(
+          rect.width ||
+          container.clientWidth ||
+          1
+        )
+      );
 
-      renderer.render(scene, camera);
-      animationFrameId = requestAnimationFrame(frame);
-    };
+    const height =
+      Math.max(
+        1,
+        Math.round(
+          rect.height ||
+          container.clientHeight ||
+          1
+        )
+      );
 
-    animationFrameId = requestAnimationFrame(frame);
+    const isMobile = window.innerWidth < 768;
+    const isSmallMobile = window.innerWidth < 480;
+
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2)
+    );
+
+    renderer.setSize(width, height, false);
+
+    if (isSmallMobile) {
+      camera.fov = 72;
+      camera.position.set(0, 0, 13.5);
+    } else if (isMobile) {
+      camera.fov = 68;
+      camera.position.set(0, 0, 12.5);
+    } else {
+      camera.fov = 48;
+      camera.position.set(3.1, 2.6, 4.0);
+    }
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    camera.lookAt(0, 0, 0);
   }
 
-  function setStimulusPosition(index, imagePath = null) {
-    if (!activeCube || !latticeGroup) return false;
-
-    const safeIndex = Math.max(0, Math.min(26, Math.floor(Number(index) || 0)));
-    activeIndex = safeIndex;
-
-    activeCube.position.copy(getNodePosition(safeIndex));
-    activeCube.userData.basePosition = getNodePosition(safeIndex);
-    activeCube.visible = true;
-    activeCube.scale.setScalar(ACTIVE_SCALE);
-
-    for (let i = 0; i < 27; i++) {
-      const node = latticeGroup.getObjectByName(`inactiveNode_${i}`);
-      if (!node) continue;
-
-      // Keep every cell individually outlined; only the active cell
-      // becomes slightly subdued behind the bold stimulus cube.
-      node.material.opacity = i === safeIndex ? 0.10 : 0.28;
-      node.material.needsUpdate = true;
+  function clearActiveTexture() {
+    if (activeMaterials) {
+      activeMaterials.forEach(
+        material => {
+          material.map = null;
+          material.color.set(
+            0xffffff
+          );
+          material.needsUpdate = true;
+        }
+      );
     }
 
+    if (activeTexture) {
+      activeTexture.dispose();
+      activeTexture = null;
+    }
+  }
+
+  function applyTexture(texture) {
+    if (
+      !activeMaterials ||
+      !texture
+    ) {
+      return;
+    }
+
+    if (
+      'colorSpace' in texture &&
+      THREE.SRGBColorSpace
+    ) {
+      texture.colorSpace =
+        THREE.SRGBColorSpace;
+    }
+
+    texture.needsUpdate = true;
+
+    activeMaterials.forEach(
+      material => {
+        material.map = texture;
+        material.color.set(
+          0xffffff
+        );
+        material.needsUpdate = true;
+      }
+    );
+
+    activeTexture = texture;
+  }
+
+  function loadStimulusTexture(
+    imagePath
+  ) {
+    const requestId =
+      ++textureRequestId;
+
+    clearActiveTexture();
+
+    if (
+      !imagePath ||
+      !textureLoader
+    ) {
+      return;
+    }
+
+    /*
+     * Prefer the application's already-verified image cache.
+     * This supports both Anime WebP and human-face images.
+     */
+    let cachedImage = null;
+    if (typeof ANIME_IMAGE_CACHE !== 'undefined') {
+      for (const mode of ANIME_MODES) {
+        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
+        if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
+          cachedImage = candidate;
+          break;
+        }
+      }
+    }
+    if (!cachedImage && typeof App !== 'undefined' && App.engine?.imageCache) {
+      const candidate = App.engine.imageCache[imagePath];
+      if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
+        cachedImage = candidate;
+      }
+    }
+
+    if (
+      cachedImage instanceof HTMLImageElement &&
+      cachedImage.naturalWidth > 0 &&
+      cachedImage.naturalHeight > 0
+    ) {
+      const texture =
+        new THREE.Texture(
+          cachedImage
+        );
+
+      texture.needsUpdate = true;
+
+      if (
+        'colorSpace' in texture &&
+        THREE.SRGBColorSpace
+      ) {
+        texture.colorSpace =
+          THREE.SRGBColorSpace;
+      }
+
+      if (
+        requestId === textureRequestId
+      ) {
+        applyTexture(texture);
+      } else {
+        texture.dispose();
+      }
+
+      return;
+    }
+
+    /*
+     * Fallback to TextureLoader for any valid path that has not
+     * already entered the application's image cache.
+     */
+    textureLoader.load(
+      imagePath,
+
+      texture => {
+        if (
+          requestId !== textureRequestId ||
+          !activeCube
+        ) {
+          texture.dispose();
+          return;
+        }
+
+        applyTexture(texture);
+      },
+
+      undefined,
+
+      error => {
+        if (
+          requestId !== textureRequestId
+        ) {
+          return;
+        }
+
+        console.error(
+          '[Spatial3D] Failed to load stimulus texture:',
+          imagePath,
+          error
+        );
+
+        /*
+         * Keep the active cube visible as a white stimulus.
+         * A texture failure must never break the trial.
+         */
+        clearActiveTexture();
+      }
+    );
+  }
+
+  function setStimulusPosition(
+    index,
+    imagePath = null
+  ) {
+    if (!activeCube) {
+      return false;
+    }
+
+    const safeIndex =
+      Math.max(
+        0,
+        Math.min(
+          26,
+          Math.floor(
+            Number(index) || 0
+          )
+        )
+      );
+
+    const x =
+      (safeIndex % 3) - 1;
+
+    const y =
+      (
+        Math.floor(
+          safeIndex / 3
+        ) % 3
+      ) - 1;
+
+    const z =
+      Math.floor(
+        safeIndex / 9
+      ) - 1;
+
+    activeCube.position.set(
+      x * SPACING,
+      y * SPACING,
+      z * SPACING
+    );
+
+    // Faces use the native texture orientation; no inversion or standard orientation.
+    activeCube.rotation.set(0, 0, 0);
+    activeCube.visible = true;
+
     if (imagePath) {
-      loadStimulusTexture(imagePath);
+      loadStimulusTexture(
+        imagePath
+      );
     } else {
       clearActiveTexture();
     }
@@ -2170,48 +1960,82 @@ const Spatial3D = (() => {
   }
 
   function clearStimulus() {
+    if (activeCube) {
+      activeCube.visible = false;
+    }
+
     ++textureRequestId;
-    resetNode(activeIndex);
+
+    clearActiveTexture();
   }
 
   function dispose() {
     ++textureRequestId;
 
-    if (animationFrameId !== null) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
+    if (
+      animationFrame !== null
+    ) {
+      cancelAnimationFrame(
+        animationFrame
+      );
     }
+
+    animationFrame = null;
 
     if (resizeObserver) {
-      try { resizeObserver.disconnect(); } catch (_) {}
-      resizeObserver = null;
+      resizeObserver.disconnect();
     }
+
+    resizeObserver = null;
 
     if (resizeHandler) {
-      window.removeEventListener('resize', resizeHandler);
-      resizeHandler = null;
+      window.removeEventListener(
+        'resize',
+        resizeHandler
+      );
     }
 
-    if (orientationHandler) {
-      window.removeEventListener('orientationchange', orientationHandler);
-      orientationHandler = null;
+    resizeHandler = null;
+
+    clearActiveTexture();
+
+    if (activeCube) {
+      if (activeCube.geometry) {
+        activeCube.geometry.dispose();
+      }
+
+      if (
+        Array.isArray(
+          activeCube.material
+        )
+      ) {
+        activeCube.material.forEach(
+          material =>
+            material.dispose()
+        );
+      }
     }
 
-    if (activeTexture) {
-      try { activeTexture.dispose(); } catch (_) {}
-      activeTexture = null;
+    if (latticeGeometry) {
+      latticeGeometry.dispose();
+      latticeGeometry = null;
     }
 
-    if (scene) {
-      disposeObject(scene, false);
+    if (latticeMaterial) {
+      latticeMaterial.dispose();
+      latticeMaterial = null;
     }
 
     if (renderer) {
-      try { renderer.dispose(); } catch (_) {}
-      try { renderer.forceContextLoss(); } catch (_) {}
+      renderer.dispose();
 
-      if (renderer.domElement?.parentNode) {
-        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      if (
+        renderer.domElement &&
+        renderer.domElement.parentNode
+      ) {
+        renderer.domElement.parentNode.removeChild(
+          renderer.domElement
+        );
       }
     }
 
@@ -2220,27 +2044,17 @@ const Spatial3D = (() => {
     scene = null;
     latticeGroup = null;
     activeCube = null;
-    activeOutline = null;
-    latticeGeometry = null;
-    latticeMaterial = null;
+    activeMaterials = null;
     textureLoader = null;
+    activeTexture = null;
     container = null;
-    activeIndex = -1;
-  }
-
-  function destroy() {
-    dispose();
   }
 
   return {
     init3D,
-    animate,
     setStimulusPosition,
-    setActiveNodeTexture,
-    resetNode,
     clearStimulus,
-    dispose,
-    destroy
+    dispose
   };
 })();
 
@@ -2267,11 +2081,6 @@ class GameEngine {
     this.sessionStart = 0; this.sessionMs = 0; this.lastTick = 0;
     this.timerInterval = null; this.trialTimeout = null; this.trialAdvanceTimeout = null;
     this.currentN = 2; this.highestN = 2;
-
-    // Error feedback is intentionally enabled by default.
-    // A missed target or incorrect modality response flashes its
-    // corresponding response key in red for immediate feedback.
-    this.errorFeedbackEnabled = true;
   }
 
   async preloadImages() {
@@ -2391,7 +2200,7 @@ class GameEngine {
   }
 
   pickAnimeFace(mode = this.animeMode) {
-    const safeMode = ANIME_MODES.includes(mode) ? mode : 'standard';
+    const safeMode = ['standard', 'waifu', 'hentai'].includes(mode) ? mode : 'standard';
     const available = getCachedAnimePaths(safeMode);
     if (!available.length) return null;
     return available[Math.floor(Math.random() * available.length)];
@@ -2399,7 +2208,9 @@ class GameEngine {
 
   pickVisualStimulus(emoLoad) {
     if (this.stimulusType === 'anime_faces') {
-      const safeMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
+      const safeMode = ['standard', 'waifu', 'hentai'].includes(this.animeMode)
+        ? this.animeMode
+        : 'standard';
       const animePath = this.pickAnimeFace(safeMode);
       if (animePath) {
         return {type:'anime_faces', path:animePath, emotion:'anime', animeMode:safeMode, fallbackFromAnime:false};
@@ -2543,223 +2354,122 @@ class GameEngine {
   }
 }
 
-// ==================== STARTUP SAFETY HELPERS ====================
-function setLoadingOverlayVisible(visible, detail = 'Preparing visual stimuli') {
-  const overlays = [
-    document.getElementById('asset-loading-overlay'),
-    document.getElementById('loader-overlay'),
-    document.querySelector('.loading-screen')
-  ].filter(Boolean);
-
-  overlays.forEach(overlay => {
-    if (visible) {
-      overlay.classList.add('active');
-      overlay.setAttribute('aria-hidden', 'false');
-      if ('style' in overlay) overlay.style.removeProperty('display');
-      const label = overlay.querySelector('.asset-loading-label, .loading-label');
-      const detailEl = overlay.querySelector('.asset-loading-detail, .loading-detail');
-      if (label) label.textContent = 'LOADING ASSETS...';
-      if (detailEl) detailEl.textContent = detail;
-    } else {
-      overlay.classList.remove('active');
-      overlay.setAttribute('aria-hidden', 'true');
-      if ('style' in overlay) overlay.style.setProperty('display', 'none', 'important');
-    }
-  });
-}
-
-function withTimeout(promiseOrValue, timeoutMs, fallbackValue = null, label = 'operation') {
-  let timer = null;
-  const work = Promise.resolve(promiseOrValue);
-
-  return Promise.race([
-    work,
-    new Promise(resolve => {
-      timer = setTimeout(() => {
-        console.warn(`[ATTENTIONAL SHIELD] ${label} timed out after ${timeoutMs}ms.`);
-        resolve(fallbackValue);
-      }, timeoutMs);
-    })
-  ]).finally(() => {
-    if (timer !== null) clearTimeout(timer);
-  });
-}
-
 // ==================== APP CONTROLLER ====================
 const App = {
   engine: new GameEngine(),
   screens: {},
   _initialized: false,
 
-  async init() {
-    if (this._initialized || this._initializing) return;
+  init() {
+    if (this._initialized) return;
+    StatsManager.load();
+    this.loadSettings();
+    this.screens = {
+      setup: document.getElementById('screen-setup'),
+      game: document.getElementById('screen-game'),
+      results: document.getElementById('screen-results')
+    };
 
-    this._initializing = true;
-    setLoadingOverlayVisible(true, 'Preparing visual stimuli');
-
-    try {
-      StatsManager.load();
-      this.loadSettings();
-
-      this.screens = {
-        setup: document.getElementById('screen-setup'),
-        game: document.getElementById('screen-game'),
-        results: document.getElementById('screen-results')
-      };
-
-      // Voice init is optional and must never block startup.
-      try {
-        this.engine.initVoices();
-        if (typeof speechSynthesis !== 'undefined') {
-          speechSynthesis.onvoiceschanged = () => {
-            try { this.engine.initVoices(); } catch (_) {}
-          };
-        }
-      } catch (voiceError) {
-        console.warn('[ATTENTIONAL SHIELD] Voice initialization skipped:', voiceError);
-      }
-
-      const voiceSel = document.getElementById('sel-voice');
-      if (voiceSel) {
-        voiceSel.addEventListener('change', e => {
-          if (this.engine.voices[e.target.value]) {
-            this.engine.selectedVoice = this.engine.voices[e.target.value];
-          }
-          this.saveSettings();
-        });
-      }
-
-      const bindInput = (id, event, handler) => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener(event, handler);
-      };
-
-      bindInput('rng-start-n', 'input', e => {
-        setText('disp-start-n', e.target.value);
-        this.onVariableNToggle();
-      });
-      bindInput('rng-emo-load', 'input', e => setText('disp-emo-load', e.target.value + '%'));
-      bindInput('sel-grid-type', 'change', () => this.onGridTypeChange());
-      bindInput('rng-3d-speed', 'input', () => this.update3DSpeedDisplay());
-      bindInput('chk-variable-n', 'change', () => this.onVariableNToggle());
-      bindInput('rng-var-min', 'input', e => setText('disp-var-min', e.target.value));
-      bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
-      bindInput('rng-isi-fixed', 'input', e => setText('disp-isi-fixed', e.target.value + 'ms'));
-      bindInput('rng-isi-min', 'input', e => setText('disp-isi-min', e.target.value + 'ms'));
-      bindInput('rng-isi-max', 'input', e => setText('disp-isi-max', e.target.value + 'ms'));
-      bindInput('rng-session-duration', 'input', e => setText('disp-session-duration', e.target.value + ' min'));
-      bindInput('rng-stim-dur', 'input', e => setText('disp-stim-dur', e.target.value + 'ms'));
-      bindInput('rng-interference', 'input', e => setText('disp-interference', e.target.value + '%'));
-      bindInput('rng-match-rate', 'input', e => setText('disp-match-rate', e.target.value + '%'));
-      bindInput('chk-word-interference', 'change', () => this.saveSettings());
-      bindInput('chk-pos', 'change', () => this.onStimChange());
-      bindInput('chk-aud', 'change', () => this.onStimChange());
-      bindInput('chk-shp', 'change', () => this.onStimChange());
-      bindInput('chk-col', 'change', () => this.onStimChange());
-
-      this.bindSettingsPersistence();
-
-      const modeDual = document.getElementById('mode-dual');
-      const modeQuad = document.getElementById('mode-quad');
-      if (modeDual) modeDual.addEventListener('click', () => this.setMode('dual'));
-      if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
-
-      document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-        card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
-      });
-
-      document.querySelectorAll('[data-anime-mode]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (btn.disabled || btn.dataset.locked === 'true') return;
-          this.setAnimeMode(btn.dataset.animeMode);
-        });
-      });
-
-      const btnInit = document.getElementById('btn-init-session');
-      const btnDash = document.getElementById('btn-full-dashboard');
-      const btnPause = document.getElementById('btn-pause');
-      const btnEnd = document.getElementById('btn-end-session');
-      const btnResMenu = document.getElementById('btn-results-menu');
-      const btnResAgain = document.getElementById('btn-results-again');
-      const btnModalClose = document.getElementById('btn-modal-close');
-
-      if (btnInit) btnInit.addEventListener('click', () => this.initSession());
-      if (btnDash) btnDash.addEventListener('click', () => this.showStatsFull());
-      if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
-      if (btnEnd) btnEnd.addEventListener('click', () => this.endSession());
-      if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
-      if (btnResAgain) btnResAgain.addEventListener('click', () => this.initSession());
-      if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
-
-      const modalOverlay = document.getElementById('modal-dashboard');
-      if (modalOverlay) {
-        modalOverlay.addEventListener('click', e => {
-          if (e.target === modalOverlay) this.closeModal();
-        });
-      }
-
-      document.addEventListener('keydown', e => this.handleKeydown(e));
-
-      this.setMode(this._savedMode || 'dual', false);
-      this.setStimulusType(this._savedStimulusType || 'human_faces', false);
-      this.setAnimeMode(this._savedAnimeMode || 'standard', false);
-      this.refreshSettingDisplays();
-      this.updateGlobalStats();
-      this.onStimChange();
-      this.onVariableNToggle();
-      this.onGridTypeChange();
-      this.onISIModeChange();
-      this.saveSettings();
-
-      // Preload selected assets before the first session, but never allow
-      // the preload gate to hold the application indefinitely.
-      const preloadResult = await withTimeout(
-        this.engine.preloadImages(),
-        5000,
-        { ready: false, timedOut: true, loaded: [], failed: [] },
-        'startup asset preload'
-      );
-
-      if (preloadResult?.timedOut) {
-        console.warn('[ATTENTIONAL SHIELD] Startup asset preload exceeded 5 seconds; continuing with available/fallback assets.');
-      }
-
-      // Audio is synthesized, not network-fetched. Still keep initialization
-      // bounded so a browser audio implementation cannot block startup.
-      await withTimeout(
-        Promise.resolve().then(() => {
-          AudioEngine.init();
-          if (AudioEngine.ctx?.state === 'suspended') {
-            return AudioEngine.ctx.resume().catch(() => {});
-          }
-        }),
-        1500,
-        null,
-        'Web Audio initialization'
-      );
-
-      // Prepare the selected 3D renderer only if setup currently requests it.
-      const selectedGrid = this.engine.getSettings().gridType;
-      if (selectedGrid === '3d' && typeof Spatial3D !== 'undefined') {
-        const scene3d = document.getElementById('scene-3d');
-        if (scene3d) {
-          try {
-            Spatial3D.init3D(scene3d);
-          } catch (threeError) {
-            console.warn('[ATTENTIONAL SHIELD] Initial 3D preparation skipped:', threeError);
-            try { Spatial3D.dispose(); } catch (_) {}
-          }
-        }
-      }
-
-      this._initialized = true;
-    } catch (error) {
-      console.error('[ATTENTIONAL SHIELD] Initialization recovered from error:', error);
-      this._initialized = true;
-    } finally {
-      this._initializing = false;
-      setLoadingOverlayVisible(false);
+    // Voice init with retry
+    this.engine.initVoices();
+    if (typeof speechSynthesis !== 'undefined') {
+      speechSynthesis.onvoiceschanged = () => this.engine.initVoices();
     }
+    const voiceSel = document.getElementById('sel-voice');
+    if (voiceSel) {
+      voiceSel.addEventListener('change', (e) => {
+        if (this.engine.voices[e.target.value]) this.engine.selectedVoice = this.engine.voices[e.target.value];
+        this.saveSettings();
+      });
+    }
+
+    // Native control bindings. These are deliberately registered from JS so the app
+    // does not depend on inline handlers or script execution order.
+    const bindInput = (id, event, handler) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    };
+    bindInput('rng-start-n', 'input', e => { setText('disp-start-n', e.target.value); this.onVariableNToggle(); });
+    bindInput('rng-emo-load', 'input', e => { setText('disp-emo-load', e.target.value + '%'); });
+    bindInput('sel-grid-type', 'change', () => this.onGridTypeChange());
+    bindInput('rng-3d-speed', 'input', () => this.update3DSpeedDisplay());
+    bindInput('chk-variable-n', 'change', () => this.onVariableNToggle());
+    bindInput('rng-var-min', 'input', e => { setText('disp-var-min', e.target.value); });
+    bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
+    bindInput('rng-isi-fixed', 'input', e => { setText('disp-isi-fixed', e.target.value + 'ms'); });
+    bindInput('rng-isi-min', 'input', e => { setText('disp-isi-min', e.target.value + 'ms'); });
+    bindInput('rng-isi-max', 'input', e => { setText('disp-isi-max', e.target.value + 'ms'); });
+    bindInput('rng-session-duration', 'input', e => { setText('disp-session-duration', e.target.value + ' min'); });
+    bindInput('rng-stim-dur', 'input', e => { setText('disp-stim-dur', e.target.value + 'ms'); });
+    bindInput('rng-interference', 'input', e => { setText('disp-interference', e.target.value + '%'); });
+    bindInput('rng-match-rate', 'input', e => { setText('disp-match-rate', e.target.value + '%'); });
+    bindInput('chk-word-interference', 'change', () => this.saveSettings());
+    bindInput('chk-pos', 'change', () => this.onStimChange());
+    bindInput('chk-aud', 'change', () => this.onStimChange());
+    bindInput('chk-shp', 'change', () => this.onStimChange());
+    bindInput('chk-col', 'change', () => this.onStimChange());
+
+    // Persist every user-facing configuration control.
+    this.bindSettingsPersistence();
+
+    // Mode cards
+    const modeDual = document.getElementById('mode-dual');
+    const modeQuad = document.getElementById('mode-quad');
+    if (modeDual) modeDual.addEventListener('click', () => this.setMode('dual'));
+    if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
+
+    document.querySelectorAll('[data-stimulus-type]').forEach(card => {
+      card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
+    });
+    document.querySelectorAll('[data-anime-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled || btn.dataset.locked === 'true') return;
+        this.setAnimeMode(btn.dataset.animeMode);
+      });
+    });
+
+    // Main buttons
+    const btnInit = document.getElementById('btn-init-session');
+    const btnDash = document.getElementById('btn-full-dashboard');
+    const btnPause = document.getElementById('btn-pause');
+    const btnEnd = document.getElementById('btn-end-session');
+    const btnResMenu = document.getElementById('btn-results-menu');
+    const btnResAgain = document.getElementById('btn-results-again');
+    const btnModalClose = document.getElementById('btn-modal-close');
+
+    if (btnInit) btnInit.addEventListener('click', () => this.startSession());
+    if (btnDash) btnDash.addEventListener('click', () => this.showStatsFull());
+    if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
+    if (btnEnd) btnEnd.addEventListener('click', () => this.endSession());
+    if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
+    if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
+    if (btnModalClose) btnModalClose.addEventListener('click', () => this.closeModal());
+    // Modal overlay click-to-close
+    const modalOverlay = document.getElementById('modal-dashboard');
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) this.closeModal();
+      });
+    }
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => this.handleKeydown(e));
+
+    // Initial UI state
+    this.setMode(this._savedMode || 'dual', false);
+    this.setStimulusType(this._savedStimulusType || 'human_faces', false);
+    this.setAnimeMode(this._savedAnimeMode || 'standard', false);
+    this.refreshSettingDisplays();
+    this.updateGlobalStats();
+    this.onStimChange();
+    this.onVariableNToggle();
+    this.onGridTypeChange();
+    this.onISIModeChange();
+    this.saveSettings();
+
+    // Preload images non-blocking
+    this.engine.preloadImages();
+    this._initialized = true;
   },
 
   getPersistentControlIds() {
@@ -2808,7 +2518,9 @@ const App = {
       if (saved?.keys && typeof saved.keys === 'object') this.engine.keys = Object.assign({}, this.engine.keys, saved.keys);
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
       this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this._savedAnimeMode = saved?.animeMode === 'waifu' ? 'waifu' : 'standard';
+      this._savedAnimeMode = ['standard', 'waifu', 'hentai'].includes(saved?.animeMode)
+        ? saved.animeMode
+        : 'standard';
       this._savedVoiceName = saved?.voiceName || null;
     } catch(e) {
       this._savedMode = 'dual'; this._savedStimulusType = 'human_faces'; this._savedAnimeMode = 'standard'; this._savedVoiceName = null;
@@ -2869,7 +2581,11 @@ const App = {
     const normalized = type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces';
 
     // Preserve the selected Anime subtype when switching the visual family.
-    if (normalized === 'anime_faces') this.animeMode = (this.animeMode === 'waifu') ? 'waifu' : 'standard';
+    if (normalized === 'anime_faces') {
+      this.animeMode = ['standard', 'waifu', 'hentai'].includes(this.animeMode)
+        ? this.animeMode
+        : 'standard';
+    }
 
     this.engine.stimulusType = normalized;
     this.engine.animeMode = this.animeMode || 'standard';
@@ -2900,25 +2616,39 @@ const App = {
   },
 
   setAnimeMode(mode, persist = true) {
-    // Standard and Waifu are active asset families. Hentai/Gore remain locked.
-    const normalized = mode === 'waifu' ? 'waifu' : 'standard';
+    // Standard, Waifu, and Hentai are active Anime datasets.
+    // Gore remains locked until its asset family is available.
+    const normalized = ['standard', 'waifu', 'hentai'].includes(mode)
+      ? mode
+      : 'standard';
+
     this.engine.animeMode = normalized;
     this.animeMode = normalized;
 
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
-      const active = btn.dataset.animeMode === normalized;
-      const locked = !['standard', 'waifu'].includes(btn.dataset.animeMode);
+      const btnMode = btn.dataset.animeMode;
+      const active = btnMode === normalized;
+      const locked = btnMode === 'gore';
+
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       btn.disabled = locked;
+
       if (locked) btn.setAttribute('aria-disabled', 'true');
       else btn.removeAttribute('aria-disabled');
     });
 
     const status = document.getElementById('stimulus-type-status');
     if (status && this.engine.stimulusType === 'anime_faces') {
-      status.textContent = normalized === 'waifu' ? 'Anime Faces • Waifu' : 'Anime Faces • Standard';
+      if (normalized === 'waifu') {
+        status.textContent = 'Anime Faces • Waifu • 56 assets';
+      } else if (normalized === 'hentai') {
+        status.textContent = 'Anime Faces • Hentai • ' + HENTAI_COUNT + ' assets';
+      } else {
+        status.textContent = 'Anime Faces • Standard';
+      }
     }
+
     if (persist) this.saveSettings();
   },
 
@@ -3029,131 +2759,75 @@ const App = {
   },
 
   async startSession() {
+    const s = this.engine.getSettings();
     const loading = document.getElementById('asset-loading-overlay');
     const startButton = document.getElementById('btn-init-session');
 
-    if (this.engine.isRunning || this._sessionInitializing) return;
+    // Set the selected visual family BEFORE preloading. This is critical for
+    // anime_waifu: the Waifu cache must be populated before trial generation.
+    this.engine.reset();
+    this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
+    this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+    this.engine.animeMode = ANIME_MODES.includes(s.animeMode) ? s.animeMode : 'standard';
 
-    this._sessionInitializing = true;
-    setLoadingOverlayVisible(true, 'Preparing visual stimuli');
+    if (loading) {
+      loading.classList.add('active');
+      loading.setAttribute('aria-hidden', 'false');
+      const label = loading.querySelector('.asset-loading-label');
+      if (label) label.textContent = 'LOADING ASSETS...';
+    }
     if (startButton) startButton.disabled = true;
 
     try {
-      const s = this.engine.getSettings();
-
-      // Set visual family BEFORE preloading.
-      this.engine.reset();
-      this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-      this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this.engine.animeMode = ANIME_MODES.includes(s.animeMode) ? s.animeMode : 'standard';
-
-      const result = await withTimeout(
-        this.engine.preloadImages(),
-        5000,
-        {
-          stimulusType: this.engine.stimulusType,
-          animeMode: this.engine.animeMode,
-          requested: 0,
-          loaded: [],
-          failed: [],
-          ready: false,
-          timedOut: true
-        },
-        'session asset preload'
-      );
-
-      if (result?.timedOut) {
-        console.warn('[ATTENTIONAL SHIELD] Session preload exceeded 5 seconds; continuing with fallback assets.');
-      }
-
-      this.engine.setActiveStimuli();
-      this.engine.currentN = s.startN;
-      this.engine.highestN = s.startN;
-      this.engine.sessionStart = Date.now();
-      this.engine.lastTick = Date.now();
-      this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
-      this.engine.isRunning = true;
-
-      if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
-        console.warn(
-          '[ATTENTIONAL SHIELD] Anime ' + this.engine.animeMode +
-          ' assets are unavailable. Canvas fallbacks will be used.'
-        );
-      }
-
-      try {
-        AudioEngine.init();
-        if (AudioEngine.ctx?.state === 'suspended') {
-          AudioEngine.ctx.resume().catch(() => {});
-        }
-      } catch (audioError) {
-        console.warn('[ATTENTIONAL SHIELD] Audio initialization skipped:', audioError);
-      }
-
-      this.buildGrid();
-      this.buildSideControls();
-      this.switchScreen('game');
-      this.showInterMsg('GET READY', 800);
-
-      // Start the first block only after the game screen has mounted.
-      setTimeout(() => {
-        if (!this.engine.isRunning || this.engine.isPaused) return;
-
-        try {
-          this.startBlock();
-        } catch (error) {
-          console.error('[ATTENTIONAL SHIELD] Block initialization failed:', error);
-
-          // Last-resort recovery to a guaranteed renderable human-face path.
-          this.engine.stimulusType = 'human_faces';
-          this.engine.animeMode = 'standard';
-
-          try {
-            this.startBlock();
-          } catch (retryError) {
-            console.error('[ATTENTIONAL SHIELD] Session recovery failed:', retryError);
-            this.endSession('error');
-          }
-        }
-      }, 850);
-
-      this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
+      const result = await this.engine.preloadImages();
+      console.info('[ATTENTIONAL SHIELD] Selected assets ready:', result);
     } catch (error) {
-      console.error('[ATTENTIONAL SHIELD] Session initialization failed:', error);
-
-      this.engine.isRunning = false;
-      this.engine.isPaused = false;
-      this.engine.isTrialActive = false;
-
-      clearTimeout(this.engine.trialTimeout);
-      clearTimeout(this.engine.trialAdvanceTimeout);
-      clearInterval(this.engine.timerInterval);
-
-      try { Spatial3D.dispose(); } catch (_) {}
-
-      this.clearWordInterference();
-      this.switchScreen('setup');
-
-      const msg = document.getElementById('inter-msg');
-      if (msg) {
-        msg.textContent = 'SESSION INITIALIZATION RECOVERED';
-        msg.classList.add('active');
-        setTimeout(() => msg.classList.remove('active'), 1800);
-      }
+      console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
     } finally {
-      this._sessionInitializing = false;
-      if (startButton) startButton.disabled = false;
       if (loading) {
         loading.classList.remove('active');
         loading.setAttribute('aria-hidden', 'true');
       }
-      setLoadingOverlayVisible(false);
+      if (startButton) startButton.disabled = false;
     }
-  },
 
-  // Public alias for legacy inline handlers / external integrations.
-  async initSession() {
-    return this.startSession();
+    this.engine.setActiveStimuli();
+    this.engine.currentN = s.startN;
+    this.engine.highestN = s.startN;
+    this.engine.sessionStart = Date.now();
+    this.engine.lastTick = Date.now();
+    this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
+    this.engine.isRunning = true;
+
+    if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
+      console.warn('[ATTENTIONAL SHIELD] Anime ' + this.engine.animeMode + ' assets are unavailable. Human faces will be used as a non-fatal fallback.');
+    }
+
+    AudioEngine.init();
+    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
+
+    this.buildGrid();
+    this.buildSideControls();
+    this.switchScreen('game');
+    this.showInterMsg('GET READY', 800);
+    setTimeout(() => {
+      if (!this.engine.isRunning || this.engine.isPaused) return;
+      try {
+        this.startBlock();
+      } catch (error) {
+        console.error('[ATTENTIONAL SHIELD] Block initialization failed:', error);
+        // Last-resort recovery: switch the engine to human faces and retry.
+        this.engine.stimulusType = 'human_faces';
+        this.engine.animeMode = 'standard';
+        try { this.startBlock(); }
+        catch (retryError) {
+          console.error('[ATTENTIONAL SHIELD] Session recovery failed:', retryError);
+          this.endSession('error');
+        }
+      }
+    }, 850);
+
+    this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
   },
 
   updateTimer() {
@@ -3178,33 +2852,17 @@ const App = {
     const g2d = document.getElementById('grid-2d');
     const s3d = document.getElementById('scene-3d');
     const cube = document.getElementById('cube-3d');
-
-    // Renderer lifecycle is exclusive: tear down WebGL before either
-    // renderer is mounted, preventing 2D/3D persistence across sessions.
-    Spatial3D.dispose();
-
-    if (g2d) {
-      g2d.classList.remove('active');
-      g2d.style.setProperty('display', 'none', 'important');
-      g2d.innerHTML = '';
-    }
-    if (s3d) {
-      s3d.classList.remove('active');
-      s3d.style.setProperty('display', 'none', 'important');
-    }
-    if (cube) cube.innerHTML = '';
+    if (g2d) { g2d.classList.remove('active'); g2d.innerHTML = ''; }
+    if (s3d) { s3d.classList.remove('active'); }
+    if (cube) { cube.innerHTML = ''; }
 
     if (s.gridType === '3d') {
-      if (s3d) {
-        s3d.classList.add('active');
-        s3d.style.setProperty('display', 'flex', 'important');
-        Spatial3D.init3D(s3d);
-      }
+      if (s3d) s3d.classList.add('active');
+      if (cube) cube.innerHTML = '';
+      Spatial3D.init3D(s3d);
     } else {
-      if (s3d) s3d.style.setProperty('display', 'none', 'important');
       if (g2d) g2d.classList.add('active');
       const sz = s.gridSize;
-      g2d.style.setProperty('display', 'grid', 'important');
       g2d.style.gridTemplateColumns = 'repeat(' + sz + ', 1fr)';
       g2d.style.gridTemplateRows = 'repeat(' + sz + ', 1fr)';
       for (let i = 0; i < sz * sz; i++) {
@@ -3264,13 +2922,6 @@ const App = {
     leftStims.forEach(t => { if (left) left.appendChild(makeBtn(t)); });
     rightStims.forEach(t => { if (right) right.appendChild(makeBtn(t)); });
     if (mobile) stims.forEach(t => mobile.appendChild(makeBtn(t, '-mobile')));
-  },
-
-  // Error feedback is on by default. This helper is intentionally
-  // public so future settings/UI can toggle it without changing response logic.
-  setErrorFeedbackEnabled(enabled = true) {
-    this.engine.errorFeedbackEnabled = enabled !== false;
-    return this.engine.errorFeedbackEnabled;
   },
 
   tapFeedback(type) {
@@ -3336,7 +2987,6 @@ const App = {
   startBlock() {
     this.engine.generateBlock();
     this.updateHUD();
-    this.updateLevelHUD();
     this.runTrial();
   },
 
@@ -3393,11 +3043,9 @@ const App = {
         }
       };
 
-      const hasRenderableAsset = isRenderableCachedAsset(preloadedImage);
-
-      if (imagePath && !hasRenderableAsset) {
-        console.warn('[ATTENTIONAL SHIELD] Stimulus asset unavailable:', imagePath);
-        showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
+      if (imagePath && !(preloadedImage instanceof HTMLImageElement && preloadedImage.naturalWidth > 0)) {
+        console.error('Failed to load anime face path:', imagePath);
+        showFallback('ANIME');
       } else if (s.gridType === '3d') {
         // Three.js owns the 3D position stimulus. The solid active cube is
         // deliberately independent of the 2D face-image rendering path.
@@ -3415,18 +3063,9 @@ const App = {
             img.style.display = 'none';
             if (fb) { fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase(); fb.style.display = 'flex'; }
           };
-          if (preloadedImage instanceof HTMLCanvasElement) {
-            try {
-              img.src = preloadedImage.toDataURL('image/png');
-            } catch (error) {
-              console.warn('[ATTENTIONAL SHIELD] Placeholder conversion failed:', error);
-              img.src = imagePath;
-            }
-          } else {
-            img.src = preloadedImage instanceof HTMLImageElement
-              ? (preloadedImage.currentSrc || preloadedImage.src)
-              : imagePath;
-          }
+          img.src = preloadedImage instanceof HTMLImageElement
+            ? (preloadedImage.currentSrc || preloadedImage.src)
+            : imagePath;
           if (fb) fb.style.display = 'none';
         } else {
           showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
@@ -3541,7 +3180,6 @@ const App = {
       else if (type === 'shp') isTarget = current.shp === previous.shp;
       else if (type === 'col') isTarget = current.col === previous.col;
     }
-    // Correct response = green; incorrect modality response = red.
     this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
   },
 
@@ -3559,11 +3197,7 @@ const App = {
       else if (type === 'col') isTarget = current.col === previous.col;
       if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
         missedTarget = true;
-
-        // Default-on red feedback for the specific missed modality.
-        if (this.engine.errorFeedbackEnabled !== false) {
-          this.flashIndicator(type, 'wrong');
-        }
+        this.flashIndicator(type, 'wrong');
       }
     });
     if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
@@ -3572,44 +3206,14 @@ const App = {
   flashIndicator(type, status) {
     const mobile = document.getElementById('ind-' + type + '-mobile');
     const desktop = document.getElementById('ind-' + type);
-    const mobileVisible =
-      mobile &&
-      window.getComputedStyle(mobile).display !== 'none';
-
-    const el = mobileVisible ? mobile : desktop;
+    const el = mobile && window.getComputedStyle(mobile).display !== 'none'
+      ? mobile
+      : desktop;
     if (!el) return;
-
-    el.classList.remove(
-      'correct',
-      'wrong',
-      'neutral',
-      'error-feedback'
-    );
-
-    // Force animation restart when feedback occurs on consecutive trials.
+    el.classList.remove('correct', 'wrong', 'neutral');
     void el.offsetWidth;
-
-    if (
-      status === 'wrong' &&
-      this.engine.errorFeedbackEnabled !== false
-    ) {
-      // Explicit red outline/error state for both:
-      // 1) incorrect responses
-      // 2) missed target responses
-      el.classList.add('wrong', 'error-feedback');
-    } else {
-      el.classList.add(status);
-    }
-
-    clearTimeout(el._feedbackTimer);
-    el._feedbackTimer = setTimeout(() => {
-      el.classList.remove(
-        'correct',
-        'wrong',
-        'neutral',
-        'error-feedback'
-      );
-    }, 300);
+    el.classList.add(status);
+    setTimeout(() => el.classList.remove('correct', 'wrong', 'neutral'), 300);
   },
 
   evaluateBlock() {
@@ -3655,41 +3259,14 @@ const App = {
       } else if (blockD < 1.0 && this.engine.currentN > 1) {
         this.engine.currentN--;
       }
-
-      // Keep the persistent header level synchronized with the adaptive level.
-      this.updateLevelHUD();
-    } else {
-      // Even in fixed-N mode, keep the header synchronized with session state.
-      this.updateLevelHUD();
     }
   },
 
   updateHUD() {
     const trial = document.getElementById('hud-trial');
     const dprime = document.getElementById('hud-dprime');
-    const level = document.getElementById('hud-nlevel');
-
-    if (trial) {
-      trial.textContent = '0 / ' + this.engine.blockTrials;
-    }
-
-    if (dprime) {
-      dprime.textContent = '0.00';
-    }
-
-    // Persistent level indicator: refresh whenever the block/level changes.
-    if (level) {
-      level.textContent = 'N-BACK: ' + this.engine.currentN;
-      level.setAttribute('aria-label', 'Current N-back level ' + this.engine.currentN);
-    }
-  },
-
-  updateLevelHUD() {
-    const level = document.getElementById('hud-nlevel');
-    if (!level) return;
-
-    level.textContent = 'N-BACK: ' + this.engine.currentN;
-    level.setAttribute('aria-label', 'Current N-back level ' + this.engine.currentN);
+    if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
+    if (dprime) dprime.textContent = '0.00';
   },
 
   togglePause() {
@@ -3848,21 +3425,11 @@ const App = {
 window.App = App;
 
 // ==================== DOM READY ====================
-const boot = async () => {
-  try {
-    await App.init();
-  } catch (error) {
+const boot = () => {
+  try { App.init(); } catch (error) {
     console.error('[ATTENTIONAL SHIELD] Initialization failed:', error);
-    setLoadingOverlayVisible(false);
-
     const msg = document.getElementById('inter-msg');
-    if (msg) {
-      msg.textContent = 'INITIALIZATION ERROR — OPEN CONSOLE';
-      msg.classList.add('active');
-    }
-  } finally {
-    // Absolute last-resort guarantee: no startup path may leave the loader visible.
-    setLoadingOverlayVisible(false);
+    if (msg) { msg.textContent = 'INITIALIZATION ERROR — OPEN CONSOLE'; msg.classList.add('active'); }
   }
 };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
