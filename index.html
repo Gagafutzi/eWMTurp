@@ -190,8 +190,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .cell-2d { background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; transition:all 0.15s ease; display:flex; align-items:center; justify-content:center; }
 .cell-2d.active { border-color:var(--cyan); box-shadow:0 0 16px rgba(0,240,255,0.15),inset 0 0 16px rgba(0,240,255,0.05); }
 .cell-2d .face-img,
-.stimulus-image,
-.mini-face img { width:100%; height:100%; display:block; object-fit:cover; opacity:0.92; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
+.stimulus-image { width:100%; height:100%; display:block; object-fit:cover; opacity:0.92; image-rendering:pixelated; image-rendering:crisp-edges; -ms-interpolation-mode:nearest-neighbor; }
 .cell-2d .face-img { width:100%; height:100%; object-fit:cover; display:block; object-position:center; max-width:100%; max-height:100%; pointer-events:none; }
 .cell-2d .face-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:clamp(0.6rem,2vmin,0.9rem); color:var(--text-dim); }
 .cell-2d .cell-overlay { position:absolute; inset:0; background:linear-gradient(180deg,transparent 40%,rgba(6,7,10,0.6) 100%); pointer-events:none; }
@@ -207,24 +206,32 @@ select:focus, input:focus { border-color:var(--cyan); }
   max-height:none;
   margin:0;
   padding:0;
-  aspect-ratio:auto;
+  background:var(--bg);
   align-items:center;
   justify-content:center;
   overflow:hidden;
+  touch-action:none;
+  contain:strict;
+  isolation:isolate;
 }
 .scene-3d.active { display:flex; }
-.cube-3d { width:0; height:0; position:relative; transform-style:preserve-3d; animation:rotate3d var(--rot-speed,20s) infinite linear; }
-@keyframes rotate3d { 0%{transform:scale(1.28) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.28) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
-@keyframes rotate3dMobile { 0%{transform:scale(1.02) rotateX(0deg) rotateY(0deg) rotateZ(0deg);} 100%{transform:scale(1.02) rotateX(360deg) rotateY(720deg) rotateZ(360deg);} }
-.mini-cube { position:absolute; width:clamp(46px,9vmin,86px); height:clamp(46px,9vmin,86px); left:clamp(-43px,-4.5vmin,-23px); top:clamp(-43px,-4.5vmin,-23px); transform-style:preserve-3d; }
-.mini-face { position:absolute; width:100%; height:100%; background:rgba(12,18,30,0.48); border:1.5px solid rgba(225,235,250,0.62); border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden; backface-visibility:hidden; box-shadow:0 0 4px rgba(190,220,255,0.08); }
-.mini-face.active { border-color:var(--cyan); box-shadow:0 0 20px rgba(0,240,255,0.45),inset 0 0 18px rgba(0,240,255,0.12); background:rgba(0,240,255,0.10); }
-.mini-face img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; border:0; margin:0; padding:0; pointer-events:none; user-select:none; -webkit-user-drag:none; }
-.mini-face .face-fallback { width:100%; height:100%; object-fit:cover; }
-.mini-face .face-fallback { display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:0.5rem; color:var(--text-dim); }
-.mf-front { transform:translateZ(clamp(23px,4.5vmin,43px)); } .mf-back { transform:rotateY(180deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.mf-right { transform:rotateY(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-left { transform:rotateY(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
-.mf-top { transform:rotateX(90deg) translateZ(clamp(23px,4.5vmin,43px)); } .mf-bottom { transform:rotateX(-90deg) translateZ(clamp(23px,4.5vmin,43px)); }
+.scene-3d canvas {
+  position:relative !important;
+  inset:auto !important;
+  display:block !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  flex:1 1 auto;
+  outline:none;
+  border:0;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
 .inter-msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:var(--font-mono); font-size:1.2rem; font-weight:700; color:var(--cyan); text-align:center; z-index:100; display:none; text-shadow:0 0 16px rgba(0,240,255,0.4); letter-spacing:2px; }
 .inter-msg.active { display:block; animation:fadeIn 0.4s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translate(-50%,-40%);} to{opacity:1;transform:translate(-50%,-50%);} }
@@ -246,7 +253,7 @@ select:focus, input:focus { border-color:var(--cyan); }
   .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
-  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; perspective:none; }
+  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; }
   .results-grid { grid-template-columns:1fr 1fr; }
   .setup-wrap { padding:12px; }
   .stats-bar { gap:10px; } .stat-chip .val { font-size:1rem; }
@@ -423,8 +430,8 @@ button, input, select { position:relative; z-index:1; }
   .game-stage { gap:6px; padding:5px; }
   .side-controls { width:52px; min-width:46px; }
   .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
-  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; perspective:none; }
-  .cube-3d { animation-name:rotate3dMobile; }
+  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; }
+
   .hud-stat .hud-lbl { display:none; }
   .hud-btn { padding:5px 8px; }
 }
@@ -525,6 +532,7 @@ button, input, select { position:relative; z-index:1; }
 }
 .cell-2d .word-interference { inset:8px; width:auto; height:auto; }
 .word-interference-3d { left:50%; top:50%; transform:translate(-50%,-50%) rotate(-4deg); min-width:100px; max-width:45%; }
+.scene-3d .word-interference-3d { left:50%; top:50%; transform:translate(-50%,-50%); z-index:20; }
 @media (max-width:767px) {
   .game-stage { display:flex; flex-direction:column; width:100%; max-width:100vw; min-width:0; padding:0; gap:0; overflow:hidden; }
   .center-display { order:1; flex:1 1 auto; width:100%; min-width:0; min-height:0; overflow:hidden; }
@@ -545,92 +553,6 @@ button, input, select { position:relative; z-index:1; }
   .response-controls .modality-btn .mod-key { font-size:.43rem; padding:1px 4px; }
   .word-interference { font-size:.52rem; padding:3px 5px; letter-spacing:.5px; }
 }
-
-/* ================================================================
-   PURE CSS 3D CUBE GRID + MOBILE RESPONSE CONTROLS
-   ================================================================ */
-#scene-3d {
-  perspective:1000px !important;
-  perspective-origin:50% 50%;
-  overflow:hidden !important;
-}
-#scene-3d.active { display:flex !important; }
-#grid-2d:not(.active) { display:none !important; }
-
-.cube-3d {
-  width:0;
-  height:0;
-  position:relative;
-  transform-style:preserve-3d;
-  transform-origin:50% 50%;
-  animation:rotate3d var(--rot-speed,20s) infinite linear;
-  will-change:transform;
-}
-@keyframes rotate3d {
-  0%   { transform:rotate3d(1,1,0,0deg); }
-  100% { transform:rotate3d(1,1,0,360deg) rotateZ(360deg); }
-}
-@keyframes rotate3dMobile {
-  0%   { transform:rotate3d(1,1,0,0deg); }
-  100% { transform:rotate3d(1,1,0,360deg) rotateZ(360deg); }
-}
-.mini-cube {
-  position:absolute;
-  width:var(--cell-size,64px);
-  height:var(--cell-size,64px);
-  left:calc(var(--cell-size,64px) / -2);
-  top:calc(var(--cell-size,64px) / -2);
-  transform-style:preserve-3d;
-  transition:filter .12s ease, opacity .12s ease;
-}
-.mini-cube.active { filter:drop-shadow(0 0 12px rgba(0,240,255,.55)); }
-.mini-face {
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-  background:rgba(12,18,30,.48);
-  border:1.5px solid rgba(225,235,250,.62);
-  border-radius:2px;
-  backface-visibility:visible;
-  -webkit-backface-visibility:visible;
-  box-shadow:0 0 5px rgba(190,220,255,.08);
-  box-sizing:border-box;
-}
-.mini-cube.active .mini-face {
-  border-color:var(--cyan);
-  background:rgba(0,240,255,.10);
-  box-shadow:0 0 18px rgba(0,240,255,.45),inset 0 0 14px rgba(0,240,255,.12);
-}
-.mini-face img {
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-  pointer-events:none;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-.mini-face .face-fallback {
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--text-dim);
-  font-family:var(--font-mono);
-  font-size:.5rem;
-}
-.mf-front  { transform:translateZ(calc(var(--cell-size,64px) / 2)); }
-.mf-back   { transform:rotateY(180deg) translateZ(calc(var(--cell-size,64px) / 2)); }
-.mf-right  { transform:rotateY(90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
-.mf-left   { transform:rotateY(-90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
-.mf-top    { transform:rotateX(90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
-.mf-bottom { transform:rotateX(-90deg) translateZ(calc(var(--cell-size,64px) / 2)); }
 
 /* Mobile interaction remains available even though side controls are hidden. */
 @media (max-width:767px) {
@@ -676,7 +598,6 @@ button, input, select { position:relative; z-index:1; }
     width:100% !important;
     height:100% !important;
     min-height:0 !important;
-    perspective:1000px !important;
   }
   #grid-2d {
     width:100% !important;
@@ -688,141 +609,113 @@ button, input, select { position:relative; z-index:1; }
 </style>
 
 
-<style id="attentional-shield-final-3d-fix">
+<style id="attentional-shield-webgl-final">
 /* ================================================================
-   ATTENTIONAL SHIELD — FINAL RIGID CSS 3D VIEWPORT
-   The perspective is isolated to this wrapper. The wrapper itself is
-   always exactly 260px x 260px, independent of viewport aspect ratio.
+   ATTENTIONAL SHIELD // FINAL THREE.JS VIEWPORT CONTRACT
+   CSS owns layout; Three.js owns all 3D geometry and rendering.
    ================================================================ */
-.scene-3d-wrapper {
-  position: relative !important;
-  width: 260px !important;
-  height: 260px !important;
-  min-width: 260px !important;
-  min-height: 260px !important;
-  max-width: 260px !important;
-  max-height: 260px !important;
-  flex: 0 0 260px !important;
+.scene-3d {
   display: none;
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
   align-items: center;
   justify-content: center;
-  perspective: 800px !important;
-  perspective-origin: 50% 50%;
-  overflow: visible !important;
+  overflow: hidden;
+  touch-action: none;
+  contain: strict;
   isolation: isolate;
   box-sizing: border-box;
 }
-.scene-3d-wrapper.active {
-  display: flex !important;
-}
-.scene-3d {
-  position: relative !important;
-  width: 260px !important;
-  height: 260px !important;
-  min-width: 260px !important;
-  min-height: 260px !important;
-  max-width: 260px !important;
-  max-height: 260px !important;
-  flex: 0 0 260px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: visible !important;
-  perspective: none !important;
-  transform-style: preserve-3d;
-  box-sizing: border-box;
-}
-.scene-3d-wrapper:not(.active) .scene-3d {
-  display: flex !important;
-}
-.cube-3d {
-  position: absolute !important;
-  left: 50% !important;
-  top: 50% !important;
-  width: 0 !important;
-  height: 0 !important;
-  transform-style: preserve-3d !important;
-  transform-origin: 50% 50% !important;
-  animation: rotate3d var(--rot-speed,20s) infinite linear !important;
-  will-change: transform;
-  overflow: visible !important;
-}
-.cube-face {
-  position: absolute !important;
-  left: -130px !important;
-  top: -130px !important;
-  width: 260px !important;
-  height: 260px !important;
-  min-width: 260px !important;
-  min-height: 260px !important;
-  max-width: 260px !important;
-  max-height: 260px !important;
-  box-sizing: border-box !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden !important;
-  background: rgba(12,18,30,.08);
-  border: 1px solid rgba(225,235,250,.20);
-  backface-visibility: hidden !important;
-  -webkit-backface-visibility: hidden !important;
-  transform-style: preserve-3d !important;
-  object-fit: cover !important;
-  pointer-events: none;
-  user-select: none;
-}
-.cube-face img {
-  width: 260px !important;
-  height: 260px !important;
-  min-width: 260px !important;
-  min-height: 260px !important;
-  max-width: 260px !important;
-  max-height: 260px !important;
-  object-fit: cover !important;
-  backface-visibility: hidden !important;
-  -webkit-backface-visibility: hidden !important;
-  pointer-events: none;
-}
-.cube-face.front  { transform: translateZ(130px) !important; }
-.cube-face.back   { transform: rotateY(180deg) translateZ(130px) !important; }
-.cube-face.right  { transform: rotateY(90deg) translateZ(130px) !important; }
-.cube-face.left   { transform: rotateY(-90deg) translateZ(130px) !important; }
-.cube-face.top    { transform: rotateX(90deg) translateZ(130px) !important; }
-.cube-face.bottom { transform: rotateX(-90deg) translateZ(130px) !important; }
 
-.mini-cube {
-  z-index: 2;
+.scene-3d.active {
+  display: flex !important;
 }
-.mini-face {
-  backface-visibility: hidden !important;
-  -webkit-backface-visibility: hidden !important;
+
+.scene-3d canvas {
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  flex: 1 1 auto;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.scene-3d .word-interference-3d {
-  left: 50% !important;
-  top: 50% !important;
-  z-index: 20 !important;
+
+#grid-2d:not(.active) {
+  display: none !important;
 }
+
 @media (max-width: 767px) {
-  .scene-3d-wrapper {
-    width: 260px !important;
-    height: 260px !important;
-    min-width: 260px !important;
-    min-height: 260px !important;
-    max-width: 260px !important;
-    max-height: 260px !important;
-    flex: 0 0 260px !important;
-    perspective: 800px !important;
-  }
   .scene-3d {
-    width: 260px !important;
-    height: 260px !important;
-    min-width: 260px !important;
-    min-height: 260px !important;
-    max-width: 260px !important;
-    max-height: 260px !important;
-    flex: 0 0 260px !important;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .scene-3d canvas {
+    width: 100% !important;
+    height: 100% !important;
   }
 }
+</style>
+
+
+<style id="reference-3d-final-viewport">
+.scene-3d{
+  display:none;
+  position:relative;
+  flex:1 1 auto;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  background:transparent;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  touch-action:none;
+  contain:strict;
+  box-sizing:border-box;
+}
+.scene-3d.active{display:flex !important;}
+.scene-3d canvas{
+  display:block !important;
+  position:relative !important;
+  inset:auto !important;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  outline:none;
+  border:0;
+  background:transparent !important;
+  touch-action:none;
+}
+#grid-2d:not(.active){display:none !important;}
 </style>
 
 </head>
@@ -1068,11 +961,7 @@ button, input, select { position:relative; z-index:1; }
         </div>
       </div>
       <div class="grid-2d" id="grid-2d"></div>
-      <div class="scene-3d-wrapper" id="scene-3d-wrapper">
-        <div class="scene-3d" id="scene-3d">
-          <div class="cube-3d" id="cube-3d"></div>
-        </div>
-      </div>
+      <div class="scene-3d" id="scene-3d" aria-hidden="true" aria-label="3D spatial stimulus"></div>
     </div>
     <div class="side-controls" id="side-right"></div>
     <div class="response-controls" id="mobile-response-controls" aria-label="Response controls"></div>
@@ -1869,508 +1758,650 @@ const ChartRenderer = {
   }
 };
 
-// ==================== THREE.JS 3D SPATIAL ENGINE ====================
-// Classic Dual N-Back 3×3×3 rotating wireframe lattice with dynamic
-// human/anime face textures on the active cube.
-const Spatial3D = (() => {
-  let container = null;
-  let renderer = null;
-  let camera = null;
-  let scene = null;
-  let latticeGroup = null;
-  let activeCube = null;
-  let animationFrame = null;
-  let resizeObserver = null;
-  let resizeHandler = null;
-  let textureLoader = null;
-  let textureRequestId = 0;
-  let activeTexture = null;
-  let activeMaterials = null;
-  let latticeGeometry = null;
-  let latticeMaterial = null;
+// ================================================================
+// THREE.JS WEBGL 3D GRID ENGINE
+// ================================================================
+class ThreeDGridEngine {
+  constructor() {
+    this.container = null;
+    this.renderer = null;
+    this.camera = null;
+    this.scene = null;
+    this.latticeGroup = null;
+    this.activeCube = null;
+    this.animationFrameId = null;
+    this.resizeObserver = null;
+    this.resizeHandler = null;
+    this.orientationHandler = null;
+    this.textureLoader = null;
+    this.textureRequestId = 0;
+    this.activeTexture = null;
+    this.latticeGeometry = null;
+    this.latticeMaterial = null;
+    this.activeIndex = -1;
+    this.rotationSpeed = 40;
 
-  const CELL_SIZE = 1;
-  const GAP = 0.05;
-  const SPACING = CELL_SIZE + GAP;
-  const GRID_HALF = (SPACING * 3) / 2;
+    this.CELL_SIZE = 1;
+    this.GAP = 0.05;
+    this.SPACING = this.CELL_SIZE + this.GAP;
+    this.GRID_HALF = (this.SPACING * 3) / 2;
+    this.ACTIVE_SIZE = 1;
+    this.ACTIVE_SCALE = 1.18;
+    this.VIEW_PADDING = 1.12;
+  }
 
-  function addSegment(vertices, ax, ay, az, bx, by, bz) {
+  addSegment(vertices, ax, ay, az, bx, by, bz) {
     vertices.push(ax, ay, az, bx, by, bz);
   }
 
-  function buildUnifiedLatticeGeometry() {
-    /*
-     * One consolidated 3×3×3 matrix.
-     *
-     * Four coordinates on each axis define the outer boundary and
-     * the two internal partitions. Drawing 4×4 lines in each of
-     * the X/Y/Z directions creates every compartment edge exactly
-     * once, with no overlapping BoxGeometry edges.
-     */
+  buildUnifiedLatticeGeometry() {
     const vertices = [];
-    const h = GRID_HALF;
+    const h = this.GRID_HALF;
+    const coords = [-h, -this.SPACING / 2, this.SPACING / 2, h];
 
-    const coords = [
-      -h,
-      -SPACING / 2,
-       SPACING / 2,
-       h
-    ];
-
-    // 16 lines parallel to X.
     for (const y of coords) {
       for (const z of coords) {
-        addSegment(vertices, -h, y, z, h, y, z);
+        this.addSegment(vertices, -h, y, z, h, y, z);
       }
     }
 
-    // 16 lines parallel to Y.
     for (const x of coords) {
       for (const z of coords) {
-        addSegment(vertices, x, -h, z, x, h, z);
+        this.addSegment(vertices, x, -h, z, x, h, z);
       }
     }
 
-    // 16 lines parallel to Z.
     for (const x of coords) {
       for (const y of coords) {
-        addSegment(vertices, x, y, -h, x, y, h);
+        this.addSegment(vertices, x, y, -h, x, y, h);
       }
     }
 
     const geometry = new THREE.BufferGeometry();
-
     geometry.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(vertices, 3)
     );
-
     geometry.computeBoundingSphere();
-
     return geometry;
   }
 
-  function init3D(containerElement) {
-    if (!containerElement || typeof THREE === 'undefined') {
-      console.error('[Spatial3D] Three.js or the 3D container is unavailable.');
+  getNodePosition(index) {
+    const safeIndex = Math.max(0, Math.min(26, Math.floor(Number(index) || 0)));
+    const x = (safeIndex % 3) - 1;
+    const y = (Math.floor(safeIndex / 3) % 3) - 1;
+    const z = Math.floor(safeIndex / 9) - 1;
+
+    return new THREE.Vector3(
+      x * this.SPACING,
+      y * this.SPACING,
+      z * this.SPACING
+    );
+  }
+
+  createInactiveNodes() {
+    const geometry = new THREE.BoxGeometry(
+      this.CELL_SIZE,
+      this.CELL_SIZE,
+      this.CELL_SIZE
+    );
+
+    for (let i = 0; i < 27; i++) {
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x101820,
+        transparent: true,
+        opacity: 0.28,
+        depthTest: true,
+        depthWrite: false,
+        side: THREE.FrontSide
+      });
+
+      const node = new THREE.Mesh(geometry, material);
+      node.name = `inactiveNode_${i}`;
+      node.position.copy(this.getNodePosition(i));
+      this.latticeGroup.add(node);
+    }
+  }
+
+  createActiveCube() {
+    const geometry = new THREE.BoxGeometry(
+      this.ACTIVE_SIZE,
+      this.ACTIVE_SIZE,
+      this.ACTIVE_SIZE
+    );
+
+    const materials = Array.from(
+      { length: 6 },
+      () => new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: false,
+        opacity: 1,
+        depthTest: true,
+        depthWrite: true,
+        side: THREE.FrontSide
+      })
+    );
+
+    this.activeCube = new THREE.Mesh(geometry, materials);
+    this.activeCube.name = 'ActiveStimulusCube';
+    this.activeCube.visible = false;
+    this.activeCube.scale.setScalar(this.ACTIVE_SCALE);
+    this.latticeGroup.add(this.activeCube);
+  }
+
+  configureTexture(texture) {
+    if (!texture) return texture;
+
+    texture.needsUpdate = true;
+
+    if ('colorSpace' in texture && THREE.SRGBColorSpace) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }
+
+    if ('encoding' in texture && THREE.sRGBEncoding) {
+      texture.encoding = THREE.sRGBEncoding;
+    }
+
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    return texture;
+  }
+
+  getCachedStimulusImage(imagePath) {
+    const renderable = image =>
+      image instanceof HTMLImageElement &&
+      image.naturalWidth > 0 &&
+      image.naturalHeight > 0;
+
+    if (
+      typeof ANIME_IMAGE_CACHE !== 'undefined' &&
+      Array.isArray(ANIME_MODES)
+    ) {
+      for (const mode of ANIME_MODES) {
+        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
+        if (renderable(candidate)) return candidate;
+      }
+    }
+
+    if (
+      typeof App !== 'undefined' &&
+      App.engine?.imageCache
+    ) {
+      const candidate = App.engine.imageCache[imagePath];
+      if (renderable(candidate)) return candidate;
+    }
+
+    if (typeof FACE_IMAGE_CACHE !== 'undefined') {
+      const candidate = FACE_IMAGE_CACHE[imagePath];
+      if (renderable(candidate)) return candidate;
+    }
+
+    return null;
+  }
+
+  clearActiveTexture() {
+    if (this.activeCube) {
+      const materials = Array.isArray(this.activeCube.material)
+        ? this.activeCube.material
+        : [this.activeCube.material];
+
+      materials.forEach(material => {
+        if (!material) return;
+        material.map = null;
+        material.color.set(0xffffff);
+        material.needsUpdate = true;
+      });
+    }
+
+    if (this.activeTexture) {
+      try { this.activeTexture.dispose(); } catch (_) {}
+      this.activeTexture = null;
+    }
+  }
+
+  setActiveNodeTexture(index, texture) {
+    if (!this.activeCube || !texture || this.activeIndex !== index) {
       return false;
     }
 
-    dispose();
+    this.clearActiveTexture();
+    const configured = this.configureTexture(texture);
 
-    container = containerElement;
+    const materials = Array.isArray(this.activeCube.material)
+      ? this.activeCube.material
+      : [this.activeCube.material];
 
-    scene = new THREE.Scene();
-    scene.background = null;
-
-    textureLoader = new THREE.TextureLoader();
-
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true
+    materials.forEach(material => {
+      material.map = configured;
+      material.color.set(0xffffff);
+      material.needsUpdate = true;
     });
 
-    renderer.setPixelRatio(
+    this.activeTexture = configured;
+    return true;
+  }
+
+  loadStimulusTexture(imagePath) {
+    const requestId = ++this.textureRequestId;
+    this.clearActiveTexture();
+
+    if (!imagePath || !this.textureLoader || !this.activeCube) return;
+
+    const cachedImage = this.getCachedStimulusImage(imagePath);
+
+    if (cachedImage) {
+      const texture = this.configureTexture(
+        new THREE.Texture(cachedImage)
+      );
+
+      if (requestId === this.textureRequestId && this.activeCube) {
+        this.setActiveNodeTexture(this.activeIndex, texture);
+      } else {
+        texture.dispose();
+      }
+      return;
+    }
+
+    this.textureLoader.load(
+      imagePath,
+      texture => {
+        if (
+          requestId !== this.textureRequestId ||
+          !this.activeCube
+        ) {
+          texture.dispose();
+          return;
+        }
+
+        this.configureTexture(texture);
+        this.setActiveNodeTexture(this.activeIndex, texture);
+      },
+      undefined,
+      error => {
+        if (requestId !== this.textureRequestId) return;
+
+        console.warn(
+          '[ThreeDGridEngine] Stimulus texture failed:',
+          imagePath,
+          error
+        );
+
+        const fallbackCanvas = document.createElement('canvas');
+        fallbackCanvas.width = 256;
+        fallbackCanvas.height = 256;
+
+        const ctx = fallbackCanvas.getContext('2d');
+
+        if (ctx) {
+          ctx.fillStyle = '#00f0ff';
+          ctx.fillRect(0, 0, 256, 256);
+          ctx.fillStyle = '#06070a';
+          ctx.fillRect(16, 16, 224, 224);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 8;
+          ctx.strokeRect(24, 24, 208, 208);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 26px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('STIMULUS', 128, 128);
+        }
+
+        const fallbackTexture = this.configureTexture(
+          new THREE.CanvasTexture(fallbackCanvas)
+        );
+
+        this.setActiveNodeTexture(
+          this.activeIndex,
+          fallbackTexture
+        );
+      }
+    );
+  }
+
+  resetNode() {
+    if (!this.activeCube) return;
+
+    this.clearActiveTexture();
+
+    const restored = Array.from(
+      { length: 6 },
+      () => new THREE.MeshBasicMaterial({
+        color: 0x101820,
+        transparent: true,
+        opacity: 0.18,
+        depthTest: true,
+        depthWrite: false,
+        side: THREE.FrontSide
+      })
+    );
+
+    if (this.activeCube.material) {
+      const old = Array.isArray(this.activeCube.material)
+        ? this.activeCube.material
+        : [this.activeCube.material];
+
+      old.forEach(material => {
+        if (!material) return;
+        try { material.dispose(); } catch (_) {}
+      });
+    }
+
+    this.activeCube.material = restored;
+    this.activeCube.scale.setScalar(this.ACTIVE_SCALE);
+    this.activeCube.visible = false;
+    this.activeIndex = -1;
+
+    for (let i = 0; i < 27; i++) {
+      const node = this.latticeGroup?.getObjectByName(
+        `inactiveNode_${i}`
+      );
+
+      if (!node) continue;
+
+      node.material.opacity = 0.28;
+      node.material.needsUpdate = true;
+    }
+  }
+
+  fitCameraToMatrix() {
+    if (
+      !this.renderer ||
+      !this.camera ||
+      !this.container ||
+      !this.latticeGroup
+    ) return;
+
+    const rect = this.container.getBoundingClientRect();
+
+    const width = Math.max(
+      1,
+      Math.round(rect.width || this.container.clientWidth || 1)
+    );
+
+    const height = Math.max(
+      1,
+      Math.round(rect.height || this.container.clientHeight || 1)
+    );
+
+    if (width < 2 || height < 2) return;
+
+    const aspect = width / height;
+    const isMobile = window.innerWidth < 768;
+    const fov = window.innerWidth < 480
+      ? 72
+      : (isMobile ? 68 : 52);
+
+    this.camera.fov = fov;
+    this.camera.aspect = aspect;
+
+    const halfExtent = this.GRID_HALF * 1.45;
+    const activeHalfExtent = this.ACTIVE_SIZE * this.ACTIVE_SCALE;
+    const extent = Math.max(
+      halfExtent,
+      halfExtent + activeHalfExtent * 0.10
+    );
+
+    const radius =
+      Math.sqrt(3) * extent * this.VIEW_PADDING;
+
+    const verticalFov =
+      THREE.MathUtils.degToRad(fov);
+
+    const horizontalFov =
+      2 *
+      Math.atan(
+        Math.tan(verticalFov / 2) *
+        Math.max(0.1, aspect)
+      );
+
+    const verticalDistance =
+      radius / Math.tan(verticalFov / 2);
+
+    const horizontalDistance =
+      radius / Math.tan(horizontalFov / 2);
+
+    this.camera.position.set(
+      0,
+      0,
+      Math.max(
+        verticalDistance,
+        horizontalDistance
+      ) * 1.05
+    );
+
+    this.camera.near = 0.05;
+    this.camera.far = Math.max(
+      100,
+      this.camera.position.z + radius * 8
+    );
+
+    this.camera.lookAt(0, 0, 0);
+    this.camera.updateProjectionMatrix();
+
+    this.renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio || 1,
+        isMobile ? 1.5 : 2
+      )
+    );
+
+    this.renderer.setSize(
+      width,
+      height,
+      false
+    );
+  }
+
+  init(containerElement) {
+    if (
+      !containerElement ||
+      typeof THREE === 'undefined'
+    ) {
+      console.error(
+        '[ThreeDGridEngine] Three.js or #scene-3d is unavailable.'
+      );
+      return false;
+    }
+
+    this.destroy();
+
+    this.container = containerElement;
+    this.container.style.width = '100%';
+    this.container.style.height = '100%';
+    this.container.style.overflow = 'hidden';
+
+    this.scene = new THREE.Scene();
+    this.scene.background = null;
+    this.scene.fog = new THREE.FogExp2(
+      0x06070a,
+      0.045
+    );
+
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
+    });
+
+    this.renderer.setClearColor(0x06070a, 0);
+    this.renderer.setPixelRatio(
       Math.min(window.devicePixelRatio || 1, 2)
     );
 
-    renderer.setClearColor(0x090d16, 0);
+    if (
+      'outputColorSpace' in this.renderer &&
+      THREE.SRGBColorSpace
+    ) {
+      this.renderer.outputColorSpace =
+        THREE.SRGBColorSpace;
+    }
 
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.display = 'block';
-    renderer.domElement.style.maxWidth = 'none';
-    renderer.domElement.style.maxHeight = 'none';
-    renderer.domElement.setAttribute(
+    if (
+      'outputEncoding' in this.renderer &&
+      THREE.sRGBEncoding
+    ) {
+      this.renderer.outputEncoding =
+        THREE.sRGBEncoding;
+    }
+
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
+    this.renderer.domElement.style.display = 'block';
+    this.renderer.domElement.style.touchAction = 'none';
+    this.renderer.domElement.setAttribute(
       'aria-label',
-      '3D spatial stimulus'
+      '3D spatial stimulus grid'
     );
 
-    container.appendChild(renderer.domElement);
+    this.container.appendChild(
+      this.renderer.domElement
+    );
 
-    /*
-     * Large viewport framing:
-     * the lattice itself is scaled up while the camera is moved
-     * closer with a narrower FOV so the 3D structure occupies
-     * approximately 85–90% of the available center display.
-     */
-    const isMobile = window.innerWidth < 768;
-    const isSmallMobile = window.innerWidth < 480;
-    const initialFov = isSmallMobile ? 72 : (isMobile ? 68 : 48);
-    const initialZ = isSmallMobile ? 13.5 : (isMobile ? 12.5 : 4.0);
-
-    camera = new THREE.PerspectiveCamera(
-      initialFov,
+    this.camera = new THREE.PerspectiveCamera(
+      52,
       1,
-      0.1,
+      0.05,
       100
     );
 
-    camera.position.set(
-      isMobile ? 0 : 3.1,
-      isMobile ? 0 : 2.6,
-      initialZ
-    );
+    this.latticeGroup = new THREE.Group();
+    this.latticeGroup.name = 'SpatialLattice';
+    this.latticeGroup.scale.setScalar(1.45);
+    this.scene.add(this.latticeGroup);
 
-    camera.lookAt(0, 0, 0);
+    this.latticeGeometry =
+      this.buildUnifiedLatticeGeometry();
 
-    latticeGroup = new THREE.Group();
-
-    /*
-     * Increase the physical footprint without changing the
-     * logical 3×3×3 coordinates.
-     */
-    latticeGroup.scale.setScalar(1.45);
-
-    scene.add(latticeGroup);
-
-    /*
-     * ONE unified LineSegments object.
-     *
-     * This replaces 27 individual BoxGeometry/EdgesGeometry
-     * objects and therefore eliminates overlapping/double edges.
-     */
-    latticeGeometry =
-      buildUnifiedLatticeGeometry();
-
-    latticeMaterial =
+    this.latticeMaterial =
       new THREE.LineBasicMaterial({
-        color: 0xffffff,
+        color: 0x71839a,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.16,
+        linewidth: 3,
         depthTest: true,
         depthWrite: false
       });
 
     const latticeLines =
       new THREE.LineSegments(
-        latticeGeometry,
-        latticeMaterial
+        this.latticeGeometry,
+        this.latticeMaterial
       );
 
-    latticeLines.frustumCulled = true;
+    latticeLines.name =
+      'UnifiedWireLattice';
 
-    latticeGroup.add(latticeLines);
+    latticeLines.renderOrder = 0;
+    this.latticeGroup.add(latticeLines);
 
-    /*
-     * Active stimulus cube.
-     *
-     * It is a direct child of latticeGroup, so after its initial
-     * camera alignment it rotates naturally with the entire matrix.
-     */
-    const activeGeometry =
-      new THREE.BoxGeometry(
-        0.88,
-        0.88,
-        0.88
-      );
+    this.createInactiveNodes();
+    this.createActiveCube();
 
-    activeMaterials =
-      Array.from(
-        { length: 6 },
-        () =>
-          new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            transparent: false
-          })
-      );
+    this.textureLoader =
+      new THREE.TextureLoader();
 
-    activeCube =
-      new THREE.Mesh(
-        activeGeometry,
-        activeMaterials
-      );
-
-    activeCube.visible = false;
-
-    latticeGroup.add(activeCube);
-
-    resizeHandler =
-      () => resizeRenderer();
+    this.resizeHandler =
+      () => this.fitCameraToMatrix();
 
     window.addEventListener(
       'resize',
-      resizeHandler,
+      this.resizeHandler,
+      { passive: true }
+    );
+
+    this.orientationHandler =
+      () => setTimeout(
+        () => this.fitCameraToMatrix(),
+        100
+      );
+
+    window.addEventListener(
+      'orientationchange',
+      this.orientationHandler,
       { passive: true }
     );
 
     if ('ResizeObserver' in window) {
-      resizeObserver =
+      this.resizeObserver =
         new ResizeObserver(
-          resizeHandler
+          () => this.fitCameraToMatrix()
         );
 
-      resizeObserver.observe(container);
+      this.resizeObserver.observe(
+        this.container
+      );
     }
 
-    resizeRenderer();
-
-    let responsiveResizeRAF = null;
-    const scheduleResponsiveResize = () => {
-      if (responsiveResizeRAF) cancelAnimationFrame(responsiveResizeRAF);
-      responsiveResizeRAF = requestAnimationFrame(() => {
-        responsiveResizeRAF = null;
-        resizeRenderer();
-      });
-    };
-    window.addEventListener('orientationchange', () => setTimeout(scheduleResponsiveResize, 100), {passive:true});
-
-    const animate = () => {
-      animationFrame =
-        requestAnimationFrame(
-          animate
-        );
-
-      if (latticeGroup) {
-        /*
-         * Continuous multi-axis rotation.
-         * The active face is NOT counter-rotated here; it is a
-         * normal child of this group and therefore rotates with it.
-         */
-        latticeGroup.rotation.x += 0.0028;
-        latticeGroup.rotation.y += 0.0048;
-        latticeGroup.rotation.z += 0.0022;
-      }
-
-      if (
-        renderer &&
-        scene &&
-        camera
-      ) {
-        renderer.render(
-          scene,
-          camera
-        );
-      }
-    };
-
-    animate();
+    this.fitCameraToMatrix();
+    this.animate();
 
     return true;
   }
 
-  function resizeRenderer() {
+  animate() {
     if (
-      !container ||
-      !renderer ||
-      !camera
+      !this.renderer ||
+      !this.scene ||
+      !this.camera ||
+      !this.container
     ) {
+      this.animationFrameId = null;
       return;
     }
 
-    const rect =
-      container.getBoundingClientRect();
-
-    const width =
-      Math.max(
+    if (this.latticeGroup) {
+      const speed = Math.max(
         1,
-        Math.round(
-          rect.width ||
-          container.clientWidth ||
-          1
+        Math.min(
+          100,
+          Number(this.rotationSpeed) || 40
         )
       );
 
-    const height =
+      const factor =
+        0.35 + ((speed - 1) / 99) * 1.35;
+
+      this.latticeGroup.rotation.x +=
+        0.0020 * factor;
+
+      this.latticeGroup.rotation.y +=
+        0.0036 * factor;
+
+      this.latticeGroup.rotation.z +=
+        0.0014 * factor;
+    }
+
+    this.renderer.render(
+      this.scene,
+      this.camera
+    );
+
+    this.animationFrameId =
+      requestAnimationFrame(
+        () => this.animate()
+      );
+  }
+
+  setRotationSpeed(value) {
+    this.rotationSpeed =
       Math.max(
         1,
-        Math.round(
-          rect.height ||
-          container.clientHeight ||
-          1
+        Math.min(
+          100,
+          Number(value) || 40
         )
       );
-
-    const isMobile = window.innerWidth < 768;
-    const isSmallMobile = window.innerWidth < 480;
-
-    renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2)
-    );
-
-    renderer.setSize(width, height, false);
-
-    if (isSmallMobile) {
-      camera.fov = 72;
-      camera.position.set(0, 0, 13.5);
-    } else if (isMobile) {
-      camera.fov = 68;
-      camera.position.set(0, 0, 12.5);
-    } else {
-      camera.fov = 48;
-      camera.position.set(3.1, 2.6, 4.0);
-    }
-
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    camera.lookAt(0, 0, 0);
   }
 
-  function clearActiveTexture() {
-    if (activeMaterials) {
-      activeMaterials.forEach(
-        material => {
-          material.map = null;
-          material.color.set(
-            0xffffff
-          );
-          material.needsUpdate = true;
-        }
-      );
-    }
-
-    if (activeTexture) {
-      activeTexture.dispose();
-      activeTexture = null;
-    }
-  }
-
-  function applyTexture(texture) {
+  setActiveCell(index, imagePath = null) {
     if (
-      !activeMaterials ||
-      !texture
+      !this.activeCube ||
+      !this.latticeGroup
     ) {
-      return;
-    }
-
-    if (
-      'colorSpace' in texture &&
-      THREE.SRGBColorSpace
-    ) {
-      texture.colorSpace =
-        THREE.SRGBColorSpace;
-    }
-
-    texture.needsUpdate = true;
-
-    activeMaterials.forEach(
-      material => {
-        material.map = texture;
-        material.color.set(
-          0xffffff
-        );
-        material.needsUpdate = true;
-      }
-    );
-
-    activeTexture = texture;
-  }
-
-  function loadStimulusTexture(
-    imagePath
-  ) {
-    const requestId =
-      ++textureRequestId;
-
-    clearActiveTexture();
-
-    if (
-      !imagePath ||
-      !textureLoader
-    ) {
-      return;
-    }
-
-    /*
-     * Prefer the application's already-verified image cache.
-     * This supports both Anime WebP and human-face images.
-     */
-    let cachedImage = null;
-    if (typeof ANIME_IMAGE_CACHE !== 'undefined') {
-      for (const mode of ANIME_MODES) {
-        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
-        if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
-          cachedImage = candidate;
-          break;
-        }
-      }
-    }
-    if (!cachedImage && typeof App !== 'undefined' && App.engine?.imageCache) {
-      const candidate = App.engine.imageCache[imagePath];
-      if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
-        cachedImage = candidate;
-      }
-    }
-
-    if (
-      cachedImage instanceof HTMLImageElement &&
-      cachedImage.naturalWidth > 0 &&
-      cachedImage.naturalHeight > 0
-    ) {
-      const texture =
-        new THREE.Texture(
-          cachedImage
-        );
-
-      texture.needsUpdate = true;
-
-      if (
-        'colorSpace' in texture &&
-        THREE.SRGBColorSpace
-      ) {
-        texture.colorSpace =
-          THREE.SRGBColorSpace;
-      }
-
-      if (
-        requestId === textureRequestId
-      ) {
-        applyTexture(texture);
-      } else {
-        texture.dispose();
-      }
-
-      return;
-    }
-
-    /*
-     * Fallback to TextureLoader for any valid path that has not
-     * already entered the application's image cache.
-     */
-    textureLoader.load(
-      imagePath,
-
-      texture => {
-        if (
-          requestId !== textureRequestId ||
-          !activeCube
-        ) {
-          texture.dispose();
-          return;
-        }
-
-        applyTexture(texture);
-      },
-
-      undefined,
-
-      error => {
-        if (
-          requestId !== textureRequestId
-        ) {
-          return;
-        }
-
-        console.error(
-          '[Spatial3D] Failed to load stimulus texture:',
-          imagePath,
-          error
-        );
-
-        /*
-         * Keep the active cube visible as a white stimulus.
-         * A texture failure must never break the trial.
-         */
-        clearActiveTexture();
-      }
-    );
-  }
-
-  function setStimulusPosition(
-    index,
-    imagePath = null
-  ) {
-    if (!activeCube) {
       return false;
     }
 
@@ -2379,409 +2410,168 @@ const Spatial3D = (() => {
         0,
         Math.min(
           26,
-          Math.floor(
-            Number(index) || 0
-          )
+          Math.floor(Number(index) || 0)
         )
       );
 
-    const x =
-      (safeIndex % 3) - 1;
+    this.activeIndex = safeIndex;
 
-    const y =
-      (
-        Math.floor(
-          safeIndex / 3
-        ) % 3
-      ) - 1;
-
-    const z =
-      Math.floor(
-        safeIndex / 9
-      ) - 1;
-
-    activeCube.position.set(
-      x * SPACING,
-      y * SPACING,
-      z * SPACING
+    this.activeCube.position.copy(
+      this.getNodePosition(safeIndex)
     );
 
-    // Faces use the native texture orientation; no inversion or standard orientation.
-    activeCube.rotation.set(0, 0, 0);
-    activeCube.visible = true;
+    this.activeCube.visible = true;
+    this.activeCube.scale.setScalar(
+      this.ACTIVE_SCALE
+    );
+
+    for (let i = 0; i < 27; i++) {
+      const node =
+        this.latticeGroup.getObjectByName(
+          `inactiveNode_${i}`
+        );
+
+      if (!node) continue;
+
+      node.material.opacity =
+        i === safeIndex
+          ? 0.10
+          : 0.28;
+
+      node.material.needsUpdate = true;
+    }
 
     if (imagePath) {
-      loadStimulusTexture(
-        imagePath
-      );
+      this.loadStimulusTexture(imagePath);
     } else {
-      clearActiveTexture();
+      this.clearActiveTexture();
     }
 
     return true;
   }
 
-  function clearStimulus() {
-    if (activeCube) {
-      activeCube.visible = false;
-    }
-
-    ++textureRequestId;
-
-    clearActiveTexture();
+  setStimulusPosition(index, imagePath = null) {
+    return this.setActiveCell(
+      index,
+      imagePath
+    );
   }
 
-  function dispose() {
-    ++textureRequestId;
+  clearStimulus() {
+    ++this.textureRequestId;
+    this.resetNode(this.activeIndex);
+  }
 
-    if (
-      animationFrame !== null
-    ) {
+  destroy() {
+    ++this.textureRequestId;
+
+    if (this.animationFrameId !== null) {
       cancelAnimationFrame(
-        animationFrame
+        this.animationFrameId
       );
+      this.animationFrameId = null;
     }
 
-    animationFrame = null;
-
-    if (resizeObserver) {
-      resizeObserver.disconnect();
+    if (this.resizeObserver) {
+      try {
+        this.resizeObserver.disconnect();
+      } catch (_) {}
+      this.resizeObserver = null;
     }
 
-    resizeObserver = null;
-
-    if (resizeHandler) {
+    if (this.resizeHandler) {
       window.removeEventListener(
         'resize',
-        resizeHandler
+        this.resizeHandler
       );
+      this.resizeHandler = null;
     }
 
-    resizeHandler = null;
-
-    clearActiveTexture();
-
-    if (activeCube) {
-      if (activeCube.geometry) {
-        activeCube.geometry.dispose();
-      }
-
-      if (
-        Array.isArray(
-          activeCube.material
-        )
-      ) {
-        activeCube.material.forEach(
-          material =>
-            material.dispose()
-        );
-      }
+    if (this.orientationHandler) {
+      window.removeEventListener(
+        'orientationchange',
+        this.orientationHandler
+      );
+      this.orientationHandler = null;
     }
 
-    if (latticeGeometry) {
-      latticeGeometry.dispose();
-      latticeGeometry = null;
-    }
+    this.clearActiveTexture();
 
-    if (latticeMaterial) {
-      latticeMaterial.dispose();
-      latticeMaterial = null;
-    }
-
-    if (renderer) {
-      const canvas = renderer.domElement;
-
-      try {
-        renderer.dispose();
-      } catch (e) {}
-
-      // Explicitly release the WebGL context so a previous session cannot
-      // continue compositing a stale framebuffer into the next session.
-      try {
-        if (typeof renderer.forceContextLoss === 'function') {
-          renderer.forceContextLoss();
+    if (this.scene) {
+      this.scene.traverse(object => {
+        if (object.geometry) {
+          try { object.geometry.dispose(); } catch (_) {}
         }
-      } catch (e) {}
 
-      if (canvas && canvas.parentNode) {
+        if (object.material) {
+          const materials =
+            Array.isArray(object.material)
+              ? object.material
+              : [object.material];
+
+          materials.forEach(material => {
+            if (!material) return;
+
+            if (material.map) {
+              try { material.map.dispose(); } catch (_) {}
+            }
+
+            try { material.dispose(); } catch (_) {}
+          });
+        }
+      });
+    }
+
+    if (this.renderer) {
+      const canvas =
+        this.renderer.domElement;
+
+      try { this.renderer.dispose(); } catch (_) {}
+
+      try {
+        if (
+          typeof this.renderer.forceContextLoss ===
+          'function'
+        ) {
+          this.renderer.forceContextLoss();
+        }
+      } catch (_) {}
+
+      if (canvas?.parentNode) {
         canvas.parentNode.removeChild(canvas);
       }
     }
 
-    renderer = null;
-    camera = null;
-    scene = null;
-    latticeGroup = null;
-    activeCube = null;
-    activeMaterials = null;
-    textureLoader = null;
-    activeTexture = null;
-    container = null;
+    this.renderer = null;
+    this.camera = null;
+    this.scene = null;
+    this.latticeGroup = null;
+    this.activeCube = null;
+    this.animationFrameId = null;
+    this.latticeGeometry = null;
+    this.latticeMaterial = null;
+    this.textureLoader = null;
+    this.activeTexture = null;
+    this.container = null;
+    this.activeIndex = -1;
   }
 
-  return {
-    init3D,
-    setStimulusPosition,
-    clearStimulus,
-    dispose
-  };
-})();
-
-
-// ==================== RENDERER LIFECYCLE SAFETY ====================
-// Strictly tears down whichever spatial renderer is not active.
-// This is called before every new session and on mode changes.
-function cleanupRenderers() {
-  const grid2d = document.getElementById('grid-2d');
-  const scene3d = document.getElementById('scene-3d');
-  const scene3dWrapper = document.getElementById('scene-3d-wrapper');
-
-  // Cancel the Three.js animation loop and dispose its WebGL resources.
-  try {
-    if (typeof Spatial3D !== 'undefined' && Spatial3D && typeof Spatial3D.dispose === 'function') {
-      Spatial3D.dispose();
-    }
-  } catch (error) {
-    console.warn('[Renderer] Spatial3D teardown warning:', error);
-  }
-
-  // Remove any stale WebGL canvases that may have been appended directly.
-  if (scene3d) {
-    scene3d.querySelectorAll('canvas').forEach(canvas => {
-      try {
-        const gl =
-          canvas.getContext('webgl2') ||
-          canvas.getContext('webgl') ||
-          canvas.getContext('experimental-webgl');
-
-        if (gl && typeof gl.getExtension === 'function') {
-          const loseContext = gl.getExtension('WEBGL_lose_context');
-          if (loseContext && typeof loseContext.loseContext === 'function') {
-            loseContext.loseContext();
-          }
-        }
-      } catch (e) {}
-
-      canvas.remove();
-    });
-
-    scene3d.classList.remove('active');
-    scene3d.style.setProperty('display', 'none', 'important');
-    scene3d.setAttribute('aria-hidden', 'true');
-    if (scene3dWrapper) {
-      scene3dWrapper.classList.remove('active');
-      scene3dWrapper.style.setProperty('display', 'none', 'important');
-      scene3dWrapper.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  // Clear the CSS 3D fallback DOM as well.
-  const cube = document.getElementById('cube-3d');
-  if (cube) cube.replaceChildren();
-
-  if (grid2d) {
-    grid2d.classList.remove('active');
-    grid2d.style.setProperty('display', 'none', 'important');
-    grid2d.setAttribute('aria-hidden', 'true');
-  }
-
-  // Clear stale word-interference overlays from either renderer.
-  document.querySelectorAll('.word-interference').forEach(el => el.remove());
-}
-
-function activate2DRenderer() {
-  const grid2d = document.getElementById('grid-2d');
-  const scene3d = document.getElementById('scene-3d');
-  const scene3dWrapper = document.getElementById('scene-3d-wrapper');
-
-  if (scene3d) {
-    scene3d.classList.remove('active');
-    scene3d.style.setProperty('display', 'none', 'important');
-    scene3d.setAttribute('aria-hidden', 'true');
-  }
-  if (scene3dWrapper) {
-    scene3dWrapper.classList.remove('active');
-    scene3dWrapper.style.setProperty('display', 'none', 'important');
-    scene3dWrapper.setAttribute('aria-hidden', 'true');
-  }
-
-  if (grid2d) {
-    grid2d.classList.add('active');
-    grid2d.style.setProperty('display', 'grid', 'important');
-    grid2d.setAttribute('aria-hidden', 'false');
+  dispose() {
+    this.destroy();
   }
 }
+const ThreeDGrid=new ThreeDGridEngine();
 
-function activate3DRenderer() {
-  const grid2d = document.getElementById('grid-2d');
-  const scene3d = document.getElementById('scene-3d');
-  const scene3dWrapper = document.getElementById('scene-3d-wrapper');
-
-  if (grid2d) {
-    grid2d.classList.remove('active');
-    grid2d.style.setProperty('display', 'none', 'important');
-    grid2d.setAttribute('aria-hidden', 'true');
-    grid2d.replaceChildren();
-  }
-
-  if (scene3d) {
-    scene3d.classList.add('active');
-    scene3d.style.setProperty('display', 'flex', 'important');
-    scene3d.setAttribute('aria-hidden', 'false');
-  }
-  if (scene3dWrapper) {
-    scene3dWrapper.classList.add('active');
-    scene3dWrapper.style.setProperty('display', 'flex', 'important');
-    scene3dWrapper.setAttribute('aria-hidden', 'false');
-  }
+function cleanupRenderers(){
+  const grid2d=document.getElementById('grid-2d'),scene3d=document.getElementById('scene-3d');
+  try{ThreeDGrid.destroy();}catch(error){console.warn('[Renderer] Three.js teardown warning:',error);}
+  if(scene3d){scene3d.classList.remove('active');scene3d.style.display='none';scene3d.setAttribute('aria-hidden','true');scene3d.querySelectorAll('canvas').forEach(c=>c.remove());}
+  if(grid2d){grid2d.classList.remove('active');grid2d.style.display='none';grid2d.setAttribute('aria-hidden','true');}
+  document.querySelectorAll('.word-interference').forEach(el=>el.remove());
 }
+function activate2DRenderer(){const g=document.getElementById('grid-2d'),s=document.getElementById('scene-3d');if(s){s.classList.remove('active');s.style.display='none';s.setAttribute('aria-hidden','true');}if(g){g.classList.add('active');g.style.display='grid';g.setAttribute('aria-hidden','false');}}
+function activate3DRenderer(){const g=document.getElementById('grid-2d'),s=document.getElementById('scene-3d');if(g){g.classList.remove('active');g.style.display='none';g.setAttribute('aria-hidden','true');g.replaceChildren();}if(!s)return null;s.classList.add('active');s.style.display='flex';s.setAttribute('aria-hidden','false');return s;}
 
-
-// ==================== PURE CSS 3D GRID ====================
-const CSS3D_FACES = [
-  ['front','mf-front'], ['back','mf-back'],
-  ['right','mf-right'], ['left','mf-left'],
-  ['top','mf-top'], ['bottom','mf-bottom']
-];
-
-function createCSS3DCubeGrid(container) {
-  if (!container) return null;
-
-  const cube = document.getElementById('cube-3d');
-  if (!cube) return null;
-
-  cube.replaceChildren();
-
-  const rigidFaces = [
-    ['front', 'FRONT'], ['back', 'BACK'],
-    ['right', 'RIGHT'], ['left', 'LEFT'],
-    ['top', 'TOP'], ['bottom', 'BOTTOM']
-  ];
-  rigidFaces.forEach(([name, label]) => {
-    const face = document.createElement('div');
-    face.className = `cube-face ${name}`;
-    face.setAttribute('aria-hidden', 'true');
-    face.dataset.face = name;
-    face.title = label;
-    cube.appendChild(face);
-  });
-
-  const rect = container.getBoundingClientRect();
-  const size = Math.max(44, Math.min(82, Math.min(rect.width || 360, rect.height || 360) * 0.18));
-  const step = size * 1.16;
-
-  cube.style.setProperty('--cell-size', `${size}px`);
-
-  for (let index = 0; index < 27; index++) {
-    const x = (index % 3) - 1;
-    const y = (Math.floor(index / 3) % 3) - 1;
-    const z = Math.floor(index / 9) - 1;
-
-    const mini = document.createElement('div');
-    mini.className = 'mini-cube';
-    mini.id = `mini-pos-${index}`;
-    mini.dataset.index = String(index);
-
-    // Keep the logical N-back coordinates unchanged; only the visual
-    // CSS coordinate system is centered on the cube.
-    mini.style.transform = `translate3d(${x * step}px, ${-y * step}px, ${z * step}px)`;
-
-    CSS3D_FACES.forEach(([name, className]) => {
-      const face = document.createElement('div');
-      face.className = `mini-face ${className}`;
-      face.dataset.face = name;
-
-      const img = document.createElement('img');
-      img.alt = '';
-      img.draggable = false;
-      img.style.display = 'none';
-
-      const fallback = document.createElement('div');
-      fallback.className = 'face-fallback';
-      fallback.textContent = '•';
-
-      face.appendChild(img);
-      face.appendChild(fallback);
-      mini.appendChild(face);
-    });
-
-    cube.appendChild(mini);
-  }
-
-  return cube;
-}
-
-function setCSS3DStimulus(index, image) {
-  const cube = document.getElementById('cube-3d');
-  if (!cube) return;
-
-  cube.querySelectorAll('.mini-cube').forEach(node => node.classList.remove('active'));
-
-  const target = document.getElementById(`mini-pos-${Math.max(0, Math.min(26, Number(index) || 0))}`);
-  if (!target) return;
-
-  target.classList.add('active');
-
-  const source =
-    image instanceof HTMLImageElement && image.naturalWidth > 0
-      ? (image.currentSrc || image.src)
-      : (typeof image === 'string' ? image : '');
-
-  target.querySelectorAll('.mini-face').forEach(face => {
-    const img = face.querySelector('img');
-    const fallback = face.querySelector('.face-fallback');
-
-    if (source && img) {
-      img.onerror = () => {
-        img.style.display = 'none';
-        if (fallback) {
-          fallback.textContent = 'FACE';
-          fallback.style.display = 'flex';
-        }
-      };
-      img.src = source;
-      img.style.display = 'block';
-      if (fallback) fallback.style.display = 'none';
-    } else {
-      if (img) img.style.display = 'none';
-      if (fallback) {
-        fallback.textContent = 'FACE';
-        fallback.style.display = 'flex';
-      }
-    }
-  });
-}
-
-function clearCSS3DStimulus() {
-  const cube = document.getElementById('cube-3d');
-  if (!cube) return;
-
-  cube.querySelectorAll('.mini-cube').forEach(node => {
-    node.classList.remove('active');
-    node.querySelectorAll('.mini-face').forEach(face => {
-      const img = face.querySelector('img');
-      const fallback = face.querySelector('.face-fallback');
-      if (img) {
-        img.removeAttribute('src');
-        img.style.display = 'none';
-      }
-      if (fallback) {
-        fallback.textContent = '•';
-        fallback.style.display = 'flex';
-      }
-    });
-  });
-}
-
-function setCSS3DRotationSpeed(value) {
-  const cube = document.getElementById('cube-3d');
-  if (!cube) return;
-
-  const numeric = Math.max(1, Math.min(100, Number(value) || 40));
-  // 1 = slowest, 100 = fastest. CSS animation duration is inverse.
-  const seconds = 34 - ((numeric - 1) / 99) * 28;
-  cube.style.setProperty('--rot-speed', `${seconds.toFixed(2)}s`);
-}
 
 // ==================== GAME ENGINE ====================
 class GameEngine {
@@ -2798,14 +2588,10 @@ class GameEngine {
     this.animeImagesLoaded = false;
     this.stimulusType = 'human_faces';
     this.animeMode = 'standard';
-    this.pendingAgeAction = null;
     this.ageVerified = (() => {
-      try {
-        return sessionStorage.getItem('age_verified') === '1';
-      } catch (e) {
-        return false;
-      }
+      try { return sessionStorage.getItem('age_verified') === '1'; } catch (e) { return false; }
     })();
+    this.pendingAgeAction = null;
   }
   reset() {
     this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
@@ -2814,7 +2600,6 @@ class GameEngine {
     this.sessionStart = 0; this.sessionMs = 0; this.lastTick = 0;
     this.timerInterval = null; this.trialTimeout = null; this.trialAdvanceTimeout = null;
     this.currentN = 2; this.highestN = 2;
-    this.sessionLimitMs = 0;
     this.sessionTotalTrials = 0;
     this.sessionTrialsCompleted = 0;
   }
@@ -2997,11 +2782,9 @@ class GameEngine {
 
   generateBlock() {
     const s = this.getSettings();
-
     if (this.blockTrials > 0 && this.currentTrial >= this.blockTrials) {
       this.sessionTrialsCompleted += this.currentTrial;
     }
-
     this.blockTrials = 20 + (this.currentN * this.currentN);
     this.kSeq = [];
     const minK = s.variableN ? s.varMin : this.currentN;
@@ -3399,36 +3182,27 @@ const App = {
     }
     if (panel) panel.hidden = humanActive;
 
-    this.setAnimeMode(this.animeMode || 'standard', false);
+    this.setAnimeMode(this.animeMode || 'standard', false, { skipAgeGate: true });
 
     const status = document.getElementById('stimulus-type-status');
     if (status) {
-      if (humanActive) {
-        status.textContent = 'Human Faces • Standard affective faces';
-      } else {
-        const labels = {
-          standard: 'Anime Faces • Standard',
-          waifu: 'Anime Faces • Waifu',
-          hentai: 'Anime Faces • Hentai • 18+'
-        };
-        status.textContent = labels[this.animeMode] || 'Anime Faces • Standard';
-      }
+      const labels = {
+        standard: 'Anime Faces • Standard',
+        waifu: 'Anime Faces • Waifu • 56 assets',
+        hentai: 'Anime Faces • Hentai • ' + HENTAI_COUNT + ' assets'
+      };
+      status.textContent = humanActive
+        ? 'Human Faces • Standard affective faces'
+        : (labels[this.animeMode] || labels.standard);
     }
 
     if (persist) this.saveSettings();
   },
 
   setAnimeMode(mode, persist = true, options = {}) {
-    // ONLY Hentai is age-gated. Standard Anime and Waifu are immediately accessible.
-    if (
-      mode === 'hentai' &&
-      !options.skipAgeGate &&
-      !this.ageVerified
-    ) {
-      this.pendingAgeAction = {
-        type: 'set-anime-mode',
-        value: 'hentai'
-      };
+    // ONLY Hentai requires explicit 18+ verification.
+    if (mode === 'hentai' && !options.skipAgeGate && !this.ageVerified) {
+      this.pendingAgeAction = { type: 'set-anime-mode', value: 'hentai' };
       this.openAgeGate();
       return;
     }
@@ -3484,7 +3258,7 @@ const App = {
     if (rng && disp) {
       const v = parseInt(rng.value);
       disp.textContent = v < 30 ? 'Slow' : v < 70 ? 'Normal' : 'Fast';
-      setCSS3DRotationSpeed(v);
+      ThreeDGrid.setRotationSpeed(v);
       this.saveSettings();
     }
   },
@@ -3584,8 +3358,7 @@ const App = {
   },
 
   isRestrictedStimulusSelection() {
-    return this.engine.stimulusType === 'anime_faces' &&
-      this.engine.animeMode === 'hentai';
+    return this.engine.stimulusType === 'anime_faces' && this.engine.animeMode === 'hentai';
   },
 
   openAgeGate() {
@@ -3617,11 +3390,8 @@ const App = {
   },
 
   confirmAgeGate() {
-    // Verification is session-scoped and survives only for this browser tab/session.
     this.ageVerified = true;
-    try {
-      sessionStorage.setItem('age_verified', '1');
-    } catch (e) {}
+    try { sessionStorage.setItem('age_verified', '1'); } catch (e) {}
 
     const pending = this.pendingAgeAction;
     this.closeAgeGate();
@@ -3694,16 +3464,11 @@ const App = {
     this.engine.lastTick = Date.now();
     this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
     this.engine.sessionTrialsCompleted = 0;
-
     const estimatedIsi = s.isiMode === 'fixed'
-      ? Math.max(500, Number(s.isiFixed) || DEFAULT_ISI)
+      ? Math.max(500, Number(s.isiFixed) || 1300)
       : (Math.max(500, Number(s.isiMin) || 1300) + Math.max(500, Number(s.isiMax) || 3000)) / 2;
-    const estimatedTrialMs = Math.max(500, Number(s.stimDur) || TRIAL_TIMING.stimulusMs) + estimatedIsi;
-    this.engine.sessionTotalTrials = Math.max(
-      1,
-      Math.floor(this.engine.sessionLimitMs / Math.max(1, estimatedTrialMs))
-    );
-
+    const estimatedTrialMs = Math.max(500, Number(s.stimDur) || 1200) + estimatedIsi;
+    this.engine.sessionTotalTrials = Math.max(1, Math.floor(this.engine.sessionLimitMs / estimatedTrialMs));
     this.engine.isRunning = true;
 
     if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
@@ -3772,11 +3537,18 @@ const App = {
     const s3d = document.getElementById('scene-3d');
 
     if (s.gridType === '3d') {
+      if (!s3d) {
+        console.error('[ATTENTIONAL SHIELD] #scene-3d is missing.');
+        return;
+      }
       activate3DRenderer();
-      createCSS3DCubeGrid(s3d);
-
+      if (!ThreeDGrid.init(s3d)) {
+        console.error('[ATTENTIONAL SHIELD] Three.js initialization failed.');
+        activate2DRenderer();
+        return;
+      }
       const speed = document.getElementById('rng-3d-speed')?.value || 40;
-      setCSS3DRotationSpeed(speed);
+      ThreeDGrid.setRotationSpeed(speed);
       return;
     }
 
@@ -3954,32 +3726,23 @@ const App = {
       const preloadedImage = getPreloadedImage(imagePath, isAnime ? 'anime_faces' : 'human_faces', animeMode);
 
       const showFallback = (label) => {
-        if (!targetEl) return;
         if (s.gridType === '3d') {
-          targetEl.querySelectorAll('.mini-face').forEach(faceEl => {
-            faceEl.replaceChildren();
-            faceEl.classList.add('active');
-            const fb = document.createElement('div');
-            fb.className = 'face-fallback';
-            fb.textContent = label;
-            faceEl.appendChild(fb);
-          });
-        } else {
-          const img = targetEl.querySelector('.face-img');
-          const fb = targetEl.querySelector('.face-fallback');
-          if (img) img.style.display = 'none';
-          if (fb) { fb.textContent = label; fb.style.display = 'flex'; }
-          targetEl.classList.add('active');
+          ThreeDGrid.setActiveCell(trial.pos, null);
+          return;
         }
+        if (!targetEl) return;
+        const img = targetEl.querySelector('.face-img');
+        const fb = targetEl.querySelector('.face-fallback');
+        if (img) img.style.display = 'none';
+        if (fb) { fb.textContent = label; fb.style.display = 'flex'; }
+        targetEl.classList.add('active');
       };
 
       if (imagePath && !(preloadedImage instanceof HTMLImageElement && preloadedImage.naturalWidth > 0)) {
         console.error('Failed to load anime face path:', imagePath);
         showFallback('ANIME');
       } else if (s.gridType === '3d') {
-        // Pure HTML/CSS 3D renderer: all six mini-cube faces receive
-        // the same preloaded image, while the cube itself rotates with CSS.
-        setCSS3DStimulus(trial.pos, preloadedImage || imagePath);
+        ThreeDGrid.setActiveCell(trial.pos, preloadedImage || imagePath || null);
       } else if (targetEl) {
         const img = targetEl.querySelector('.face-img');
         const fb = targetEl.querySelector('.face-fallback');
@@ -4084,7 +3847,7 @@ const App = {
     this.clearWordInterference();
     const s = this.engine.getSettings();
     if (s.gridType === '3d') {
-      clearCSS3DStimulus();
+      ThreeDGrid.clearStimulus();
     } else {
       document.querySelectorAll('.cell-2d').forEach(c => {
         c.classList.remove('active');
@@ -4195,8 +3958,7 @@ const App = {
   updateHUD() {
     const trial = document.getElementById('hud-trial');
     const dprime = document.getElementById('hud-dprime');
-    const total = this.engine.sessionTotalTrials || this.engine.blockTrials;
-    if (trial) trial.textContent = '0 / ' + total;
+    if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
     if (dprime) dprime.textContent = '0.00';
     this.updateLevelHUD();
   },
