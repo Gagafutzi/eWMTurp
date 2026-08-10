@@ -133,7 +133,15 @@ select:focus, input:focus { border-color:var(--cyan); }
 .hud-stat .hud-lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
 .hud-stat .hud-val.cyan { color:var(--cyan); text-shadow:0 0 8px rgba(0,240,255,0.3); }
 .hud-stat .hud-val.magenta { color:var(--magenta); text-shadow:0 0 8px rgba(255,0,110,0.3); }
-.hud-stat .hud-val.amber { color:var(--amber); } .hud-stat .hud-val.green { color:var(--green); }
+.hud-stat .hud-val.amber { color:var(--amber); }
+/* Persistent N-back level HUD: updated at block/level transitions. */
+.hud-stat .hud-val.level {
+  color:var(--magenta);
+  text-shadow:0 0 8px rgba(255,0,110,0.28);
+  min-width:3.8ch;
+  text-align:center;
+}
+ .hud-stat .hud-val.green { color:var(--green); }
 .hud-btn { background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:5px 12px; border-radius:5px; font-size:0.7rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:var(--font-sans); }
 .hud-btn:hover { border-color:var(--text-muted); color:var(--text); }
 .hud-btn.danger { border-color:var(--red); color:var(--red); } .hud-btn.danger:hover { background:var(--red-dim); }
@@ -262,6 +270,41 @@ select:focus, input:focus { border-color:var(--cyan); }
 .asset-loading-label { color:var(--cyan); font-size:0.85rem; font-weight:800; letter-spacing:2px; animation:assetPulse 0.9s ease-in-out infinite alternate; }
 .asset-loading-detail { margin-top:8px; color:var(--text-muted); font-size:0.62rem; letter-spacing:1px; }
 @keyframes assetPulse { from { opacity:0.45; } to { opacity:1; } }
+
+/* ================================================================
+   MODALITY ERROR FEEDBACK — ENABLED BY DEFAULT
+   ================================================================ */
+.modality-btn.error-feedback {
+  border-color:var(--red) !important;
+  outline:2px solid var(--red);
+  outline-offset:1px;
+  background:var(--red-dim) !important;
+  box-shadow:
+    0 0 0 2px rgba(255,51,51,0.18),
+    0 0 22px rgba(255,51,51,0.55) !important;
+  animation:modalityErrorFlash 300ms ease-out;
+}
+
+.modality-btn.error-feedback .mod-initial {
+  color:var(--red) !important;
+  text-shadow:0 0 10px rgba(255,51,51,0.75);
+}
+
+@keyframes modalityErrorFlash {
+  0% {
+    transform:scale(1);
+    filter:brightness(1);
+  }
+  35% {
+    transform:scale(1.045);
+    filter:brightness(1.45);
+  }
+  100% {
+    transform:scale(1);
+    filter:brightness(1);
+  }
+}
+
 </style>
 <style>
 /* Refactor safety/responsiveness */
@@ -1557,23 +1600,53 @@ const Spatial3D = (() => {
     vertices.push(ax, ay, az, bx, by, bz);
   }
 
+  /*
+   * 3D GRID OUTLINE CLEANUP
+   * -----------------------
+   * Deliberately do NOT draw the large outer bounding cube.
+   *
+   * Individual cell outlines are supplied by createInactiveNode()
+   * below, so every logical 3D slot remains visually identifiable
+   * without enclosing the entire lattice in one large box.
+   *
+   * These subtle internal guide segments only mark the two internal
+   * partition planes on each axis and therefore do not create an
+   * overall perimeter/bounding frame.
+   */
   function buildUnifiedLatticeGeometry() {
     const vertices = [];
     const h = GRID_HALF;
-    const coords = [-h, -SPACING / 2, SPACING / 2, h];
+    const inner = [-SPACING / 2, SPACING / 2];
 
-    for (const y of coords) {
-      for (const z of coords) addSegment(vertices, -h, y, z, h, y, z);
-    }
-    for (const x of coords) {
-      for (const z of coords) addSegment(vertices, x, -h, z, x, h, z);
-    }
-    for (const x of coords) {
-      for (const y of coords) addSegment(vertices, x, y, -h, x, y, h);
-    }
+    // X-constant internal planes: four Y/Z border segments each.
+    inner.forEach(x => {
+      addSegment(vertices, x, -h, -h, x, h, -h);
+      addSegment(vertices, x, -h,  h, x, h,  h);
+      addSegment(vertices, x, -h, -h, x, -h, h);
+      addSegment(vertices, x,  h, -h, x,  h, h);
+    });
+
+    // Y-constant internal planes.
+    inner.forEach(y => {
+      addSegment(vertices, -h, y, -h, h, y, -h);
+      addSegment(vertices, -h, y,  h, h, y,  h);
+      addSegment(vertices, -h, y, -h, -h, y, h);
+      addSegment(vertices,  h, y, -h, h, y, h);
+    });
+
+    // Z-constant internal planes.
+    inner.forEach(z => {
+      addSegment(vertices, -h, -h, z, h, -h, z);
+      addSegment(vertices, -h,  h, z, h,  h, z);
+      addSegment(vertices, -h, -h, z, -h, h, z);
+      addSegment(vertices,  h, -h, z, h, h, z);
+    });
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(vertices, 3)
+    );
     geometry.computeBoundingSphere();
     return geometry;
   }
@@ -2002,9 +2075,9 @@ const Spatial3D = (() => {
     // Unified 3D wire lattice remains visible behind the node cubes.
     latticeGeometry = buildUnifiedLatticeGeometry();
     latticeMaterial = new THREE.LineBasicMaterial({
-      color: 0x9fb3ca,
+      color: 0x71839a,
       transparent: true,
-      opacity: 0.34,
+      opacity: 0.16,
       depthTest: true,
       depthWrite: false
     });
@@ -2081,6 +2154,8 @@ const Spatial3D = (() => {
       const node = latticeGroup.getObjectByName(`inactiveNode_${i}`);
       if (!node) continue;
 
+      // Keep every cell individually outlined; only the active cell
+      // becomes slightly subdued behind the bold stimulus cube.
       node.material.opacity = i === safeIndex ? 0.10 : 0.28;
       node.material.needsUpdate = true;
     }
@@ -2192,6 +2267,11 @@ class GameEngine {
     this.sessionStart = 0; this.sessionMs = 0; this.lastTick = 0;
     this.timerInterval = null; this.trialTimeout = null; this.trialAdvanceTimeout = null;
     this.currentN = 2; this.highestN = 2;
+
+    // Error feedback is intentionally enabled by default.
+    // A missed target or incorrect modality response flashes its
+    // corresponding response key in red for immediate feedback.
+    this.errorFeedbackEnabled = true;
   }
 
   async preloadImages() {
@@ -3186,6 +3266,13 @@ const App = {
     if (mobile) stims.forEach(t => mobile.appendChild(makeBtn(t, '-mobile')));
   },
 
+  // Error feedback is on by default. This helper is intentionally
+  // public so future settings/UI can toggle it without changing response logic.
+  setErrorFeedbackEnabled(enabled = true) {
+    this.engine.errorFeedbackEnabled = enabled !== false;
+    return this.engine.errorFeedbackEnabled;
+  },
+
   tapFeedback(type) {
     if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
     if (this.engine.currentTrial >= this.engine.blockTrials) return;
@@ -3249,6 +3336,7 @@ const App = {
   startBlock() {
     this.engine.generateBlock();
     this.updateHUD();
+    this.updateLevelHUD();
     this.runTrial();
   },
 
@@ -3453,6 +3541,7 @@ const App = {
       else if (type === 'shp') isTarget = current.shp === previous.shp;
       else if (type === 'col') isTarget = current.col === previous.col;
     }
+    // Correct response = green; incorrect modality response = red.
     this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
   },
 
@@ -3470,7 +3559,11 @@ const App = {
       else if (type === 'col') isTarget = current.col === previous.col;
       if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
         missedTarget = true;
-        this.flashIndicator(type, 'wrong');
+
+        // Default-on red feedback for the specific missed modality.
+        if (this.engine.errorFeedbackEnabled !== false) {
+          this.flashIndicator(type, 'wrong');
+        }
       }
     });
     if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
@@ -3479,14 +3572,44 @@ const App = {
   flashIndicator(type, status) {
     const mobile = document.getElementById('ind-' + type + '-mobile');
     const desktop = document.getElementById('ind-' + type);
-    const el = mobile && window.getComputedStyle(mobile).display !== 'none'
-      ? mobile
-      : desktop;
+    const mobileVisible =
+      mobile &&
+      window.getComputedStyle(mobile).display !== 'none';
+
+    const el = mobileVisible ? mobile : desktop;
     if (!el) return;
-    el.classList.remove('correct', 'wrong', 'neutral');
+
+    el.classList.remove(
+      'correct',
+      'wrong',
+      'neutral',
+      'error-feedback'
+    );
+
+    // Force animation restart when feedback occurs on consecutive trials.
     void el.offsetWidth;
-    el.classList.add(status);
-    setTimeout(() => el.classList.remove('correct', 'wrong', 'neutral'), 300);
+
+    if (
+      status === 'wrong' &&
+      this.engine.errorFeedbackEnabled !== false
+    ) {
+      // Explicit red outline/error state for both:
+      // 1) incorrect responses
+      // 2) missed target responses
+      el.classList.add('wrong', 'error-feedback');
+    } else {
+      el.classList.add(status);
+    }
+
+    clearTimeout(el._feedbackTimer);
+    el._feedbackTimer = setTimeout(() => {
+      el.classList.remove(
+        'correct',
+        'wrong',
+        'neutral',
+        'error-feedback'
+      );
+    }, 300);
   },
 
   evaluateBlock() {
@@ -3532,14 +3655,41 @@ const App = {
       } else if (blockD < 1.0 && this.engine.currentN > 1) {
         this.engine.currentN--;
       }
+
+      // Keep the persistent header level synchronized with the adaptive level.
+      this.updateLevelHUD();
+    } else {
+      // Even in fixed-N mode, keep the header synchronized with session state.
+      this.updateLevelHUD();
     }
   },
 
   updateHUD() {
     const trial = document.getElementById('hud-trial');
     const dprime = document.getElementById('hud-dprime');
-    if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
-    if (dprime) dprime.textContent = '0.00';
+    const level = document.getElementById('hud-nlevel');
+
+    if (trial) {
+      trial.textContent = '0 / ' + this.engine.blockTrials;
+    }
+
+    if (dprime) {
+      dprime.textContent = '0.00';
+    }
+
+    // Persistent level indicator: refresh whenever the block/level changes.
+    if (level) {
+      level.textContent = 'N-BACK: ' + this.engine.currentN;
+      level.setAttribute('aria-label', 'Current N-back level ' + this.engine.currentN);
+    }
+  },
+
+  updateLevelHUD() {
+    const level = document.getElementById('hud-nlevel');
+    if (!level) return;
+
+    level.textContent = 'N-BACK: ' + this.engine.currentN;
+    level.setAttribute('aria-label', 'Current N-back level ' + this.engine.currentN);
   },
 
   togglePause() {
