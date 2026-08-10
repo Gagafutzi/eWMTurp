@@ -378,6 +378,78 @@ button, input, select { position:relative; z-index:1; }
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<style>
+/* ================================================================
+   FINAL RESPONSIVE 3D + MOBILE RESPONSE LAYOUT
+   ================================================================ */
+#screen-game, .game-stage, #scene-3d, #canvas-container {
+  width:100%; max-width:100vw; min-width:0; box-sizing:border-box;
+}
+#screen-game { overflow:hidden; }
+.game-stage { contain:strict; }
+#scene-3d, #canvas-container { contain:strict; overflow:hidden; touch-action:none; }
+#scene-3d canvas, #canvas-container canvas {
+  display:block !important; width:100% !important; height:100% !important;
+  max-width:100% !important; max-height:100% !important; box-sizing:border-box;
+  touch-action:none;
+}
+.response-controls {
+  display:none; width:100%; max-width:100vw; min-width:0; box-sizing:border-box;
+  align-items:stretch; justify-content:center; gap:8px; padding:8px;
+  background:rgba(8,10,14,.98); border-top:1px solid var(--border);
+  touch-action:manipulation; overscroll-behavior:contain; z-index:30;
+}
+.response-controls .modality-btn { flex:1 1 0; min-width:0; min-height:48px; max-height:none; touch-action:manipulation; }
+.block-transition {
+  position:absolute; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center;
+  padding:20px; background:rgba(6,7,10,.84); backdrop-filter:blur(7px);
+  opacity:0; visibility:hidden; pointer-events:none; transition:opacity .18s ease, visibility .18s ease;
+}
+.block-transition.active { opacity:1; visibility:visible; pointer-events:auto; }
+.block-transition-panel {
+  width:min(460px,92vw); padding:30px 26px; text-align:center; background:var(--bg-panel);
+  border:1px solid var(--cyan); border-radius:12px;
+  box-shadow:0 0 40px rgba(0,240,255,.12), inset 0 0 25px rgba(0,240,255,.025);
+}
+.block-transition-kicker { font-family:var(--font-mono); font-size:.58rem; letter-spacing:3px; color:var(--text-muted); margin-bottom:10px; }
+.block-transition-title { font-family:var(--font-mono); font-size:clamp(1.3rem,4vw,2rem); font-weight:900; letter-spacing:2px; color:var(--cyan); text-shadow:0 0 14px rgba(0,240,255,.3); }
+.block-transition-next { margin-top:12px; font-family:var(--font-mono); font-size:clamp(1rem,3vw,1.35rem); font-weight:800; color:var(--magenta); text-shadow:0 0 12px rgba(255,0,110,.25); }
+.block-transition-progress { margin-top:14px; font-size:.65rem; color:var(--text-muted); }
+.block-transition-button { margin-top:20px; width:100%; }
+.word-interference {
+  position:absolute; z-index:50; display:flex; align-items:center; justify-content:center;
+  pointer-events:none; user-select:none; -webkit-user-select:none; font-family:var(--font-mono);
+  font-weight:900; text-transform:uppercase; letter-spacing:1px; text-align:center;
+  color:rgba(255,255,255,.94); text-shadow:0 2px 4px rgba(0,0,0,.95), 0 0 8px rgba(0,0,0,.95);
+  background:rgba(6,7,10,.45); border:1px solid rgba(255,255,255,.18); border-radius:5px;
+  padding:4px 7px; font-size:clamp(.55rem,1.8vmin,.8rem); white-space:nowrap; overflow:hidden;
+  max-width:90%; transform:rotate(-4deg); opacity:.88;
+}
+.cell-2d .word-interference { inset:8px; width:auto; height:auto; }
+.word-interference-3d { left:50%; top:50%; transform:translate(-50%,-50%) rotate(-4deg); min-width:100px; max-width:45%; }
+@media (max-width:767px) {
+  .game-stage { display:flex; flex-direction:column; width:100%; max-width:100vw; min-width:0; padding:0; gap:0; overflow:hidden; }
+  .center-display { order:1; flex:1 1 auto; width:100%; min-width:0; min-height:0; overflow:hidden; }
+  .side-controls { display:none !important; }
+  .response-controls { order:2; display:flex; flex:0 0 auto; min-height:64px; padding:8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  .response-controls .modality-btn { min-height:48px; font-size:.75rem; }
+  .game-hud { height:50px; padding:0 10px; }
+  .hud-left,.hud-right { gap:8px; }
+  .hud-stat .hud-val { font-size:.85rem; }
+  .hud-stat .hud-lbl { display:none; }
+  #scene-3d { flex:1 1 auto; min-height:0; width:100%; height:100%; }
+  #scene-3d canvas { width:100% !important; height:100% !important; }
+}
+@media (max-width:480px) {
+  .response-controls { gap:5px; min-height:60px; }
+  .response-controls .modality-btn { min-height:46px; border-radius:8px; }
+  .response-controls .modality-btn .mod-initial { font-size:1.15rem; }
+  .response-controls .modality-btn .mod-key { font-size:.43rem; padding:1px 4px; }
+  .word-interference { font-size:.52rem; padding:3px 5px; letter-spacing:.5px; }
+}
+</style>
+
 </head>
 <body>
 
@@ -550,6 +622,14 @@ button, input, select { position:relative; z-index:1; }
             <div class="control-label">Buzzer Sound on Miss</div>
             <label class="toggle-switch"><input type="checkbox" id="chk-buzzer"><span class="toggle-slider"></span></label>
           </div>
+          <div class="panel-title" style="margin-top:16px;color:var(--amber)">ADVANCED DISTRACTORS</div>
+          <div class="control-row">
+            <div>
+              <div class="control-label">Word Interference</div>
+              <small style="display:block;color:var(--text-dim);font-size:.62rem;line-height:1.35;max-width:320px;margin-top:3px">Passive visual distractor rendered over the active position stimulus. It never creates an additional response target.</small>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="chk-word-interference"><span class="toggle-slider"></span></label>
+          </div>
           <div class="panel-title" style="margin-top:16px;color:var(--magenta)">Affective Parameters</div>
           <div class="control-row">
             <div class="control-label">Interference / Lures</div>
@@ -593,7 +673,6 @@ button, input, select { position:relative; z-index:1; }
   <div class="game-hud">
     <div class="hud-left">
       <div class="hud-stat"><span class="hud-val cyan" id="hud-timer">0:00</span><span class="hud-lbl">Session</span></div>
-      <div class="hud-stat"><span class="hud-val magenta" id="hud-nlevel">2-Back</span><span class="hud-lbl">Load</span></div>
       <div class="hud-stat"><span class="hud-val amber" id="hud-trial">0 / 0</span><span class="hud-lbl">Trial</span></div>
     </div>
     <div class="hud-right">
@@ -610,12 +689,23 @@ button, input, select { position:relative; z-index:1; }
         <div class="shape-display" id="shape-display" style="visibility:hidden">
           <svg id="shape-svg" viewBox="0 0 100 100"></svg>
         </div>
-        <div class="n-indicator" id="n-indicator"></div>
       </div>
       <div class="grid-2d" id="grid-2d"></div>
       <div class="scene-3d" id="scene-3d"><div class="cube-3d" id="cube-3d"></div></div>
     </div>
     <div class="side-controls" id="side-right"></div>
+    <div class="response-controls" id="mobile-response-controls" aria-label="Response controls"></div>
+  </div>
+</div>
+
+<!-- BLOCK COMPLETION / N-LEVEL TRANSITION -->
+<div id="block-transition" class="block-transition" aria-hidden="true">
+  <div class="block-transition-panel">
+    <div class="block-transition-kicker">WORKING MEMORY TRAINING</div>
+    <div class="block-transition-title">BLOCK COMPLETE</div>
+    <div class="block-transition-next" data-transition-level>Advancing to 2-Back</div>
+    <div class="block-transition-progress">Next block starting automatically</div>
+    <button type="button" class="btn btn-primary block-transition-button" data-transition-start>START NEXT BLOCK</button>
   </div>
 </div>
 
@@ -1048,6 +1138,20 @@ const AFFECTIVE_WORD_BANK = {
 };
 
 // Keep the original non-audio word pools for the visual/shape-word stimulus.
+// ==================== ADVANCED VISUAL DISTRACTOR ====================
+const WORD_INTERFERENCE_BANK = Object.freeze([
+  'WINDOW','TABLE','PENCIL','RIVER','CHAIR','GARDEN','PAPER','CLOUD',
+  'MIRROR','BRIDGE','FOREST','OCEAN','LAMP','CLOCK','DOOR','STONE',
+  'WARNING','DANGER','URGENT','ALERT','THREAT','IMPACT','CRISIS','SHOCK',
+  'FEAR','ANGER','LOSS','PANIC','HOPE','CALM','TRUST','DOUBT'
+]);
+
+function pickWordInterference() {
+  return WORD_INTERFERENCE_BANK[
+    Math.floor(Math.random() * WORD_INTERFERENCE_BANK.length)
+  ];
+}
+
 const WORDS_NEGATIVE = ['Murder','Rape','Failure','Genocide','Retard','Hurt','Alone','Reject','Worthless','Disaster','Death','Pain','Trash','Loser','Betray'];
 const WORDS_POSITIVE = ['Success','Victory','Gift','Miracle','Money','Loved','Triumph','Joy','Peace','Winner','Glory','Hero','Champion','Blessing','Proud'];
 const WORDS_NEUTRAL  = [
@@ -1417,18 +1521,22 @@ const Spatial3D = (() => {
      * closer with a narrower FOV so the 3D structure occupies
      * approximately 85–90% of the available center display.
      */
+    const isMobile = window.innerWidth < 768;
+    const isSmallMobile = window.innerWidth < 480;
+    const initialFov = isSmallMobile ? 72 : (isMobile ? 68 : 48);
+    const initialZ = isSmallMobile ? 13.5 : (isMobile ? 12.5 : 4.0);
+
     camera = new THREE.PerspectiveCamera(
-      48,
+      initialFov,
       1,
       0.1,
       100
     );
 
-    // Symmetric camera placement around the lattice origin.
     camera.position.set(
-      3.1,
-      2.6,
-      4.0
+      isMobile ? 0 : 3.1,
+      isMobile ? 0 : 2.6,
+      initialZ
     );
 
     camera.lookAt(0, 0, 0);
@@ -1524,6 +1632,16 @@ const Spatial3D = (() => {
 
     resizeRenderer();
 
+    let responsiveResizeRAF = null;
+    const scheduleResponsiveResize = () => {
+      if (responsiveResizeRAF) cancelAnimationFrame(responsiveResizeRAF);
+      responsiveResizeRAF = requestAnimationFrame(() => {
+        responsiveResizeRAF = null;
+        resizeRenderer();
+      });
+    };
+    window.addEventListener('orientationchange', () => setTimeout(scheduleResponsiveResize, 100), {passive:true});
+
     const animate = () => {
       animationFrame =
         requestAnimationFrame(
@@ -1590,16 +1708,26 @@ const Spatial3D = (() => {
         )
       );
 
-    renderer.setSize(
-      width,
-      height,
-      false
+    const isMobile = window.innerWidth < 768;
+    const isSmallMobile = window.innerWidth < 480;
+
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2)
     );
 
-    /*
-     * Dynamic aspect synchronization is essential now that the
-     * 3D viewport is no longer locked to a square.
-     */
+    renderer.setSize(width, height, false);
+
+    if (isSmallMobile) {
+      camera.fov = 72;
+      camera.position.set(0, 0, 13.5);
+    } else if (isMobile) {
+      camera.fov = 68;
+      camera.position.set(0, 0, 12.5);
+    } else {
+      camera.fov = 48;
+      camera.position.set(3.1, 2.6, 4.0);
+    }
+
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     camera.lookAt(0, 0, 0);
@@ -2020,6 +2148,7 @@ class GameEngine {
       sessionDurationMin: safeInt('rng-session-duration', DEFAULT_SESSION_DURATION_MIN),
       tally: safeBool('chk-tally'),
       buzzerOnMiss: safeBool('chk-buzzer'),
+      wordInterference: safeBool('chk-word-interference'),
       emoLoad: safeInt('rng-emo-load', 70),
       interference: safeInt('rng-interference', 40),
       matchRate: safeInt('rng-match-rate', 30) / 100,
@@ -2150,7 +2279,8 @@ class GameEngine {
         animeAsset:visual.type === 'anime_faces' ? visual.path : null,
         animeMode:visual.type === 'anime_faces' ? visual.animeMode : null,
         fallbackFromAnime:!!visual.fallbackFromAnime,
-        word, audWord
+        word, audWord,
+        wordInterference: s.wordInterference ? pickWordInterference() : ''
       });
     }
 
@@ -2260,6 +2390,7 @@ const App = {
     bindInput('rng-stim-dur', 'input', e => { setText('disp-stim-dur', e.target.value + 'ms'); });
     bindInput('rng-interference', 'input', e => { setText('disp-interference', e.target.value + '%'); });
     bindInput('rng-match-rate', 'input', e => { setText('disp-match-rate', e.target.value + '%'); });
+    bindInput('chk-word-interference', 'change', () => this.saveSettings());
     bindInput('chk-pos', 'change', () => this.onStimChange());
     bindInput('chk-aud', 'change', () => this.onStimChange());
     bindInput('chk-shp', 'change', () => this.onStimChange());
@@ -2333,7 +2464,7 @@ const App = {
       'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed',
       'chk-variable-n','rng-var-min','inp-var-max','chk-adaptive','sel-isi-mode',
       'rng-isi-fixed','rng-isi-min','rng-isi-max','rng-stim-dur','rng-session-duration',
-      'chk-tally','chk-buzzer','rng-interference','rng-match-rate','sel-voice',
+      'chk-tally','chk-buzzer','chk-word-interference','rng-interference','rng-match-rate','sel-voice',
       'chk-pos','chk-aud','chk-shp','chk-col'
     ];
   },
@@ -2731,33 +2862,85 @@ const App = {
   buildSideControls() {
     const left = document.getElementById('side-left');
     const right = document.getElementById('side-right');
+    const mobile = document.getElementById('mobile-response-controls');
     if (left) left.innerHTML = '';
     if (right) right.innerHTML = '';
+    if (mobile) mobile.innerHTML = '';
+
     const stims = this.engine.activeStimuli;
+    const makeBtn = (type, idSuffix = '') => {
+      const d = document.createElement('div');
+      d.className = 'modality-btn';
+      d.id = 'ind-' + type + idSuffix;
+      d.dataset.type = type;
+      d.setAttribute('role', 'button');
+      d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
+      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
+      d.addEventListener('touchstart', (e) => { e.preventDefault(); this.tapFeedback(type); }, {passive:false});
+      d.addEventListener('mousedown', (e) => { e.preventDefault(); this.tapFeedback(type); });
+      return d;
+    };
+
     let leftStims = [], rightStims = [];
     if (stims.length >= 4) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
     else if (stims.length === 3) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
     else if (stims.length === 2) { leftStims = [stims[0]]; rightStims = [stims[1]]; }
     else { leftStims = stims; }
-
-    const makeBtn = (type) => {
-      const d = document.createElement('div');
-      d.className = 'modality-btn';
-      d.id = 'ind-' + type;
-      d.dataset.type = type;
-      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
-      d.addEventListener('touchstart', (e) => { e.preventDefault(); this.tapFeedback(type); }, {passive: false});
-      d.addEventListener('mousedown', (e) => { e.preventDefault(); this.tapFeedback(type); });
-      return d;
-    };
     leftStims.forEach(t => { if (left) left.appendChild(makeBtn(t)); });
     rightStims.forEach(t => { if (right) right.appendChild(makeBtn(t)); });
+    if (mobile) stims.forEach(t => mobile.appendChild(makeBtn(t, '-mobile')));
   },
 
   tapFeedback(type) {
     if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
     if (this.engine.currentTrial >= this.engine.blockTrials) return;
     if (!this.engine.responses[type][this.engine.currentTrial]) this.processFeedback(type);
+  },
+
+  renderWordInterference(word, targetEl, gridType) {
+    this.clearWordInterference();
+    if (!word) return;
+    const label = document.createElement('div');
+    label.className = 'word-interference';
+    label.textContent = word;
+    label.setAttribute('aria-hidden', 'true');
+    label.dataset.passiveDistractor = 'true';
+    if (gridType === '3d') {
+      const scene = document.getElementById('scene-3d');
+      if (!scene) return;
+      label.classList.add('word-interference-3d');
+      scene.appendChild(label);
+    } else if (targetEl) {
+      targetEl.appendChild(label);
+    }
+  },
+
+  clearWordInterference() {
+    document.querySelectorAll('.word-interference').forEach(el => el.remove());
+  },
+
+  showBlockCompletionOverlay(nextN) {
+    const overlay = document.getElementById('block-transition');
+    if (!overlay) return new Promise(resolve => setTimeout(resolve, 2500));
+    const level = overlay.querySelector('[data-transition-level]');
+    const button = overlay.querySelector('[data-transition-start]');
+    if (level) level.textContent = 'Advancing to ' + nextN + '-Back';
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    return new Promise(resolve => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        if (button) button.removeEventListener('click', finish);
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+        resolve();
+      };
+      if (button) button.addEventListener('click', finish);
+      const timer = setTimeout(finish, 2500);
+    });
   },
 
   showInterMsg(text, duration) {
@@ -2779,8 +2962,12 @@ const App = {
     if (this.engine.currentTrial >= this.engine.blockTrials) {
       this.evaluateBlock();
       if (this.engine.isRunning && !this.engine.isPaused) {
-        this.showInterMsg('BLOCK COMPLETE', 300);
-        setTimeout(() => { if (this.engine.isRunning && !this.engine.isPaused) this.startBlock(); }, 350);
+        this.engine.isTrialActive = false;
+        this.clearGrid();
+        const upcomingN = this.engine.currentN;
+        this.showBlockCompletionOverlay(upcomingN).then(() => {
+          if (this.engine.isRunning && !this.engine.isPaused) this.startBlock();
+        });
       }
       return;
     }
@@ -2792,17 +2979,6 @@ const App = {
 
     const hudTrial = document.getElementById('hud-trial');
     if (hudTrial) hudTrial.textContent = (this.engine.currentTrial + 1) + ' / ' + this.engine.blockTrials;
-    const nDisp = document.getElementById('hud-nlevel');
-    if (nDisp) {
-      if (s.variableN) {
-        nDisp.textContent = k + '-Back';
-        nDisp.style.color = 'var(--magenta)';
-      } else {
-        nDisp.textContent = this.engine.currentN + '-Back';
-        nDisp.style.color = 'var(--text)';
-      }
-    }
-
     this.clearGrid();
 
     // Position stimulus
@@ -2865,9 +3041,16 @@ const App = {
       }
     }
 
+    if (s.wordInterference && trial.wordInterference && this.engine.activeStimuli.includes('pos')) {
+      this.renderWordInterference(
+        trial.wordInterference,
+        s.gridType === '3d' ? document.getElementById('scene-3d') : document.getElementById('pos-' + trial.pos),
+        s.gridType
+      );
+    }
+
     // Top stimulus (shape/color). No random word is rendered above the grid.
     const shapeDisp = document.getElementById('shape-display');
-    const nInd = document.getElementById('n-indicator');
     if (this.engine.activeStimuli.includes('col') || this.engine.activeStimuli.includes('shp') || this.engine.activeStimuli.includes('aud')) {
       if (shapeDisp) shapeDisp.style.visibility = 'visible';
       const fillColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : 'rgba(255,255,255,0.06)';
@@ -2882,12 +3065,6 @@ const App = {
       }
     } else {
       if (shapeDisp) shapeDisp.style.visibility = 'hidden';
-    }
-
-    if (s.variableN && nInd) {
-      nInd.innerHTML = '<span class="n-badge">' + k + '-Back</span>';
-    } else if (nInd) {
-      nInd.innerHTML = '';
     }
 
     // Audio
@@ -2905,7 +3082,6 @@ const App = {
     const hideStimulus = () => {
       if (!this.engine.isRunning || this.engine.isPaused) return;
       this.clearGrid();
-      if (s.variableN && nDisp) nDisp.style.color = 'var(--text)';
     };
 
     const advanceTrial = () => {
@@ -2916,7 +3092,6 @@ const App = {
         return;
       }
       this.clearGrid();
-      if (s.variableN && nDisp) nDisp.style.color = 'var(--text)';
       if (s.tally) {
         const inter = document.getElementById('inter-msg');
         if (inter) { inter.textContent = 'PRESS SPACE'; inter.classList.add('active'); }
@@ -2943,6 +3118,7 @@ const App = {
   },
 
   clearGrid() {
+    this.clearWordInterference();
     const s = this.engine.getSettings();
     if (s.gridType === '3d') {
       Spatial3D.clearStimulus();
@@ -2956,9 +3132,7 @@ const App = {
       });
     }
     const shapeDisp = document.getElementById('shape-display');
-    const nInd = document.getElementById('n-indicator');
     if (shapeDisp) shapeDisp.style.visibility = 'hidden';
-    if (nInd) nInd.innerHTML = '';
   },
 
   processFeedback(type) {
@@ -2997,7 +3171,11 @@ const App = {
   },
 
   flashIndicator(type, status) {
-    const el = document.getElementById('ind-' + type);
+    const mobile = document.getElementById('ind-' + type + '-mobile');
+    const desktop = document.getElementById('ind-' + type);
+    const el = mobile && window.getComputedStyle(mobile).display !== 'none'
+      ? mobile
+      : desktop;
     if (!el) return;
     el.classList.remove('correct', 'wrong', 'neutral');
     void el.offsetWidth;
@@ -3052,10 +3230,8 @@ const App = {
   },
 
   updateHUD() {
-    const nlevel = document.getElementById('hud-nlevel');
     const trial = document.getElementById('hud-trial');
     const dprime = document.getElementById('hud-dprime');
-    if (nlevel) nlevel.textContent = this.engine.currentN + '-Back';
     if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
     if (dprime) dprime.textContent = '0.00';
   },
