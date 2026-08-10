@@ -303,6 +303,14 @@ select:focus, input:focus { border-color:var(--cyan); }
   }
 }
 
+
+/* Asset preload transition overlay */
+#asset-loading-overlay { position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; background:rgba(6,7,10,0.94); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); pointer-events:none; }
+#asset-loading-overlay.active { display:flex; pointer-events:auto; }
+.asset-loading-panel { min-width:260px; padding:22px 28px; border:1px solid rgba(0,240,255,0.35); border-radius:10px; background:rgba(12,14,20,0.98); box-shadow:0 0 28px rgba(0,240,255,0.12); text-align:center; font-family:var(--font-mono); }
+.asset-loading-label { color:var(--cyan); font-size:0.85rem; font-weight:800; letter-spacing:2px; animation:assetPulse 0.9s ease-in-out infinite alternate; }
+.asset-loading-detail { margin-top:8px; color:var(--text-muted); font-size:0.62rem; letter-spacing:1px; }
+@keyframes assetPulse { from { opacity:0.45; } to { opacity:1; } }
 </style>
 <style>
 /* Refactor safety/responsiveness */
@@ -372,6 +380,14 @@ button, input, select { position:relative; z-index:1; }
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
+
+<div id="asset-loading-overlay" aria-hidden="true">
+  <div class="asset-loading-panel" role="status" aria-live="polite">
+    <div class="asset-loading-label">LOADING ASSETS...</div>
+    <div class="asset-loading-detail">Preparing visual stimuli</div>
+  </div>
+</div>
+
 
 <!-- SETUP SCREEN -->
 <div id="screen-setup" class="screen active">
@@ -642,6 +658,7 @@ button, input, select { position:relative; z-index:1; }
 </div>
 
 <script>
+
 (function() {
 'use strict';
 
@@ -691,9 +708,6 @@ const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
     'assets/stimuli/anime/j.webp', 'assets/stimuli/anime/k.webp', 'assets/stimuli/anime/l.webp'
   ]),
   waifu: Object.freeze([
-    'assets/stimuli/waifu/1d.jpg',
-    'assets/stimuli/waifu/1m.jpg',
-    'assets/stimuli/waifu/260px-Eva2-22_C0487-02_Crop.webp',
     'assets/stimuli/waifu/waifu_0.webp',
     'assets/stimuli/waifu/waifu_1.webp',
     'assets/stimuli/waifu/waifu_2.webp',
@@ -867,6 +881,48 @@ function getCachedAnimePaths(mode = 'standard') {
     );
   });
 }
+
+// ==================== SELECTED ASSET PRELOADER ====================
+// Preload the visual family selected for the upcoming session. The same
+// verified HTMLImageElement instances are consumed by the 2D renderer and
+// Three.js, so the game never starts by racing the first stimulus against a
+// network request. Individual failures remain non-fatal.
+async function preloadAssets(options = {}) {
+  const stimulusType = options.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+  const animeMode = ANIME_MODES.includes(options.animeMode) ? options.animeMode : 'standard';
+  const paths = stimulusType === 'anime_faces'
+    ? (ANIME_FACE_ASSET_MANIFEST[animeMode] || [])
+    : FACES.map(face => face.file);
+  const cache = stimulusType === 'anime_faces'
+    ? (ANIME_IMAGE_CACHE[animeMode] || (ANIME_IMAGE_CACHE[animeMode] = Object.create(null)))
+    : FACE_IMAGE_CACHE;
+
+  const results = await Promise.all(paths.map(async path => ({
+    path,
+    ok: await preloadImage(path, cache)
+  })));
+
+  return {
+    stimulusType,
+    animeMode,
+    requested: paths.length,
+    loaded: results.filter(r => r.ok).map(r => r.path),
+    failed: results.filter(r => !r.ok).map(r => r.path),
+    ready: results.some(r => r.ok) || paths.length === 0
+  };
+}
+
+function getPreloadedImage(path, stimulusType = 'human_faces', animeMode = 'standard') {
+  if (!path) return null;
+  if (stimulusType === 'anime_faces') {
+    const mode = ANIME_MODES.includes(animeMode) ? animeMode : 'standard';
+    const image = ANIME_IMAGE_CACHE[mode]?.[path];
+    return image instanceof HTMLImageElement && image.naturalWidth > 0 ? image : null;
+  }
+  const image = FACE_IMAGE_CACHE[path];
+  return image instanceof HTMLImageElement && image.naturalWidth > 0 ? image : null;
+}
+
 
 const FACE_PRELOAD_PROMISE = Promise.all(
   FACES.map(face =>
@@ -1618,18 +1674,22 @@ const Spatial3D = (() => {
      * Prefer the application's already-verified image cache.
      * This supports both Anime WebP and human-face images.
      */
-    const cachedImage =
-      (
-        typeof ANIME_IMAGE_CACHE !== 'undefined' &&
-        ANIME_IMAGE_CACHE.standard &&
-        ANIME_IMAGE_CACHE.standard[imagePath]
-      ) ||
-      (
-        typeof App !== 'undefined' &&
-        App.engine &&
-        App.engine.imageCache &&
-        App.engine.imageCache[imagePath]
-      );
+    let cachedImage = null;
+    if (typeof ANIME_IMAGE_CACHE !== 'undefined') {
+      for (const mode of ANIME_MODES) {
+        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
+        if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
+          cachedImage = candidate;
+          break;
+        }
+      }
+    }
+    if (!cachedImage && typeof App !== 'undefined' && App.engine?.imageCache) {
+      const candidate = App.engine.imageCache[imagePath];
+      if (candidate instanceof HTMLImageElement && candidate.naturalWidth > 0 && candidate.naturalHeight > 0) {
+        cachedImage = candidate;
+      }
+    }
 
     if (
       cachedImage instanceof HTMLImageElement &&
@@ -1885,44 +1945,31 @@ class GameEngine {
   }
 
   async preloadImages() {
-    if (this._preloadPromise) return this._preloadPromise;
+    const selectedType = this.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+    const selectedMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
+    const key = selectedType + ':' + selectedMode;
 
-    this._preloadPromise = (async () => {
-      try {
-        await FACE_PRELOAD_PROMISE;
+    if (this._selectedPreloadKey === key && this._selectedPreloadResult) {
+      return this._selectedPreloadResult;
+    }
+
+    this._selectedPreloadKey = key;
+    this._selectedPreloadResult = preloadAssets({ stimulusType: selectedType, animeMode: selectedMode })
+      .then(result => {
         FACES.forEach(face => {
-          this.imageCache[face.file] = FACE_IMAGE_CACHE[face.file] instanceof HTMLImageElement;
+          const image = FACE_IMAGE_CACHE[face.file];
+          if (image instanceof HTMLImageElement) this.imageCache[face.file] = image;
         });
+        this.imagesLoaded = selectedType === 'human_faces' ? result.ready : true;
+        this.animeImagesLoaded = selectedType === 'anime_faces' ? result.ready : getCachedAnimePaths(selectedMode).length > 0;
+        return result;
+      })
+      .catch(error => {
+        console.warn('[ATTENTIONAL SHIELD] Selected asset preload failed; continuing with fallbacks.', error);
+        return { stimulusType: selectedType, animeMode: selectedMode, requested: 0, loaded: [], failed: [], ready: false };
+      });
 
-        await ANIME_PRELOAD_READY;
-
-        const standardAnime = getCachedAnimePaths('standard');
-        const waifuAnime = getCachedAnimePaths('waifu');
-        const selectedMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
-        const selectedAnime = getCachedAnimePaths(selectedMode);
-        this.imagesLoaded = true;
-        this.animeImagesLoaded = selectedAnime.length > 0;
-
-        console.info('[ATTENTIONAL SHIELD] Image preload complete:', {
-          humanFaces: Object.values(this.imageCache).filter(Boolean).length,
-          animeStandard: standardAnime.length,
-          animeWaifu: waifuAnime.length,
-          selectedAnimeMode: selectedMode,
-          selectedAnimeLoaded: selectedAnime.length,
-          animeReady: this.animeImagesLoaded
-        });
-        return {animeReady:this.animeImagesLoaded, animeLoaded:selectedAnime.length, animeStandard:standardAnime.length, animeWaifu:waifuAnime.length};
-      } catch (error) {
-        // Never let an optional visual asset prevent the WMT engine from starting.
-        this.imagesLoaded = true;
-        const selectedMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
-        this.animeImagesLoaded = getCachedAnimePaths(selectedMode).length > 0;
-        console.warn('[ATTENTIONAL SHIELD] Non-fatal image preload issue; session can continue.', error);
-        return {animeReady:this.animeImagesLoaded, animeLoaded:getCachedAnimePaths(selectedMode).length};
-      }
-    })();
-
-    return this._preloadPromise;
+    return this._selectedPreloadResult;
   }
 
   initVoices() {
@@ -2549,22 +2596,37 @@ const App = {
 
   async startSession() {
     const s = this.engine.getSettings();
+    const loading = document.getElementById('asset-loading-overlay');
+    const startButton = document.getElementById('btn-init-session');
 
-    // Asset loading is deliberately non-fatal. Await it before the game screen
-    // is entered, then use human faces if Anime Standard is unavailable.
-    try {
-      await this.engine.preloadImages();
-    } catch (error) {
-      console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
-      this.engine.imagesLoaded = true;
-      const selectedAnimeMode = ANIME_MODES.includes(this.engine.animeMode) ? this.engine.animeMode : 'standard';
-      this.engine.animeImagesLoaded = getCachedAnimePaths(selectedAnimeMode).length > 0;
-    }
-
+    // Set the selected visual family BEFORE preloading. This is critical for
+    // anime_waifu: the Waifu cache must be populated before trial generation.
     this.engine.reset();
     this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
     this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-    this.engine.animeMode = s.animeMode || 'standard';
+    this.engine.animeMode = ANIME_MODES.includes(s.animeMode) ? s.animeMode : 'standard';
+
+    if (loading) {
+      loading.classList.add('active');
+      loading.setAttribute('aria-hidden', 'false');
+      const label = loading.querySelector('.asset-loading-label');
+      if (label) label.textContent = 'LOADING ASSETS...';
+    }
+    if (startButton) startButton.disabled = true;
+
+    try {
+      const result = await this.engine.preloadImages();
+      console.info('[ATTENTIONAL SHIELD] Selected assets ready:', result);
+    } catch (error) {
+      console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
+    } finally {
+      if (loading) {
+        loading.classList.remove('active');
+        loading.setAttribute('aria-hidden', 'true');
+      }
+      if (startButton) startButton.disabled = false;
+    }
+
     this.engine.setActiveStimuli();
     this.engine.currentN = s.startN;
     this.engine.highestN = s.startN;
@@ -2747,8 +2809,10 @@ const App = {
     if (this.engine.activeStimuli.includes('pos')) {
       const targetEl = document.getElementById('pos-' + trial.pos);
       const isAnime = trial.visualType === 'anime_faces';
-      const imageCache = isAnime ? (ANIME_IMAGE_CACHE.standard || {}) : this.engine.imageCache;
+      const animeMode = isAnime && ANIME_MODES.includes(trial.animeMode) ? trial.animeMode : 'standard';
+      const imageCache = isAnime ? (ANIME_IMAGE_CACHE[animeMode] || {}) : this.engine.imageCache;
       const imagePath = trial.face;
+      const preloadedImage = getPreloadedImage(imagePath, isAnime ? 'anime_faces' : 'human_faces', animeMode);
 
       const showFallback = (label) => {
         if (!targetEl) return;
@@ -2770,7 +2834,7 @@ const App = {
         }
       };
 
-      if (isAnime && !(imagePath && imageCache[imagePath] instanceof HTMLImageElement && imageCache[imagePath].naturalWidth > 0)) {
+      if (imagePath && !(preloadedImage instanceof HTMLImageElement && preloadedImage.naturalWidth > 0)) {
         console.error('Failed to load anime face path:', imagePath);
         showFallback('ANIME');
       } else if (s.gridType === '3d') {
@@ -2790,7 +2854,9 @@ const App = {
             img.style.display = 'none';
             if (fb) { fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase(); fb.style.display = 'flex'; }
           };
-          img.src = imagePath;
+          img.src = preloadedImage instanceof HTMLImageElement
+            ? (preloadedImage.currentSrc || preloadedImage.src)
+            : imagePath;
           if (fb) fb.style.display = 'none';
         } else {
           showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
@@ -3160,6 +3226,7 @@ const boot = () => {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
 else boot();
 })();
+
 </script>
 </body>
 </html>
