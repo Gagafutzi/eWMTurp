@@ -1671,38 +1671,131 @@ const Spatial3D = (() => {
     }
   }
 
-  function applyTexture(texture) {
-    if (!activeStimulus || !texture) return;
-    if ('colorSpace' in texture && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+  function setActiveNodeTexture(index, texture) {
+    if (!activeCube || !texture) return;
+
+    if ('colorSpace' in texture && THREE.SRGBColorSpace) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }
     texture.needsUpdate = true;
-    activeStimulus.material.map = texture;
-    activeStimulus.material.color.set(0xffffff);
-    activeStimulus.material.opacity = 1;
-    activeStimulus.material.needsUpdate = true;
+
+    if (activeTexture && activeTexture !== texture) {
+      try { activeTexture.dispose(); } catch (_) {}
+    }
     activeTexture = texture;
+
+    const oldOutline = activeCube.getObjectByName('boldOutline');
+    if (oldOutline) {
+      if (oldOutline.geometry) oldOutline.geometry.dispose();
+      if (oldOutline.material) {
+        if (Array.isArray(oldOutline.material)) {
+          oldOutline.material.forEach(m => m.dispose());
+        } else {
+          oldOutline.material.dispose();
+        }
+      }
+      activeCube.remove(oldOutline);
+    }
+
+    const imageMaterial = new THREE.MeshStandardMaterial({
+      map: texture,
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveMap: texture,
+      emissiveIntensity: 0.35,
+      roughness: 0.55,
+      metalness: 0.18,
+      transparent: false,
+      side: THREE.FrontSide
+    });
+
+    const accentMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00f0ff,
+      emissive: 0x00f0ff,
+      emissiveIntensity: 0.35,
+      roughness: 0.28,
+      metalness: 0.78,
+      transparent: true,
+      opacity: 0.94,
+      side: THREE.FrontSide
+    });
+
+    activeCube.material = [
+      accentMaterial,
+      accentMaterial,
+      accentMaterial,
+      accentMaterial,
+      imageMaterial,
+      imageMaterial
+    ];
+
+    activeCube.material.forEach(m => {
+      m.needsUpdate = true;
+    });
+
+    const outlineGeometry = new THREE.EdgesGeometry(activeCube.geometry);
+    const outlineMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 1.0,
+      depthTest: true,
+      depthWrite: false
+    });
+
+    const wireframe = new THREE.LineSegments(
+      outlineGeometry,
+      outlineMaterial
+    );
+    wireframe.name = 'boldOutline';
+    wireframe.scale.setScalar(1.015);
+    activeCube.add(wireframe);
+
+    activeCube.scale.setScalar(1.35);
+    activeCube.visible = true;
   }
 
-  function getCachedStimulusImage(imagePath) {
-    if (!imagePath) return null;
+  function applyTexture(texture) {
+    setActiveNodeTexture(null, texture);
+  }
 
-    if (typeof ANIME_IMAGE_CACHE !== 'undefined' && typeof ANIME_MODES !== 'undefined') {
-      for (const mode of ANIME_MODES) {
-        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
-        if (isRenderableCachedAsset(candidate)) return candidate;
+  function resetNode(index) {
+    if (!activeCube) return;
+
+    const boldOutline = activeCube.getObjectByName('boldOutline');
+    if (boldOutline) {
+      if (boldOutline.geometry) boldOutline.geometry.dispose();
+      if (boldOutline.material) {
+        if (Array.isArray(boldOutline.material)) {
+          boldOutline.material.forEach(m => m.dispose());
+        } else {
+          boldOutline.material.dispose();
+        }
       }
+      activeCube.remove(boldOutline);
     }
 
-    if (typeof App !== 'undefined' && App.engine?.imageCache) {
-      const candidate = App.engine.imageCache[imagePath];
-      if (isRenderableCachedAsset(candidate)) return candidate;
+    if (activeTexture) {
+      try { activeTexture.dispose(); } catch (_) {}
+      activeTexture = null;
     }
 
-    if (typeof FACE_IMAGE_CACHE !== 'undefined') {
-      const candidate = FACE_IMAGE_CACHE[imagePath];
-      if (isRenderableCachedAsset(candidate)) return candidate;
+    if (activeCube.material && Array.isArray(activeCube.material)) {
+      activeCube.material.forEach(material => {
+        material.map = null;
+        if ('emissiveMap' in material) material.emissiveMap = null;
+        material.color.set(0x101820);
+        if ('emissive' in material) material.emissive.set(0x000000);
+        if ('emissiveIntensity' in material) material.emissiveIntensity = 0;
+        if ('roughness' in material) material.roughness = 0.8;
+        if ('metalness' in material) material.metalness = 0.15;
+        material.transparent = true;
+        material.opacity = 0.18;
+        material.needsUpdate = true;
+      });
     }
 
-    return null;
+    activeCube.scale.setScalar(1.0);
+    activeCube.visible = false;
   }
 
   function loadStimulusTexture(imagePath) {
