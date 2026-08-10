@@ -718,6 +718,145 @@ button, input, select { position:relative; z-index:1; }
 #grid-2d:not(.active){display:none !important;}
 </style>
 
+
+<style id="attentional-shield-2d-grid-overflow-fix">
+/* ================================================================
+   2D GRID OVERFLOW FIX
+   Keeps the complete 3x3 matrix inside the game-stage on every viewport.
+   This does not alter the 3D renderer, stimulus logic, or visual assets.
+   ================================================================ */
+
+.game-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.grid-2d {
+  position: relative;
+  flex: 0 1 auto;
+  width: min(100%, 72vh, 72vw);
+  height: min(100%, 72vh, 72vw);
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: auto;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden !important;
+
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: clamp(4px, 0.65vmin, 10px);
+
+  align-content: stretch;
+  justify-content: stretch;
+  place-content: stretch;
+}
+
+.grid-2d > * {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.grid-2d .grid-cell,
+.grid-2d .cell,
+.grid-2d [class*="cell"] {
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.grid-2d img,
+.grid-2d video,
+.grid-2d canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 767px) {
+  .game-stage {
+    min-height: 0;
+    height: 100%;
+    padding: clamp(4px, 1.5vw, 12px);
+  }
+
+  .grid-2d {
+    width: min(
+      100%,
+      78vh,
+      92vw
+    );
+    height: min(
+      100%,
+      78vh,
+      92vw
+    );
+    gap: clamp(3px, 1vw, 7px);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-2d {
+    width: min(
+      100%,
+      68vh,
+      68vw
+    );
+    height: min(
+      100%,
+      68vh,
+      68vw
+    );
+  }
+}
+
+/* Prevent any visual effect/pseudo-element from painting outside the matrix. */
+.grid-2d::before,
+.grid-2d::after,
+.grid-2d > *::before,
+.grid-2d > *::after {
+  max-width: 100%;
+  max-height: 100%;
+}
+</style>
+
+
+<style id="attentional-shield-2d-grid-state-fix">
+#grid-2d {
+  box-sizing: border-box;
+}
+
+#grid-2d.active {
+  display: grid !important;
+}
+
+#grid-2d:not(.active) {
+  display: none !important;
+}
+</style>
+
 </head>
 <body>
 
@@ -1889,6 +2028,44 @@ class ThreeDGridEngine {
     this.latticeGroup.add(this.activeCube);
   }
 
+  getCachedStimulusImage(imagePath) {
+    const renderable = image =>
+      image instanceof HTMLImageElement &&
+      image.complete &&
+      image.naturalWidth > 0 &&
+      image.naturalHeight > 0;
+
+    if (!imagePath || typeof imagePath !== 'string') return null;
+
+    // Resolve the exact selected Anime mode first. This prevents an Anime
+    // stimulus from accidentally resolving through another mode or the
+    // human FACE_IMAGE_CACHE.
+    const selectedMode =
+      typeof App !== 'undefined' &&
+      App.engine?.stimulusType === 'anime_faces'
+        ? (ANIME_MODES.includes(App.engine?.animeMode)
+            ? App.engine.animeMode
+            : 'standard')
+        : null;
+
+    if (selectedMode && typeof ANIME_IMAGE_CACHE !== 'undefined') {
+      const selected = ANIME_IMAGE_CACHE[selectedMode]?.[imagePath];
+      if (renderable(selected)) return selected;
+    }
+
+    if (typeof App !== 'undefined' && App.engine?.imageCache) {
+      const candidate = App.engine.imageCache[imagePath];
+      if (renderable(candidate)) return candidate;
+    }
+
+    if (typeof FACE_IMAGE_CACHE !== 'undefined') {
+      const candidate = FACE_IMAGE_CACHE[imagePath];
+      if (renderable(candidate)) return candidate;
+    }
+
+    return null;
+  }
+
   configureTexture(texture) {
     if (!texture) return texture;
 
@@ -1906,135 +2083,79 @@ class ThreeDGridEngine {
     texture.wrapT = THREE.ClampToEdgeWrapping;
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
 
     return texture;
   }
 
-  getCachedStimulusImage(imagePath) {
-    const renderable = image =>
-      image instanceof HTMLImageElement &&
-      image.naturalWidth > 0 &&
-      image.naturalHeight > 0;
-
-    if (
-      typeof ANIME_IMAGE_CACHE !== 'undefined' &&
-      Array.isArray(ANIME_MODES)
-    ) {
-      for (const mode of ANIME_MODES) {
-        const candidate = ANIME_IMAGE_CACHE[mode]?.[imagePath];
-        if (renderable(candidate)) return candidate;
-      }
+  createTextureFromImage(image) {
+    if (!(image instanceof HTMLImageElement)) return null;
+    if (!image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+      return null;
     }
 
-    if (
-      typeof App !== 'undefined' &&
-      App.engine?.imageCache
-    ) {
-      const candidate = App.engine.imageCache[imagePath];
-      if (renderable(candidate)) return candidate;
-    }
-
-    if (typeof FACE_IMAGE_CACHE !== 'undefined') {
-      const candidate = FACE_IMAGE_CACHE[imagePath];
-      if (renderable(candidate)) return candidate;
-    }
-
-    return null;
+    // The image is already loaded by the application's preload cache.
+    // THREE.Texture(image) avoids a second network request and is the most
+    // reliable bridge from an HTMLImageElement into WebGL.
+    const texture = new THREE.Texture(image);
+    return this.configureTexture(texture);
   }
 
-  clearActiveTexture() {
-    if (this.activeCube) {
-      const materials = Array.isArray(this.activeCube.material)
-        ? this.activeCube.material
-        : [this.activeCube.material];
-
-      materials.forEach(material => {
-        if (!material) return;
-        material.map = null;
-        material.color.set(0xffffff);
-        material.needsUpdate = true;
-      });
-    }
-
-    if (this.activeTexture) {
-      try { this.activeTexture.dispose(); } catch (_) {}
-      this.activeTexture = null;
-    }
-  }
-
-  setActiveNodeTexture(index, texture) {
-    if (!this.activeCube || !texture || this.activeIndex !== index) {
-      return false;
-    }
-
-    this.clearActiveTexture();
-    const configured = this.configureTexture(texture);
-
-    const materials = Array.isArray(this.activeCube.material)
-      ? this.activeCube.material
-      : [this.activeCube.material];
-
-    materials.forEach(material => {
-      material.map = configured;
-      material.color.set(0xffffff);
-      material.needsUpdate = true;
-    });
-
-    this.activeTexture = configured;
-    return true;
-  }
-
-  loadStimulusTexture(imagePath) {
+  loadStimulusTexture(imageSource) {
     const requestId = ++this.textureRequestId;
     this.clearActiveTexture();
 
-    if (!imagePath || !this.textureLoader || !this.activeCube) return;
+    if (!imageSource || !this.activeCube) return;
 
-    const cachedImage = this.getCachedStimulusImage(imagePath);
+    // IMPORTANT: runTrial() passes the preloaded HTMLImageElement directly.
+    // Never send that object to TextureLoader.load(), which expects a URL.
+    if (imageSource instanceof HTMLImageElement) {
+      const texture = this.createTextureFromImage(imageSource);
 
-    if (cachedImage) {
-      const texture = this.configureTexture(
-        new THREE.Texture(cachedImage)
-      );
-
-      if (requestId === this.textureRequestId && this.activeCube) {
+      if (texture && requestId === this.textureRequestId && this.activeCube) {
         this.setActiveNodeTexture(this.activeIndex, texture);
-      } else {
+      } else if (texture) {
         texture.dispose();
       }
       return;
     }
 
+    const imagePath = String(imageSource);
+    const cachedImage = this.getCachedStimulusImage(imagePath);
+
+    if (cachedImage) {
+      const texture = this.createTextureFromImage(cachedImage);
+      if (texture && requestId === this.textureRequestId && this.activeCube) {
+        this.setActiveNodeTexture(this.activeIndex, texture);
+      } else if (texture) {
+        texture.dispose();
+      }
+      return;
+    }
+
+    // Dynamic fallback for a preload race. TextureLoader is only used for a
+    // genuine URL string, never for an HTMLImageElement.
+    if (!this.textureLoader) return;
+
     this.textureLoader.load(
       imagePath,
       texture => {
-        if (
-          requestId !== this.textureRequestId ||
-          !this.activeCube
-        ) {
+        if (requestId !== this.textureRequestId || !this.activeCube) {
           texture.dispose();
           return;
         }
-
         this.configureTexture(texture);
         this.setActiveNodeTexture(this.activeIndex, texture);
       },
       undefined,
       error => {
         if (requestId !== this.textureRequestId) return;
-
-        console.warn(
-          '[ThreeDGridEngine] Stimulus texture failed:',
-          imagePath,
-          error
-        );
+        console.warn('[ThreeDGridEngine] Stimulus texture failed:', imagePath, error);
 
         const fallbackCanvas = document.createElement('canvas');
         fallbackCanvas.width = 256;
         fallbackCanvas.height = 256;
-
         const ctx = fallbackCanvas.getContext('2d');
-
         if (ctx) {
           ctx.fillStyle = '#00f0ff';
           ctx.fillRect(0, 0, 256, 256);
@@ -2049,15 +2170,8 @@ class ThreeDGridEngine {
           ctx.textBaseline = 'middle';
           ctx.fillText('STIMULUS', 128, 128);
         }
-
-        const fallbackTexture = this.configureTexture(
-          new THREE.CanvasTexture(fallbackCanvas)
-        );
-
-        this.setActiveNodeTexture(
-          this.activeIndex,
-          fallbackTexture
-        );
+        const fallbackTexture = this.configureTexture(new THREE.CanvasTexture(fallbackCanvas));
+        this.setActiveNodeTexture(this.activeIndex, fallbackTexture);
       }
     );
   }
@@ -2397,7 +2511,7 @@ class ThreeDGridEngine {
       );
   }
 
-  setActiveCell(index, imagePath = null) {
+  setActiveCell(index, imageSource = null) {
     if (
       !this.activeCube ||
       !this.latticeGroup
@@ -2441,8 +2555,8 @@ class ThreeDGridEngine {
       node.material.needsUpdate = true;
     }
 
-    if (imagePath) {
-      this.loadStimulusTexture(imagePath);
+    if (imageSource) {
+      this.loadStimulusTexture(imageSource);
     } else {
       this.clearActiveTexture();
     }
@@ -2450,10 +2564,10 @@ class ThreeDGridEngine {
     return true;
   }
 
-  setStimulusPosition(index, imagePath = null) {
+  setStimulusPosition(index, imageSource = null) {
     return this.setActiveCell(
       index,
-      imagePath
+      imageSource
     );
   }
 
