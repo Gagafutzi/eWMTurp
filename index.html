@@ -687,6 +687,144 @@ button, input, select { position:relative; z-index:1; }
 
 </style>
 
+
+<style id="attentional-shield-final-3d-fix">
+/* ================================================================
+   ATTENTIONAL SHIELD — FINAL RIGID CSS 3D VIEWPORT
+   The perspective is isolated to this wrapper. The wrapper itself is
+   always exactly 260px x 260px, independent of viewport aspect ratio.
+   ================================================================ */
+.scene-3d-wrapper {
+  position: relative !important;
+  width: 260px !important;
+  height: 260px !important;
+  min-width: 260px !important;
+  min-height: 260px !important;
+  max-width: 260px !important;
+  max-height: 260px !important;
+  flex: 0 0 260px !important;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  perspective: 800px !important;
+  perspective-origin: 50% 50%;
+  overflow: visible !important;
+  isolation: isolate;
+  box-sizing: border-box;
+}
+.scene-3d-wrapper.active {
+  display: flex !important;
+}
+.scene-3d {
+  position: relative !important;
+  width: 260px !important;
+  height: 260px !important;
+  min-width: 260px !important;
+  min-height: 260px !important;
+  max-width: 260px !important;
+  max-height: 260px !important;
+  flex: 0 0 260px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  perspective: none !important;
+  transform-style: preserve-3d;
+  box-sizing: border-box;
+}
+.scene-3d-wrapper:not(.active) .scene-3d {
+  display: flex !important;
+}
+.cube-3d {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: 0 !important;
+  height: 0 !important;
+  transform-style: preserve-3d !important;
+  transform-origin: 50% 50% !important;
+  animation: rotate3d var(--rot-speed,20s) infinite linear !important;
+  will-change: transform;
+  overflow: visible !important;
+}
+.cube-face {
+  position: absolute !important;
+  left: -130px !important;
+  top: -130px !important;
+  width: 260px !important;
+  height: 260px !important;
+  min-width: 260px !important;
+  min-height: 260px !important;
+  max-width: 260px !important;
+  max-height: 260px !important;
+  box-sizing: border-box !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden !important;
+  background: rgba(12,18,30,.08);
+  border: 1px solid rgba(225,235,250,.20);
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  transform-style: preserve-3d !important;
+  object-fit: cover !important;
+  pointer-events: none;
+  user-select: none;
+}
+.cube-face img {
+  width: 260px !important;
+  height: 260px !important;
+  min-width: 260px !important;
+  min-height: 260px !important;
+  max-width: 260px !important;
+  max-height: 260px !important;
+  object-fit: cover !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  pointer-events: none;
+}
+.cube-face.front  { transform: translateZ(130px) !important; }
+.cube-face.back   { transform: rotateY(180deg) translateZ(130px) !important; }
+.cube-face.right  { transform: rotateY(90deg) translateZ(130px) !important; }
+.cube-face.left   { transform: rotateY(-90deg) translateZ(130px) !important; }
+.cube-face.top    { transform: rotateX(90deg) translateZ(130px) !important; }
+.cube-face.bottom { transform: rotateX(-90deg) translateZ(130px) !important; }
+
+.mini-cube {
+  z-index: 2;
+}
+.mini-face {
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+}
+.scene-3d .word-interference-3d {
+  left: 50% !important;
+  top: 50% !important;
+  z-index: 20 !important;
+}
+@media (max-width: 767px) {
+  .scene-3d-wrapper {
+    width: 260px !important;
+    height: 260px !important;
+    min-width: 260px !important;
+    min-height: 260px !important;
+    max-width: 260px !important;
+    max-height: 260px !important;
+    flex: 0 0 260px !important;
+    perspective: 800px !important;
+  }
+  .scene-3d {
+    width: 260px !important;
+    height: 260px !important;
+    min-width: 260px !important;
+    min-height: 260px !important;
+    max-width: 260px !important;
+    max-height: 260px !important;
+    flex: 0 0 260px !important;
+  }
+}
+</style>
+
 </head>
 <body>
 
@@ -930,7 +1068,11 @@ button, input, select { position:relative; z-index:1; }
         </div>
       </div>
       <div class="grid-2d" id="grid-2d"></div>
-      <div class="scene-3d" id="scene-3d"><div class="cube-3d" id="cube-3d"></div></div>
+      <div class="scene-3d-wrapper" id="scene-3d-wrapper">
+        <div class="scene-3d" id="scene-3d">
+          <div class="cube-3d" id="cube-3d"></div>
+        </div>
+      </div>
     </div>
     <div class="side-controls" id="side-right"></div>
     <div class="response-controls" id="mobile-response-controls" aria-label="Response controls"></div>
@@ -2392,6 +2534,7 @@ const Spatial3D = (() => {
 function cleanupRenderers() {
   const grid2d = document.getElementById('grid-2d');
   const scene3d = document.getElementById('scene-3d');
+  const scene3dWrapper = document.getElementById('scene-3d-wrapper');
 
   // Cancel the Three.js animation loop and dispose its WebGL resources.
   try {
@@ -2425,6 +2568,11 @@ function cleanupRenderers() {
     scene3d.classList.remove('active');
     scene3d.style.setProperty('display', 'none', 'important');
     scene3d.setAttribute('aria-hidden', 'true');
+    if (scene3dWrapper) {
+      scene3dWrapper.classList.remove('active');
+      scene3dWrapper.style.setProperty('display', 'none', 'important');
+      scene3dWrapper.setAttribute('aria-hidden', 'true');
+    }
   }
 
   // Clear the CSS 3D fallback DOM as well.
@@ -2444,11 +2592,17 @@ function cleanupRenderers() {
 function activate2DRenderer() {
   const grid2d = document.getElementById('grid-2d');
   const scene3d = document.getElementById('scene-3d');
+  const scene3dWrapper = document.getElementById('scene-3d-wrapper');
 
   if (scene3d) {
     scene3d.classList.remove('active');
     scene3d.style.setProperty('display', 'none', 'important');
     scene3d.setAttribute('aria-hidden', 'true');
+  }
+  if (scene3dWrapper) {
+    scene3dWrapper.classList.remove('active');
+    scene3dWrapper.style.setProperty('display', 'none', 'important');
+    scene3dWrapper.setAttribute('aria-hidden', 'true');
   }
 
   if (grid2d) {
@@ -2461,6 +2615,7 @@ function activate2DRenderer() {
 function activate3DRenderer() {
   const grid2d = document.getElementById('grid-2d');
   const scene3d = document.getElementById('scene-3d');
+  const scene3dWrapper = document.getElementById('scene-3d-wrapper');
 
   if (grid2d) {
     grid2d.classList.remove('active');
@@ -2473,6 +2628,11 @@ function activate3DRenderer() {
     scene3d.classList.add('active');
     scene3d.style.setProperty('display', 'flex', 'important');
     scene3d.setAttribute('aria-hidden', 'false');
+  }
+  if (scene3dWrapper) {
+    scene3dWrapper.classList.add('active');
+    scene3dWrapper.style.setProperty('display', 'flex', 'important');
+    scene3dWrapper.setAttribute('aria-hidden', 'false');
   }
 }
 
@@ -2491,6 +2651,20 @@ function createCSS3DCubeGrid(container) {
   if (!cube) return null;
 
   cube.replaceChildren();
+
+  const rigidFaces = [
+    ['front', 'FRONT'], ['back', 'BACK'],
+    ['right', 'RIGHT'], ['left', 'LEFT'],
+    ['top', 'TOP'], ['bottom', 'BOTTOM']
+  ];
+  rigidFaces.forEach(([name, label]) => {
+    const face = document.createElement('div');
+    face.className = `cube-face ${name}`;
+    face.setAttribute('aria-hidden', 'true');
+    face.dataset.face = name;
+    face.title = label;
+    cube.appendChild(face);
+  });
 
   const rect = container.getBoundingClientRect();
   const size = Math.max(44, Math.min(82, Math.min(rect.width || 360, rect.height || 360) * 0.18));
@@ -2624,6 +2798,14 @@ class GameEngine {
     this.animeImagesLoaded = false;
     this.stimulusType = 'human_faces';
     this.animeMode = 'standard';
+    this.pendingAgeAction = null;
+    this.ageVerified = (() => {
+      try {
+        return sessionStorage.getItem('age_verified') === '1';
+      } catch (e) {
+        return false;
+      }
+    })();
   }
   reset() {
     this.trials = []; this.kSeq = []; this.currentTrial = 0; this.blockTrials = 0;
@@ -2632,6 +2814,9 @@ class GameEngine {
     this.sessionStart = 0; this.sessionMs = 0; this.lastTick = 0;
     this.timerInterval = null; this.trialTimeout = null; this.trialAdvanceTimeout = null;
     this.currentN = 2; this.highestN = 2;
+    this.sessionLimitMs = 0;
+    this.sessionTotalTrials = 0;
+    this.sessionTrialsCompleted = 0;
   }
 
   async preloadImages() {
@@ -2812,6 +2997,11 @@ class GameEngine {
 
   generateBlock() {
     const s = this.getSettings();
+
+    if (this.blockTrials > 0 && this.currentTrial >= this.blockTrials) {
+      this.sessionTrialsCompleted += this.currentTrial;
+    }
+
     this.blockTrials = 20 + (this.currentN * this.currentN);
     this.kSeq = [];
     const minK = s.variableN ? s.varMin : this.currentN;
@@ -3184,19 +3374,6 @@ const App = {
       ? 'anime_faces'
       : 'human_faces';
 
-    if (
-      normalized === 'anime_faces' &&
-      !options.skipAgeGate &&
-      !this.ageVerified
-    ) {
-      this.pendingAgeAction = {
-        type: 'set-stimulus-type',
-        value: normalized
-      };
-      this.openAgeGate();
-      return;
-    }
-
     // Preserve the selected Anime subtype when switching the visual family.
     if (normalized === 'anime_faces') {
       this.animeMode = ['standard', 'waifu', 'hentai'].includes(this.animeMode)
@@ -3225,23 +3402,32 @@ const App = {
     this.setAnimeMode(this.animeMode || 'standard', false);
 
     const status = document.getElementById('stimulus-type-status');
-    if (status) status.textContent = humanActive
-      ? 'Human Faces • Standard affective faces'
-      : 'Anime Faces • Standard';
+    if (status) {
+      if (humanActive) {
+        status.textContent = 'Human Faces • Standard affective faces';
+      } else {
+        const labels = {
+          standard: 'Anime Faces • Standard',
+          waifu: 'Anime Faces • Waifu',
+          hentai: 'Anime Faces • Hentai • 18+'
+        };
+        status.textContent = labels[this.animeMode] || 'Anime Faces • Standard';
+      }
+    }
 
     if (persist) this.saveSettings();
   },
 
   setAnimeMode(mode, persist = true, options = {}) {
-    // Standard, Waifu, and Hentai are adult/restricted visual datasets.
+    // ONLY Hentai is age-gated. Standard Anime and Waifu are immediately accessible.
     if (
-      ['standard', 'waifu', 'hentai'].includes(mode) &&
+      mode === 'hentai' &&
       !options.skipAgeGate &&
       !this.ageVerified
     ) {
       this.pendingAgeAction = {
         type: 'set-anime-mode',
-        value: mode
+        value: 'hentai'
       };
       this.openAgeGate();
       return;
@@ -3399,7 +3585,7 @@ const App = {
 
   isRestrictedStimulusSelection() {
     return this.engine.stimulusType === 'anime_faces' &&
-      ['standard', 'waifu', 'hentai'].includes(this.engine.animeMode);
+      this.engine.animeMode === 'hentai';
   },
 
   openAgeGate() {
@@ -3431,8 +3617,11 @@ const App = {
   },
 
   confirmAgeGate() {
-    // Verification is session-scoped: it is not written to persistent settings.
+    // Verification is session-scoped and survives only for this browser tab/session.
     this.ageVerified = true;
+    try {
+      sessionStorage.setItem('age_verified', '1');
+    } catch (e) {}
 
     const pending = this.pendingAgeAction;
     this.closeAgeGate();
@@ -3504,6 +3693,17 @@ const App = {
     this.engine.sessionStart = Date.now();
     this.engine.lastTick = Date.now();
     this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
+    this.engine.sessionTrialsCompleted = 0;
+
+    const estimatedIsi = s.isiMode === 'fixed'
+      ? Math.max(500, Number(s.isiFixed) || DEFAULT_ISI)
+      : (Math.max(500, Number(s.isiMin) || 1300) + Math.max(500, Number(s.isiMax) || 3000)) / 2;
+    const estimatedTrialMs = Math.max(500, Number(s.stimDur) || TRIAL_TIMING.stimulusMs) + estimatedIsi;
+    this.engine.sessionTotalTrials = Math.max(
+      1,
+      Math.floor(this.engine.sessionLimitMs / Math.max(1, estimatedTrialMs))
+    );
+
     this.engine.isRunning = true;
 
     if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
@@ -3737,7 +3937,11 @@ const App = {
     this.engine.isTrialActive = true;
 
     const hudTrial = document.getElementById('hud-trial');
-    if (hudTrial) hudTrial.textContent = (this.engine.currentTrial + 1) + ' / ' + this.engine.blockTrials;
+    if (hudTrial) {
+      const sessionIndex = this.engine.sessionTrialsCompleted + this.engine.currentTrial + 1;
+      const total = this.engine.sessionTotalTrials || this.engine.blockTrials;
+      hudTrial.textContent = sessionIndex + ' / ' + total;
+    }
     this.clearGrid();
 
     // Position stimulus
@@ -3991,7 +4195,8 @@ const App = {
   updateHUD() {
     const trial = document.getElementById('hud-trial');
     const dprime = document.getElementById('hud-dprime');
-    if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
+    const total = this.engine.sessionTotalTrials || this.engine.blockTrials;
+    if (trial) trial.textContent = '0 / ' + total;
     if (dprime) dprime.textContent = '0.00';
     this.updateLevelHUD();
   },
@@ -4056,7 +4261,7 @@ const App = {
       overallDPrime: overallD,
       overallAccuracy: overallAcc,
       modalityStats: modalityStats,
-      trialsCompleted: this.engine.currentTrial,
+      trialsCompleted: this.engine.sessionTrialsCompleted + this.engine.currentTrial,
       settings: this.engine.getSettings()
     });
 
@@ -4067,7 +4272,7 @@ const App = {
     if (resTime) resTime.textContent = formatTime(this.engine.sessionMs);
     if (resBestN) resBestN.textContent = this.engine.highestN;
     if (resD) resD.textContent = overallD.toFixed(2);
-    if (resTrials) resTrials.textContent = this.engine.currentTrial;
+    if (resTrials) resTrials.textContent = this.engine.sessionTrialsCompleted + this.engine.currentTrial;
 
     const breakdown = document.getElementById('modality-breakdown');
     if (breakdown) {
