@@ -413,7 +413,7 @@ button, input, select { position:relative; z-index:1; }
           <div class="anime-submode-heading"><span>Anime Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
           <div class="anime-submode-grid" role="group" aria-label="Anime stimulus subtype">
             <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime Faces</strong><small>Standard</small></button>
-            <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Waifu Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Waifu</small></button>
+            <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false"><strong>Anime Waifu Faces</strong><small>Waifu • 56 assets</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false" disabled aria-disabled="true"><strong>Hentai Faces <span class="anime-coming-soon">COMING SOON</span></strong><small>Hentai</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false" disabled aria-disabled="true"><strong>Anime Gore <span class="anime-coming-soon">COMING SOON</span></strong><small>Gore</small></button>
           </div>
@@ -679,20 +679,72 @@ const FACES = [
 // never depends on a runtime manifest.json or directory listing.
 const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
   standard: Object.freeze([
-    'assets/stimuli/anime/a.webp',
-    'assets/stimuli/anime/b.webp',
-    'assets/stimuli/anime/c.webp',
-    'assets/stimuli/anime/d.webp',
-    'assets/stimuli/anime/e.webp',
-    'assets/stimuli/anime/f.webp',
-    'assets/stimuli/anime/g.webp',
-    'assets/stimuli/anime/h.webp',
-    'assets/stimuli/anime/i.webp',
-    'assets/stimuli/anime/j.webp',
-    'assets/stimuli/anime/k.webp',
-    'assets/stimuli/anime/l.webp'
+    'assets/stimuli/anime/a.webp', 'assets/stimuli/anime/b.webp', 'assets/stimuli/anime/c.webp',
+    'assets/stimuli/anime/d.webp', 'assets/stimuli/anime/e.webp', 'assets/stimuli/anime/f.webp',
+    'assets/stimuli/anime/g.webp', 'assets/stimuli/anime/h.webp', 'assets/stimuli/anime/i.webp',
+    'assets/stimuli/anime/j.webp', 'assets/stimuli/anime/k.webp', 'assets/stimuli/anime/l.webp'
   ]),
-  waifu: Object.freeze([]),
+  waifu: Object.freeze([
+    'assets/stimuli/waifu/1d.jpg',
+    'assets/stimuli/waifu/1m.jpg',
+    'assets/stimuli/waifu/260px-Eva2-22_C0487-02_Crop.webp',
+    'assets/stimuli/waifu/waifu_0.webp',
+    'assets/stimuli/waifu/waifu_1.webp',
+    'assets/stimuli/waifu/waifu_2.webp',
+    'assets/stimuli/waifu/waifu_3.webp',
+    'assets/stimuli/waifu/waifu_4.webp',
+    'assets/stimuli/waifu/waifu_5.webp',
+    'assets/stimuli/waifu/waifu_7.webp',
+    'assets/stimuli/waifu/waifu_8.webp',
+    'assets/stimuli/waifu/waifu_9.webp',
+    'assets/stimuli/waifu/waifu_10.webp',
+    'assets/stimuli/waifu/waifu_11.webp',
+    'assets/stimuli/waifu/waifu_12.webp',
+    'assets/stimuli/waifu/waifu_13.webp',
+    'assets/stimuli/waifu/waifu_14.webp',
+    'assets/stimuli/waifu/waifu_15.webp',
+    'assets/stimuli/waifu/waifu_16.webp',
+    'assets/stimuli/waifu/waifu_17.webp',
+    'assets/stimuli/waifu/waifu_18.webp',
+    'assets/stimuli/waifu/waifu_19.webp',
+    'assets/stimuli/waifu/waifu_20.webp',
+    'assets/stimuli/waifu/waifu_21.webp',
+    'assets/stimuli/waifu/waifu_22.webp',
+    'assets/stimuli/waifu/waifu_23.webp',
+    'assets/stimuli/waifu/waifu_24.webp',
+    'assets/stimuli/waifu/waifu_25.webp',
+    'assets/stimuli/waifu/waifu_26.webp',
+    'assets/stimuli/waifu/waifu_27.webp',
+    'assets/stimuli/waifu/waifu_28.webp',
+    'assets/stimuli/waifu/waifu_29.webp',
+    'assets/stimuli/waifu/waifu_30.webp',
+    'assets/stimuli/waifu/waifu_31.webp',
+    'assets/stimuli/waifu/waifu_32.webp',
+    'assets/stimuli/waifu/waifu_33.webp',
+    'assets/stimuli/waifu/waifu_34.webp',
+    'assets/stimuli/waifu/waifu_35.webp',
+    'assets/stimuli/waifu/waifu_36.webp',
+    'assets/stimuli/waifu/waifu_37.webp',
+    'assets/stimuli/waifu/waifu_38.webp',
+    'assets/stimuli/waifu/waifu_39.webp',
+    'assets/stimuli/waifu/waifu_40.webp',
+    'assets/stimuli/waifu/waifu_41.webp',
+    'assets/stimuli/waifu/waifu_42.webp',
+    'assets/stimuli/waifu/waifu_43.webp',
+    'assets/stimuli/waifu/waifu_44.webp',
+    'assets/stimuli/waifu/waifu_45.webp',
+    'assets/stimuli/waifu/waifu_46.webp',
+    'assets/stimuli/waifu/waifu_47.webp',
+    'assets/stimuli/waifu/waifu_48.webp',
+    'assets/stimuli/waifu/waifu_49.webp',
+    'assets/stimuli/waifu/waifu_50.webp',
+    'assets/stimuli/waifu/waifu_51.webp',
+    'assets/stimuli/waifu/waifu_52.webp',
+    'assets/stimuli/waifu/waifu_53.webp',
+    'assets/stimuli/waifu/waifu_54.webp',
+    'assets/stimuli/waifu/waifu_55.webp',
+    'assets/stimuli/waifu/waifu_56.webp'
+  ]),
   hentai: Object.freeze([]),
   gore: Object.freeze([])
 });
@@ -1836,23 +1888,29 @@ class GameEngine {
 
         await ANIME_PRELOAD_READY;
 
-        const cachedAnime = getCachedAnimePaths('standard');
+        const standardAnime = getCachedAnimePaths('standard');
+        const waifuAnime = getCachedAnimePaths('waifu');
+        const selectedMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
+        const selectedAnime = getCachedAnimePaths(selectedMode);
         this.imagesLoaded = true;
-        this.animeImagesLoaded = cachedAnime.length > 0;
+        this.animeImagesLoaded = selectedAnime.length > 0;
 
         console.info('[ATTENTIONAL SHIELD] Image preload complete:', {
           humanFaces: Object.values(this.imageCache).filter(Boolean).length,
-          animeStandard: cachedAnime.length,
+          animeStandard: standardAnime.length,
+          animeWaifu: waifuAnime.length,
+          selectedAnimeMode: selectedMode,
+          selectedAnimeLoaded: selectedAnime.length,
           animeReady: this.animeImagesLoaded
         });
-
-        return {animeReady:this.animeImagesLoaded, animeLoaded:cachedAnime.length};
+        return {animeReady:this.animeImagesLoaded, animeLoaded:selectedAnime.length, animeStandard:standardAnime.length, animeWaifu:waifuAnime.length};
       } catch (error) {
         // Never let an optional visual asset prevent the WMT engine from starting.
         this.imagesLoaded = true;
-        this.animeImagesLoaded = getCachedAnimePaths('standard').length > 0;
+        const selectedMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
+        this.animeImagesLoaded = getCachedAnimePaths(selectedMode).length > 0;
         console.warn('[ATTENTIONAL SHIELD] Non-fatal image preload issue; session can continue.', error);
-        return {animeReady:this.animeImagesLoaded, animeLoaded:getCachedAnimePaths('standard').length};
+        return {animeReady:this.animeImagesLoaded, animeLoaded:getCachedAnimePaths(selectedMode).length};
       }
     })();
 
@@ -1947,7 +2005,7 @@ class GameEngine {
   }
 
   pickAnimeFace(mode = this.animeMode) {
-    const safeMode = mode === 'standard' ? 'standard' : 'standard';
+    const safeMode = ANIME_MODES.includes(mode) ? mode : 'standard';
     const available = getCachedAnimePaths(safeMode);
     if (!available.length) return null;
     return available[Math.floor(Math.random() * available.length)];
@@ -1955,14 +2013,15 @@ class GameEngine {
 
   pickVisualStimulus(emoLoad) {
     if (this.stimulusType === 'anime_faces') {
-      const animePath = this.pickAnimeFace('standard');
+      const safeMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
+      const animePath = this.pickAnimeFace(safeMode);
       if (animePath) {
-        return {type:'anime_faces', path:animePath, emotion:'anime', animeMode:'standard', fallbackFromAnime:false};
+        return {type:'anime_faces', path:animePath, emotion:'anime', animeMode:safeMode, fallbackFromAnime:false};
       }
 
       // Anime is optional. If its files are unavailable, continue the actual
       // training session using a verified human face rather than throwing.
-      console.warn('[ATTENTIONAL SHIELD] Anime assets unavailable; falling back to human face stimuli for this trial.');
+      console.warn('[ATTENTIONAL SHIELD] Anime ' + safeMode + ' assets unavailable; falling back to human face stimuli for this trial.');
       const face = this.pickFace(emoLoad);
       return {type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null, fallbackFromAnime:true};
     }
@@ -2034,7 +2093,7 @@ class GameEngine {
         faceEmotion:visual.emotion,
         visualType:visual.type,
         animeAsset:visual.type === 'anime_faces' ? visual.path : null,
-        animeMode:visual.type === 'anime_faces' ? 'standard' : null,
+        animeMode:visual.type === 'anime_faces' ? visual.animeMode : null,
         fallbackFromAnime:!!visual.fallbackFromAnime,
         word, audWord
       });
@@ -2320,10 +2379,8 @@ const App = {
   setStimulusType(type, persist = true) {
     const normalized = type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces';
 
-    // Standard Anime Faces is the only active anime subtype. Any attempt to
-    // select a locked subtype is safely coerced to Standard instead of
-    // entering a fallback loop or changing the underlying stimulus family.
-    if (normalized === 'anime_faces') this.animeMode = 'standard';
+    // Preserve the selected Anime subtype when switching the visual family.
+    if (normalized === 'anime_faces') this.animeMode = (this.animeMode === 'waifu') ? 'waifu' : 'standard';
 
     this.engine.stimulusType = normalized;
     this.engine.animeMode = this.animeMode || 'standard';
@@ -2343,7 +2400,7 @@ const App = {
     }
     if (panel) panel.hidden = humanActive;
 
-    this.setAnimeMode('standard', false);
+    this.setAnimeMode(this.animeMode || 'standard', false);
 
     const status = document.getElementById('stimulus-type-status');
     if (status) status.textContent = humanActive
@@ -2354,28 +2411,25 @@ const App = {
   },
 
   setAnimeMode(mode, persist = true) {
-    // waifu/hentai/gore are intentionally locked until their asset manifests
-    // are supplied. They cannot become the active engine state.
-    const normalized = mode === 'standard' ? 'standard' : 'standard';
+    // Standard and Waifu are active asset families. Hentai/Gore remain locked.
+    const normalized = mode === 'waifu' ? 'waifu' : 'standard';
     this.engine.animeMode = normalized;
     this.animeMode = normalized;
 
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
       const active = btn.dataset.animeMode === normalized;
-      const locked = btn.dataset.animeMode !== 'standard';
+      const locked = !['standard', 'waifu'].includes(btn.dataset.animeMode);
       btn.classList.toggle('active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      if (locked) {
-        btn.disabled = true;
-        btn.setAttribute('aria-disabled', 'true');
-      }
+      btn.disabled = locked;
+      if (locked) btn.setAttribute('aria-disabled', 'true');
+      else btn.removeAttribute('aria-disabled');
     });
 
     const status = document.getElementById('stimulus-type-status');
     if (status && this.engine.stimulusType === 'anime_faces') {
-      status.textContent = 'Anime Faces • Standard';
+      status.textContent = normalized === 'waifu' ? 'Anime Faces • Waifu' : 'Anime Faces • Standard';
     }
-
     if (persist) this.saveSettings();
   },
 
@@ -2495,7 +2549,8 @@ const App = {
     } catch (error) {
       console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
       this.engine.imagesLoaded = true;
-      this.engine.animeImagesLoaded = getCachedAnimePaths('standard').length > 0;
+      const selectedAnimeMode = ANIME_MODES.includes(this.engine.animeMode) ? this.engine.animeMode : 'standard';
+      this.engine.animeImagesLoaded = getCachedAnimePaths(selectedAnimeMode).length > 0;
     }
 
     this.engine.reset();
@@ -2511,7 +2566,7 @@ const App = {
     this.engine.isRunning = true;
 
     if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
-      console.warn('[ATTENTIONAL SHIELD] Anime Standard assets are unavailable. Human faces will be used as a non-fatal fallback.');
+      console.warn('[ATTENTIONAL SHIELD] Anime ' + this.engine.animeMode + ' assets are unavailable. Human faces will be used as a non-fatal fallback.');
     }
 
     AudioEngine.init();
