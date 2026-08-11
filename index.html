@@ -3837,112 +3837,78 @@ const App = {
   },
 
   handleKeydown(e) {
-    // Keybinding capture mode.
+    // Key-binding capture mode must work before any gameplay/focus checks.
     if (this.engine.listeningBind) {
       e.preventDefault();
       e.stopPropagation();
-
-      // Store the actual KeyboardEvent.key value. This preserves
-      // special keys such as Space and ArrowLeft/ArrowRight.
       this.engine.keys[this.engine.listeningBind] = e.key;
-
       this.engine.listeningBind = null;
       this.onStimChange();
       this.saveSettings();
       return;
     }
 
-    // Only handle modality keys while an actual trial is running.
-    if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) {
-      return;
-    }
-
-    // Never interfere with normal text-entry controls.
+    // Ignore keyboard input only when the user is actually typing in a form field.
     const target = e.target;
-    const tag = target?.tagName;
+    const tag = target && target.tagName ? target.tagName.toUpperCase() : '';
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable || e.isComposing) return;
 
-    if (
-      tag === 'INPUT' ||
-      tag === 'SELECT' ||
-      tag === 'TEXTAREA' ||
-      target?.isContentEditable ||
-      e.isComposing
-    ) {
-      return;
+    if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) return;
+    if (this.engine.currentTrial < 0 || this.engine.currentTrial >= this.engine.blockTrials) return;
+
+    const normalizeKey = (value) => {
+      const raw = String(value ?? '');
+      const lower = raw.toLowerCase();
+      if (lower === ' ' || lower === 'space' || lower === 'spacebar') return 'space';
+      if (lower === 'esc') return 'escape';
+      if (lower === 'return') return 'enter';
+      return lower;
+    };
+
+    const pressedKey = normalizeKey(e.key);
+    const pressedCode = normalizeKey(e.code);
+
+    // During an active trial, navigation/scroll keys must never reach the browser.
+    const browserControlKeys = new Set([
+      'space', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright',
+      'pageup', 'pagedown', 'home', 'end'
+    ]);
+
+    if (browserControlKeys.has(pressedKey) || browserControlKeys.has(pressedCode)) {
+      e.preventDefault();
     }
-
-    if (this.engine.currentTrial >= this.engine.blockTrials) {
-      return;
-    }
-
-    // Normalize the physical/logical key without using trim().
-    // trim() would turn the Space key (" ") into an empty string.
-    const pressedKey = String(e.key ?? '').toLowerCase();
-    const pressedCode = String(e.code ?? '').toLowerCase();
 
     for (const type of this.engine.activeStimuli) {
-      const rawBound = this.engine.keys[type];
+      const boundRaw = String(this.engine.keys[type] ?? '');
+      const boundKey = normalizeKey(boundRaw);
+      if (!boundKey) continue;
 
-      if (rawBound === undefined || rawBound === null) {
-        continue;
-      }
+      // Compare the configured e.key value AND e.code, so bindings remain
+      // reliable for letters, numbers, arrows, Space, and other special keys.
+      const boundCode = normalizeKey(boundRaw);
+      const physicalCode = pressedCode;
+      const keyMatch = pressedKey === boundKey;
+      const codeMatch = physicalCode === boundCode;
 
-      const bound = String(rawBound).toLowerCase();
+      // Also accept KeyX/DigitX when a binding was saved as just x/1.
+      const keyCodeMatch =
+        (boundKey.length === 1 && /^[a-z]$/.test(boundKey) && physicalCode === 'key' + boundKey) ||
+        (boundKey.length === 1 && /^[0-9]$/.test(boundKey) && physicalCode === 'digit' + boundKey);
 
-      if (!bound) {
-        continue;
-      }
-
-      // Support bindings saved as:
-      //   "a", "f", "A", "ArrowLeft", " ", "Space",
-      //   "KeyA", "KeyF", etc.
-      let keyMatches = pressedKey === bound;
-      let codeMatches = pressedCode === bound;
-
-      // Alphabetic bindings: "a" <-> KeyboardEvent.code "KeyA".
-      if (bound.length === 1 && /^[a-z]$/.test(bound)) {
-        codeMatches = pressedCode === ('key' + bound);
-      }
-
-      // Numeric bindings: "1" <-> "Digit1".
-      if (bound.length === 1 && /^[0-9]$/.test(bound)) {
-        codeMatches = pressedCode === ('digit' + bound);
-      }
-
-      // Space can be stored as " " by KeyboardEvent.key or as "Space".
-      if (bound === ' ' || bound === 'space') {
-        keyMatches = pressedKey === ' ' || pressedKey === 'space';
-        codeMatches = pressedCode === 'space';
-      }
-
-      // Arrow keys are naturally represented by e.key/code.
-      if (bound.startsWith('arrow')) {
-        keyMatches = pressedKey === bound;
-        codeMatches = pressedCode === bound;
-      }
-
-      if (keyMatches || codeMatches) {
-        // Prevent Space, arrows, etc. from triggering browser behavior
-        // while the game is actively accepting a response.
+      if (keyMatch || codeMatch || keyCodeMatch) {
         e.preventDefault();
         e.stopPropagation();
-
         this.handleModalityResponse(type);
         return;
       }
     }
 
-    // Tally mode still uses Space when Space is not assigned to a modality.
-    if (
-      this.engine.getSettings().tally &&
-      (e.code === 'Space' || e.key === ' ')
-    ) {
+    if (this.engine.getSettings().tally && pressedKey === 'space') {
       e.preventDefault();
       e.stopPropagation();
       this.advanceTally();
     }
   },
-
 
   toggleAccordion(id) {
     const el = document.getElementById(id);
@@ -4263,108 +4229,49 @@ const App = {
     const left = document.getElementById('side-left');
     const right = document.getElementById('side-right');
     const mobile = document.getElementById('mobile-response-controls');
-
     if (left) left.innerHTML = '';
     if (right) right.innerHTML = '';
     if (mobile) mobile.innerHTML = '';
 
     const stims = this.engine.activeStimuli;
-
     const makeBtn = (type, idSuffix = '') => {
       const d = document.createElement('div');
-
       d.className = 'modality-btn';
       d.id = 'ind-' + type + idSuffix;
       d.dataset.type = type;
       d.setAttribute('role', 'button');
-      d.setAttribute('tabindex', '0');
       d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
-
-      d.innerHTML =
-        '<span class="mod-initial">' +
-        MOD_INITIALS[type] +
-        '</span>' +
-        '<span class="mod-key">' +
-        formatKey(this.engine.keys[type]) +
-        '</span>';
-
-      const respond = (e) => {
+      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
+      d.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
-
-        if (document.activeElement === d) {
-          d.blur();
-        }
-
-        this.handleModalityResponse(type, d);
-      };
-
-      // Pointer events cover mouse, touch and pen input.
-      d.addEventListener('pointerdown', respond, { passive: false });
-
-      // Allow keyboard activation when a response control has focus.
-      d.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          this.handleModalityResponse(type, d);
-        }
+        this.handleModalityResponse(type);
       });
-
+      d.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleModalityResponse(type);
+      });
       return d;
     };
 
-    let leftStims = [];
-    let rightStims = [];
-
-    if (stims.length >= 4) {
-      leftStims = stims.slice(0, 2);
-      rightStims = stims.slice(2);
-    } else if (stims.length === 3) {
-      leftStims = stims.slice(0, 2);
-      rightStims = stims.slice(2);
-    } else if (stims.length === 2) {
-      leftStims = [stims[0]];
-      rightStims = [stims[1]];
-    } else {
-      leftStims = stims;
-    }
-
-    leftStims.forEach(type => {
-      if (left) left.appendChild(makeBtn(type));
-    });
-
-    rightStims.forEach(type => {
-      if (right) right.appendChild(makeBtn(type));
-    });
-
-    if (mobile) {
-      stims.forEach(type => mobile.appendChild(makeBtn(type, '-mobile')));
-    }
+    let leftStims = [], rightStims = [];
+    if (stims.length >= 4) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
+    else if (stims.length === 3) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
+    else if (stims.length === 2) { leftStims = [stims[0]]; rightStims = [stims[1]]; }
+    else { leftStims = stims; }
+    leftStims.forEach(t => { if (left) left.appendChild(makeBtn(t)); });
+    rightStims.forEach(t => { if (right) right.appendChild(makeBtn(t)); });
+    if (mobile) stims.forEach(t => mobile.appendChild(makeBtn(t, '-mobile')));
   },
 
-  handleModalityResponse(type, clickedButton = null) {
-    if (
-      !this.engine.isRunning ||
-      !this.engine.isTrialActive ||
-      this.engine.isPaused
-    ) {
-      return;
+  handleModalityResponse(type) {
+    if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
+    if (this.engine.currentTrial >= this.engine.blockTrials) return;
+    if (!this.engine.responses[type]) this.engine.responses[type] = [];
+    if (!this.engine.responses[type][this.engine.currentTrial]) {
+      this.processFeedback(type);
     }
-
-    if (this.engine.currentTrial >= this.engine.blockTrials) {
-      return;
-    }
-
-    if (!this.engine.responses[type]) {
-      this.engine.responses[type] = [];
-    }
-
-    if (this.engine.responses[type][this.engine.currentTrial]) {
-      return;
-    }
-
-    this.processFeedback(type, clickedButton);
   },
 
   tapFeedback(type) {
@@ -4605,34 +4512,19 @@ const App = {
     if (shapeDisp) shapeDisp.style.visibility = 'hidden';
   },
 
-  processFeedback(type, clickedButton = null) {
-    const trialIndex = this.engine.currentTrial;
-
-    this.engine.responses[type][trialIndex] = true;
-
-    const k = this.engine.kSeq[trialIndex];
+  processFeedback(type) {
+    this.engine.responses[type][this.engine.currentTrial] = true;
+    const k = this.engine.kSeq[this.engine.currentTrial];
     let isTarget = false;
-
-    if (trialIndex >= k) {
-      const current = this.engine.trials[trialIndex];
-      const previous = this.engine.trials[trialIndex - k];
-
-      if (type === 'aud') {
-        isTarget = current.audWord === previous.audWord;
-      } else if (type === 'pos') {
-        isTarget = current.pos === previous.pos;
-      } else if (type === 'shp') {
-        isTarget = current.shp === previous.shp;
-      } else if (type === 'col') {
-        isTarget = current.col === previous.col;
-      }
+    if (this.engine.currentTrial >= k) {
+      const current = this.engine.trials[this.engine.currentTrial];
+      const previous = this.engine.trials[this.engine.currentTrial - k];
+      if (type === 'aud') isTarget = current.audWord === previous.audWord;
+      else if (type === 'pos') isTarget = current.pos === previous.pos;
+      else if (type === 'shp') isTarget = current.shp === previous.shp;
+      else if (type === 'col') isTarget = current.col === previous.col;
     }
-
-    this.flashIndicator(
-      type,
-      isTarget ? 'correct' : 'wrong',
-      clickedButton
-    );
+    this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
   },
 
   showMissedFeedback() {
@@ -4655,31 +4547,21 @@ const App = {
     if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
   },
 
-  flashIndicator(type, status, clickedButton = null) {
-    const mobile = document.getElementById('ind-' + type + '-mobile');
-    const desktop = document.getElementById('ind-' + type);
+  flashIndicator(type, status) {
+    // There are desktop and mobile copies of each response control. Apply
+    // feedback to every matching control so the visible one always flashes.
+    const controls = Array.from(document.querySelectorAll('.modality-btn[data-type="' + type + '"]'));
+    if (!controls.length) return;
 
-    // Clear stale feedback from both desktop and mobile controls.
-    [desktop, mobile].forEach(el => {
-      if (!el) return;
+    controls.forEach(el => {
       el.classList.remove('correct', 'wrong', 'neutral');
+      void el.offsetWidth;
+      el.classList.add(status);
     });
 
-    // When a physical button was clicked, give feedback to that exact button.
-    const el = clickedButton || (
-      mobile && window.getComputedStyle(mobile).display !== 'none'
-        ? mobile
-        : desktop
-    );
-
-    if (!el) return;
-
-    void el.offsetWidth;
-    el.classList.add(status);
-
     setTimeout(() => {
-      el.classList.remove('correct', 'wrong', 'neutral');
-    }, 300);
+      controls.forEach(el => el.classList.remove('correct', 'wrong', 'neutral'));
+    }, 350);
   },
 
   evaluateBlock() {
