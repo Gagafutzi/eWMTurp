@@ -3837,9 +3837,15 @@ const App = {
   },
 
   handleKeydown(e) {
+    // Keybinding capture mode.
     if (this.engine.listeningBind) {
       e.preventDefault();
+      e.stopPropagation();
+
+      // Store the actual KeyboardEvent.key value. This preserves
+      // special keys such as Space and ArrowLeft/ArrowRight.
       this.engine.keys[this.engine.listeningBind] = e.key;
+
       this.engine.listeningBind = null;
       this.onStimChange();
       this.saveSettings();
@@ -3847,39 +3853,96 @@ const App = {
     }
 
     // Only handle modality keys while an actual trial is running.
-    if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) return;
+    if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) {
+      return;
+    }
 
-    const tag = e.target?.tagName;
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
+    // Never interfere with normal text-entry controls.
+    const target = e.target;
+    const tag = target?.tagName;
 
-    if (this.engine.currentTrial >= this.engine.blockTrials) return;
+    if (
+      tag === 'INPUT' ||
+      tag === 'SELECT' ||
+      tag === 'TEXTAREA' ||
+      target?.isContentEditable ||
+      e.isComposing
+    ) {
+      return;
+    }
 
-    const pressedKey = String(e.key || '').toLowerCase();
-    const pressedCode = String(e.code || '').toLowerCase();
+    if (this.engine.currentTrial >= this.engine.blockTrials) {
+      return;
+    }
+
+    // Normalize the physical/logical key without using trim().
+    // trim() would turn the Space key (" ") into an empty string.
+    const pressedKey = String(e.key ?? '').toLowerCase();
+    const pressedCode = String(e.code ?? '').toLowerCase();
 
     for (const type of this.engine.activeStimuli) {
-      const bound = String(this.engine.keys[type] || '').trim().toLowerCase();
-      if (!bound) continue;
+      const rawBound = this.engine.keys[type];
 
-      // Support both the existing stored e.key values (f, j, etc.)
-      // and physical KeyboardEvent.code values (KeyF, KeyJ, etc.).
-      const boundCode = bound.startsWith('key') || bound.startsWith('digit')
-        ? bound
-        : ('key' + bound);
+      if (rawBound === undefined || rawBound === null) {
+        continue;
+      }
 
-      if (pressedKey === bound || pressedCode === bound || pressedCode === boundCode) {
+      const bound = String(rawBound).toLowerCase();
+
+      if (!bound) {
+        continue;
+      }
+
+      // Support bindings saved as:
+      //   "a", "f", "A", "ArrowLeft", " ", "Space",
+      //   "KeyA", "KeyF", etc.
+      let keyMatches = pressedKey === bound;
+      let codeMatches = pressedCode === bound;
+
+      // Alphabetic bindings: "a" <-> KeyboardEvent.code "KeyA".
+      if (bound.length === 1 && /^[a-z]$/.test(bound)) {
+        codeMatches = pressedCode === ('key' + bound);
+      }
+
+      // Numeric bindings: "1" <-> "Digit1".
+      if (bound.length === 1 && /^[0-9]$/.test(bound)) {
+        codeMatches = pressedCode === ('digit' + bound);
+      }
+
+      // Space can be stored as " " by KeyboardEvent.key or as "Space".
+      if (bound === ' ' || bound === 'space') {
+        keyMatches = pressedKey === ' ' || pressedKey === 'space';
+        codeMatches = pressedCode === 'space';
+      }
+
+      // Arrow keys are naturally represented by e.key/code.
+      if (bound.startsWith('arrow')) {
+        keyMatches = pressedKey === bound;
+        codeMatches = pressedCode === bound;
+      }
+
+      if (keyMatches || codeMatches) {
+        // Prevent Space, arrows, etc. from triggering browser behavior
+        // while the game is actively accepting a response.
         e.preventDefault();
         e.stopPropagation();
+
         this.handleModalityResponse(type);
         return;
       }
     }
 
-    if (this.engine.getSettings().tally && e.code === 'Space') {
+    // Tally mode still uses Space when Space is not assigned to a modality.
+    if (
+      this.engine.getSettings().tally &&
+      (e.code === 'Space' || e.key === ' ')
+    ) {
       e.preventDefault();
+      e.stopPropagation();
       this.advanceTally();
     }
   },
+
 
   toggleAccordion(id) {
     const el = document.getElementById(id);
