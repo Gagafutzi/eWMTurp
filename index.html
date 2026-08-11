@@ -947,7 +947,7 @@ body[data-theme="dark"] {
 #theme-toggle {
   position:fixed;
   top:12px;
-  right:12px;
+  right:24px;
   z-index:10000;
   display:inline-flex;
   align-items:center;
@@ -956,6 +956,7 @@ body[data-theme="dark"] {
   min-width:92px;
   height:34px;
   padding:0 11px;
+  margin-top:2px;
   border:1px solid var(--border);
   border-radius:999px;
   background:var(--bg-panel);
@@ -971,6 +972,12 @@ body[data-theme="dark"] {
     border-color .18s ease,
     color .18s ease,
     transform .18s ease;
+}
+
+/* Theme toggle is only visible on the home/landing (setup) screen. */
+body:has(#screen-game.active) #theme-toggle,
+body:has(#screen-results.active) #theme-toggle {
+  display:none !important;
 }
 
 #theme-toggle:hover {
@@ -991,7 +998,7 @@ body[data-theme="dark"] {
 @media (max-width:767px) {
   #theme-toggle {
     top:8px;
-    right:8px;
+    right:12px;
     min-width:38px;
     width:38px;
     padding:0;
