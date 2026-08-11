@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1246,16 +1245,16 @@ const DEFAULT_SESSION_DURATION_MIN = 10;
 const TRIAL_TIMING = Object.freeze({ stimulusMs:700 });
 
 const FACES = [
-  {file:'face_0.jpg', emotion:'neutral', valence:0},
-  {file:'face_1.jpg', emotion:'positive', valence:1},
-  {file:'face_2.jpg', emotion:'positive', valence:2},
-  {file:'face_3.jpg', emotion:'negative', valence:-2},
-  {file:'face_4.jpg', emotion:'negative', valence:-2},
-  {file:'face_5.jpg', emotion:'negative', valence:-1},
-  {file:'face_6.jpg', emotion:'surprise', valence:0},
-  {file:'face_7.jpg', emotion:'negative', valence:-2},
-  {file:'face_8.jpg', emotion:'neutral', valence:0},
-  {file:'face_9.jpg', emotion:'negative', valence:-1}
+  {file:'assets/stimuli/faces/face_0.jpg', emotion:'neutral', valence:0},
+  {file:'assets/stimuli/faces/face_1.jpg', emotion:'positive', valence:1},
+  {file:'assets/stimuli/faces/face_2.jpg', emotion:'positive', valence:2},
+  {file:'assets/stimuli/faces/face_3.jpg', emotion:'negative', valence:-2},
+  {file:'assets/stimuli/faces/face_4.jpg', emotion:'negative', valence:-2},
+  {file:'assets/stimuli/faces/face_5.jpg', emotion:'negative', valence:-1},
+  {file:'assets/stimuli/faces/face_6.jpg', emotion:'surprise', valence:0},
+  {file:'assets/stimuli/faces/face_7.jpg', emotion:'negative', valence:-2},
+  {file:'assets/stimuli/faces/face_8.jpg', emotion:'neutral', valence:0},
+  {file:'assets/stimuli/faces/face_9.jpg', emotion:'negative', valence:-1}
 ];
 
 // ==================== VISUAL ASSET PIPELINE ====================
@@ -1974,8 +1973,6 @@ class ThreeDGridEngine {
     this.ACTIVE_SIZE = 1;
     this.ACTIVE_SCALE = 1.18;
     this.VIEW_PADDING = 1.12;
-
-    this._resizeRetryTimer = null;
   }
 
   addSegment(vertices, ax, ay, az, bx, by, bz) {
@@ -2225,28 +2222,6 @@ class ThreeDGridEngine {
     );
   }
 
-  setActiveNodeTexture(index, texture) {
-    if (!this.activeCube || !texture) return;
-    this.activeTexture = texture;
-    const materials = Array.from({length:6}, () => new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: false,
-      side: THREE.FrontSide,
-      depthTest: true,
-      depthWrite: true
-    }));
-    const old = Array.isArray(this.activeCube.material) ? this.activeCube.material : [this.activeCube.material];
-    old.forEach(m => { if (m) m.dispose(); });
-    this.activeCube.material = materials;
-  }
-
-  clearActiveTexture() {
-    if (this.activeTexture) {
-      try { this.activeTexture.dispose(); } catch (_) {}
-      this.activeTexture = null;
-    }
-  }
-
   resetNode() {
     if (!this.activeCube) return;
 
@@ -2293,267 +2268,155 @@ class ThreeDGridEngine {
   }
 
   fitCameraToMatrix() {
-    if (
-      !this.renderer ||
-      !this.camera ||
-      !this.container ||
-      !this.latticeGroup
-    ) return;
-
-    // Read live bounding sizes. If they are zero (which can happen during setup switches
-    // or when the parent container is display:none), trigger a safe deferred lookup.
-    const width = Math.round(this.container.clientWidth || 0);
-    const height = Math.round(this.container.clientHeight || 0);
-
-    if (width === 0 || height === 0) {
-      const rect = this.container.getBoundingClientRect();
-      const rWidth = Math.round(rect.width || 0);
-      const rHeight = Math.round(rect.height || 0);
-
-      if (rWidth > 0 && rHeight > 0) {
-        this.applyDimensions(rWidth, rHeight);
-        return;
-      }
-
-      // Schedule a subsequent loop retry frame to let flexbox paints finish
-      if (!this._resizeRetryTimer) {
-        this._resizeRetryTimer = setTimeout(() => {
-          this._resizeRetryTimer = null;
-          this.fitCameraToMatrix();
-        }, 50);
-      }
-      return;
-    }
-
-    this.applyDimensions(width, height);
-  }
-
-  applyDimensions(width, height) {
-    const aspect = width / height;
-    const isMobile = window.innerWidth < 768;
-    const fov = window.innerWidth < 480
-      ? 72
-      : (isMobile ? 68 : 52);
-
-    this.camera.fov = fov;
-    this.camera.aspect = aspect;
-
-    const halfExtent = this.GRID_HALF * 1.45;
-    const activeHalfExtent = this.ACTIVE_SIZE * this.ACTIVE_SCALE;
-    const extent = Math.max(
-      halfExtent,
-      halfExtent + activeHalfExtent * 0.10
-    );
-
-    const radius =
-      Math.sqrt(3) * extent * this.VIEW_PADDING;
-
-    const verticalFov =
-      THREE.MathUtils.degToRad(fov);
-
-    const horizontalFov =
-      2 *
-      Math.atan(
-        Math.tan(verticalFov / 2) *
-        Math.max(0.1, aspect)
-      );
-
-    const verticalDistance =
-      radius / Math.tan(verticalFov / 2);
-
-    const horizontalDistance =
-      radius / Math.tan(horizontalFov / 2);
-
-    this.camera.position.set(
-      0,
-      0,
-      Math.max(
-        verticalDistance,
-        horizontalDistance
-      ) * 1.05
-    );
-
-    this.camera.near = 0.05;
-    this.camera.far = Math.max(
-      100,
-      this.camera.position.z + radius * 8
-    );
-
-    this.camera.lookAt(0, 0, 0);
-    this.camera.updateProjectionMatrix();
-
-    this.renderer.setPixelRatio(
-      Math.min(
-        window.devicePixelRatio || 1,
-        isMobile ? 1.5 : 2
-      )
-    );
-
-    this.renderer.setSize(
-      width,
-      height,
-      false
-    );
-  }
-
-  init(containerElement) {
-    if (
-      !containerElement ||
-      typeof THREE === 'undefined'
-    ) {
-      console.error(
-        '[ThreeDGridEngine] Three.js or #scene-3d is unavailable.'
-      );
+    if (!this.renderer || !this.camera || !this.container || !this.latticeGroup) {
+      console.debug('[eWMT:3D] fitCameraToMatrix skipped: renderer/camera/container/lattice unavailable.');
       return false;
     }
 
-    this.destroy();
+    try {
+      let width = Math.round(this.container.clientWidth || 0);
+      let height = Math.round(this.container.clientHeight || 0);
 
-    this.container = containerElement;
-    this.container.style.width = '100%';
-    this.container.style.height = '100%';
-    this.container.style.overflow = 'hidden';
+      if (width < 2 || height < 2) {
+        const rect = this.container.getBoundingClientRect();
+        width = Math.round(rect.width || width || 0);
+        height = Math.round(rect.height || height || 0);
+      }
 
-    this.scene = new THREE.Scene();
-    this.scene.background = null;
-    this.scene.fog = new THREE.FogExp2(
-      0x06070a,
-      0.045
-    );
+      if (width < 2) width = Math.round(window.innerWidth || document.documentElement.clientWidth || 800);
+      if (height < 2) height = Math.round(window.innerHeight || document.documentElement.clientHeight || 600);
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance'
-    });
+      width = Math.max(1, width);
+      height = Math.max(1, height);
 
-    this.renderer.setClearColor(0x06070a, 0);
-    this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio || 1, 2)
-    );
+      const aspect = width / height;
+      const isMobile = window.innerWidth < 768;
+      const fov = window.innerWidth < 480 ? 72 : (isMobile ? 68 : 52);
 
-    if (
-      'outputColorSpace' in this.renderer &&
-      THREE.SRGBColorSpace
-    ) {
-      this.renderer.outputColorSpace =
-        THREE.SRGBColorSpace;
+      this.camera.fov = fov;
+      this.camera.aspect = aspect;
+
+      const halfExtent = this.GRID_HALF * 1.45;
+      const activeHalfExtent = this.ACTIVE_SIZE * this.ACTIVE_SCALE;
+      const extent = Math.max(halfExtent, halfExtent + activeHalfExtent * 0.10);
+      const radius = Math.sqrt(3) * extent * this.VIEW_PADDING;
+      const verticalFov = THREE.MathUtils.degToRad(fov);
+      const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * Math.max(0.1, aspect));
+      const verticalDistance = radius / Math.tan(verticalFov / 2);
+      const horizontalDistance = radius / Math.tan(horizontalFov / 2);
+
+      this.camera.position.set(0, 0, Math.max(verticalDistance, horizontalDistance) * 1.05);
+      this.camera.near = 0.05;
+      this.camera.far = Math.max(100, this.camera.position.z + radius * 8);
+      this.camera.lookAt(0, 0, 0);
+      this.camera.updateProjectionMatrix();
+
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
+      this.renderer.setSize(width, height, false);
+
+      return true;
+    } catch (error) {
+      console.error('[eWMT:3D] fitCameraToMatrix exception:', error);
+      return false;
     }
+  }
 
-    if (
-      'outputEncoding' in this.renderer &&
-      THREE.sRGBEncoding
-    ) {
-      this.renderer.outputEncoding =
-        THREE.sRGBEncoding;
-    }
+init(containerElement) {
+    console.groupCollapsed('[eWMT:3D] ThreeDGrid.init()');
+    try {
+      if (!containerElement) throw new Error('#scene-3d container not found.');
+      if (typeof THREE === 'undefined') throw new Error('Three.js did not load; THREE is undefined.');
 
-    // Force canvas styling to inherit matching dimensions dynamically
-    this.renderer.domElement.style.setProperty('width', '100%', 'important');
-    this.renderer.domElement.style.setProperty('height', '100%', 'important');
-    this.renderer.domElement.style.display = 'block';
-    this.renderer.domElement.style.touchAction = 'none';
-    this.renderer.domElement.setAttribute(
-      'aria-label',
-      '3D spatial stimulus grid'
-    );
+      this.destroy();
+      this.container = containerElement;
+      this.container.style.width = '100%';
+      this.container.style.height = '100%';
+      this.container.style.overflow = 'hidden';
 
-    this.container.appendChild(
-      this.renderer.domElement
-    );
+      // Test WebGL before allocating the real renderer.
+      let gl = null;
+      try {
+        const testCanvas = document.createElement('canvas');
+        gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+      } catch (webglError) {
+        console.warn('[eWMT:3D] WebGL capability test threw:', webglError);
+      }
+      if (!gl) throw new Error('WebGL is unavailable in this browser/device.');
 
-    this.camera = new THREE.PerspectiveCamera(
-      52,
-      1,
-      0.05,
-      100
-    );
+      this.scene = new THREE.Scene();
+      this.scene.background = null;
+      this.scene.fog = new THREE.FogExp2(0x06070a, 0.045);
 
-    this.latticeGroup = new THREE.Group();
-    this.latticeGroup.name = 'SpatialLattice';
-    this.latticeGroup.scale.setScalar(1.45);
-    this.scene.add(this.latticeGroup);
+      this.renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, powerPreference:'high-performance' });
+      this.renderer.setClearColor(0x06070a, 0);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    this.latticeGeometry =
-      this.buildUnifiedLatticeGeometry();
+      if ('outputColorSpace' in this.renderer && THREE.SRGBColorSpace) this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      if ('outputEncoding' in this.renderer && THREE.sRGBEncoding) this.renderer.outputEncoding = THREE.sRGBEncoding;
 
-    this.latticeMaterial =
-      new THREE.LineBasicMaterial({
-        color: 0x71839a,
-        transparent: true,
-        opacity: 0.16,
-        linewidth: 3,
-        depthTest: true,
-        depthWrite: false
-      });
+      this.renderer.domElement.style.width = '100%';
+      this.renderer.domElement.style.height = '100%';
+      this.renderer.domElement.style.minWidth = '0';
+      this.renderer.domElement.style.minHeight = '0';
+      this.renderer.domElement.style.display = 'block';
+      this.renderer.domElement.style.touchAction = 'none';
+      this.renderer.domElement.setAttribute('aria-label', '3D spatial stimulus grid');
+      this.container.appendChild(this.renderer.domElement);
 
-    const latticeLines =
-      new THREE.LineSegments(
-        this.latticeGeometry,
-        this.latticeMaterial
-      );
+      this.camera = new THREE.PerspectiveCamera(52, 1, 0.05, 100);
 
-    latticeLines.name =
-      'UnifiedWireLattice';
+      this.latticeGroup = new THREE.Group();
+      this.latticeGroup.name = 'SpatialLattice';
+      this.latticeGroup.scale.setScalar(1.45);
+      this.scene.add(this.latticeGroup);
 
-    latticeLines.renderOrder = 0;
-    this.latticeGroup.add(latticeLines);
+      this.latticeGeometry = this.buildUnifiedLatticeGeometry();
+      this.latticeMaterial = new THREE.LineBasicMaterial({ color:0x71839a, transparent:true, opacity:0.16, linewidth:3, depthTest:true, depthWrite:false });
+      const latticeLines = new THREE.LineSegments(this.latticeGeometry, this.latticeMaterial);
+      latticeLines.name = 'UnifiedWireLattice';
+      latticeLines.renderOrder = 0;
+      this.latticeGroup.add(latticeLines);
 
-    this.createInactiveNodes();
-    this.createActiveCube();
+      this.createInactiveNodes();
+      this.createActiveCube();
+      this.textureLoader = new THREE.TextureLoader();
 
-    this.textureLoader =
-      new THREE.TextureLoader();
+      this.resizeHandler = () => {
+        try { this.fitCameraToMatrix(); } catch (error) { console.warn('[eWMT:3D] resize handler failed:', error); }
+      };
+      window.addEventListener('resize', this.resizeHandler, { passive:true });
 
-    this.resizeHandler =
-      () => this.fitCameraToMatrix();
+      this.orientationHandler = () => setTimeout(() => {
+        try { this.fitCameraToMatrix(); } catch (error) { console.warn('[eWMT:3D] orientation resize failed:', error); }
+      }, 100);
+      window.addEventListener('orientationchange', this.orientationHandler, { passive:true });
 
-    window.addEventListener(
-      'resize',
-      this.resizeHandler,
-      { passive: true }
-    );
+      if ('ResizeObserver' in window) {
+        this.resizeObserver = new ResizeObserver(() => {
+          try { this.fitCameraToMatrix(); } catch (error) { console.warn('[eWMT:3D] ResizeObserver failed:', error); }
+        });
+        this.resizeObserver.observe(this.container);
+      }
 
-    this.orientationHandler =
-      () => setTimeout(
-        () => this.fitCameraToMatrix(),
-        100
-      );
-
-    window.addEventListener(
-      'orientationchange',
-      this.orientationHandler,
-      { passive: true }
-    );
-
-    if ('ResizeObserver' in window) {
-      this.resizeObserver =
-        new ResizeObserver(
-          () => this.fitCameraToMatrix()
-        );
-
-      this.resizeObserver.observe(
-        this.container
-      );
-    }
-
-    // Delay multiple sizing passes to permit CSS/view transitions to finish painting
-    this.fitCameraToMatrix();
-
-    requestAnimationFrame(() => {
       this.fitCameraToMatrix();
-      requestAnimationFrame(() => {
-        this.fitCameraToMatrix();
-      });
-    });
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (this.renderer && this.camera && this.container) this.fitCameraToMatrix();
+      }));
+      setTimeout(() => {
+        if (this.renderer && this.camera && this.container) this.fitCameraToMatrix();
+      }, 80);
 
-    setTimeout(() => {
-      this.fitCameraToMatrix();
-    }, 150);
-
-    this.animate();
-
-    return true;
+      this.animate();
+      console.info('[eWMT:3D] Initialization successful.');
+      return true;
+    } catch (error) {
+      console.error('[eWMT:3D] INITIALIZATION FAILED:', error);
+      console.error('[eWMT:3D] Stack:', error?.stack);
+      try { this.destroy(); } catch (cleanupError) { console.error('[eWMT:3D] Cleanup after init failure failed:', cleanupError); }
+      return false;
+    } finally {
+      console.groupEnd();
+    }
   }
 
   animate() {
@@ -2678,11 +2541,6 @@ class ThreeDGridEngine {
 
   destroy() {
     ++this.textureRequestId;
-
-    if (this._resizeRetryTimer) {
-      clearTimeout(this._resizeRetryTimer);
-      this._resizeRetryTimer = null;
-    }
 
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(
@@ -3162,7 +3020,7 @@ const App = {
     if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
 
     document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-      card.addEventListener('click', () => this.setMode(card.dataset.stimulusType));
+      card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
     });
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -3347,26 +3205,18 @@ const App = {
       this.screens[id].classList.add('active');
     }
 
-    // Settle layouts then query parent dimensions to scale Three.js accurately.
+    // The 3D scene may have been display:none immediately before this
+    // switch. Give CSS/flexbox a paint opportunity, then size Three.js
+    // from the container's LIVE dimensions.
     if (id === 'game') {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (this.engine?.getSettings?.().gridType === '3d') {
-            if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-              ThreeDGrid.fitCameraToMatrix();
-            }
+          if (this.engine?.getSettings?.().gridType === '3d' &&
+              typeof ThreeDGrid.fitCameraToMatrix === 'function') {
+            ThreeDGrid.fitCameraToMatrix();
           }
         });
       });
-
-      // Defensive layout-settling delayed check
-      setTimeout(() => {
-        if (this.engine?.getSettings?.().gridType === '3d') {
-          if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-            ThreeDGrid.fitCameraToMatrix();
-          }
-        }
-      }, 150);
     }
 
     if (id === 'setup') {
@@ -3654,15 +3504,7 @@ const App = {
   },
 
   async startSession(options = {}) {
-    cleanupRenderers();
-
-    if (!options.skipAgeGate && this.isRestrictedStimulusSelection()) {
-      this.pendingAgeAction = { type: 'start-session' };
-      this.openAgeGate();
-      return;
-    }
-
-    const s = this.engine.getSettings();
+    const INIT_TIMEOUT = 10000;
     const loading = document.getElementById('asset-loading-overlay');
     const startButton = document.getElementById('btn-init-session');
 
@@ -3675,101 +3517,162 @@ const App = {
     };
 
     const waitFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
-
-    const waitForContainerSize = async (container, attempts = 10) => {
-      if (!container) return false;
+    const waitForLayout = async (element, attempts = 12) => {
+      if (!element) return false;
       for (let i = 0; i < attempts; i++) {
-        const width = container.clientWidth || container.getBoundingClientRect().width;
-        const height = container.clientHeight || container.getBoundingClientRect().height;
-        if (width > 0 && height > 0) return true;
-        void container.offsetWidth;
-        void container.offsetHeight;
+        const rect = element.getBoundingClientRect();
+        const width = element.clientWidth || rect.width || 0;
+        const height = element.clientHeight || rect.height || 0;
+        console.debug('[eWMT:init] layout check', i + 1, { width, height, display: getComputedStyle(element).display });
+        if (width > 1 && height > 1) return true;
+        void element.offsetWidth;
+        void element.offsetHeight;
         await waitFrame();
       }
       return false;
     };
 
-    const preloadWithTimeout = (timeoutMs = 8000) => {
+    const withTimeout = (promise, ms, label) => {
       let timer = null;
-      const timeout = new Promise(resolve => {
-        timer = setTimeout(() => resolve({ timedOut: true, loaded: false }), timeoutMs);
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
       });
-      const preload = Promise.resolve()
-        .then(() => this.engine.preloadImages())
-        .then(result => ({ timedOut: false, loaded: true, result }))
-        .catch(error => ({ timedOut: false, loaded: false, error }));
-      return Promise.race([preload, timeout]).finally(() => { if (timer) clearTimeout(timer); });
+      return Promise.race([Promise.resolve(promise), timeout]).finally(() => {
+        if (timer) clearTimeout(timer);
+      });
     };
 
+    const phase = async (name, fn) => {
+      const started = performance.now();
+      console.groupCollapsed(`[eWMT:init] ${name}`);
+      try {
+        const result = await fn();
+        console.info(`[eWMT:init] ${name} completed in ${(performance.now() - started).toFixed(1)}ms`);
+        return result;
+      } catch (error) {
+        console.error(`[eWMT:init] ${name} FAILED`, error);
+        throw error;
+      } finally {
+        console.groupEnd();
+      }
+    };
+
+    if (!options.skipAgeGate && this.isRestrictedStimulusSelection()) {
+      this.pendingAgeAction = { type: 'start-session' };
+      this.openAgeGate();
+      return;
+    }
+
     if (startButton) startButton.disabled = true;
-    setLoading(true);
+    setLoading(true, 'INITIALIZING SESSION...');
 
     try {
-      this.engine.reset();
-      this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-      this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this.engine.animeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(s.animeMode) ? s.animeMode : 'standard';
+      await phase('Renderer cleanup', async () => cleanupRenderers());
 
-      const preloadResult = await preloadWithTimeout(8000);
-      if (preloadResult.timedOut) {
-        console.warn('[ATTENTIONAL SHIELD] Asset preload timed out; continuing with available assets.');
-      } else if (!preloadResult.loaded) {
-        console.warn('[ATTENTIONAL SHIELD] Asset preload failed; continuing with available assets.', preloadResult.error);
-      } else {
-        console.info('[ATTENTIONAL SHIELD] Selected assets ready:', preloadResult.result);
-      }
+      const s = this.engine.getSettings();
+      console.info('[eWMT:init] Session configuration', {
+        gridType: s.gridType,
+        gridSize: s.gridSize,
+        stimulusType: s.stimulusType,
+        animeMode: s.animeMode,
+        startN: s.startN,
+        isiMode: s.isiMode,
+        isiFixed: s.isiFixed,
+        stimDur: s.stimDur,
+        sessionDurationMin: s.sessionDurationMin
+      });
 
-      this.engine.setActiveStimuli();
-      this.engine.currentN = s.startN;
-      this.engine.highestN = s.startN;
-      this.engine.sessionStart = Date.now();
-      this.engine.lastTick = Date.now();
-      this.engine.sessionLimitMs = Math.max(1, Number(s.sessionDurationMin) || 10) * 60000;
-      this.engine.sessionTrialsCompleted = 0;
+      await phase('Engine reset', async () => {
+        this.engine.reset();
+        this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
+        this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+        this.engine.animeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(s.animeMode) ? s.animeMode : 'standard';
+      });
 
-      const estimatedIsi = s.isiMode === 'fixed'
-        ? Math.max(500, Number(s.isiFixed) || DEFAULT_ISI)
-        : (Math.max(500, Number(s.isiMin) || 1300) + Math.max(500, Number(s.isiMax) || 3000)) / 2;
-      const estimatedTrialMs = Math.max(500, Number(s.stimDur) || TRIAL_TIMING.stimulusMs) + estimatedIsi;
-      this.engine.sessionTotalTrials = Math.max(1, Math.floor(this.engine.sessionLimitMs / estimatedTrialMs));
-      this.engine.isRunning = true;
+      await phase('Asset preload', async () => {
+        try {
+          const result = await withTimeout(this.engine.preloadImages(), INIT_TIMEOUT, 'Asset preload');
+          console.info('[eWMT:init] Asset preload result', result);
+          if (!result || result.ready === false) {
+            console.warn('[eWMT:init] Some selected assets are unavailable; continuing with available assets.');
+          }
+        } catch (error) {
+          console.warn('[eWMT:init] Asset preload failed/timed out; continuing with available assets.', error);
+        }
+      });
 
-      AudioEngine.init();
-      if (AudioEngine.ctx?.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
+      await phase('Configure active modalities', async () => {
+        this.engine.setActiveStimuli();
+        if (!Array.isArray(this.engine.activeStimuli)) {
+          throw new Error('engine.activeStimuli was not initialized as an array');
+        }
+        console.debug('[eWMT:init] Active stimuli', this.engine.activeStimuli);
+      });
 
-      // IMPORTANT: make the game screen visible BEFORE initializing
-      // Three.js. #scene-3d can otherwise report 0x0 while display:none.
-      this.switchScreen('game');
-      await waitFrame();
+      await phase('Initialize session state', async () => {
+        this.engine.currentN = s.startN;
+        this.engine.highestN = s.startN;
+        this.engine.sessionStart = Date.now();
+        this.engine.lastTick = Date.now();
+        this.engine.sessionMs = 0;
+        this.engine.sessionLimitMs = Math.max(1, Number(s.sessionDurationMin) || DEFAULT_SESSION_DURATION_MIN) * 60000;
+        this.engine.sessionTrialsCompleted = 0;
 
-      this.buildGrid();
-      this.buildSideControls();
+        const estimatedIsi = s.isiMode === 'fixed'
+          ? Math.max(500, Number(s.isiFixed) || DEFAULT_ISI)
+          : (Math.max(500, Number(s.isiMin) || 1300) + Math.max(500, Number(s.isiMax) || 3000)) / 2;
+        const estimatedTrialMs = Math.max(500, Number(s.stimDur) || TRIAL_TIMING.stimulusMs) + estimatedIsi;
+        this.engine.sessionTotalTrials = Math.max(1, Math.floor(this.engine.sessionLimitMs / estimatedTrialMs));
+        this.engine.isRunning = true;
+        this.engine.isPaused = false;
+        this.engine.isTrialActive = false;
+      });
 
-      // Allow the newly-visible flex/grid layout to settle before the
-      // first renderer sizing pass.
-      await waitFrame();
+      await phase('Initialize audio', async () => {
+        try {
+          AudioEngine.init();
+          if (AudioEngine.ctx?.state === 'suspended') {
+            await AudioEngine.ctx.resume().catch(error => console.warn('[eWMT:init] Audio resume failed:', error));
+          }
+        } catch (error) {
+          console.warn('[eWMT:init] Audio initialization failed; continuing without audio.', error);
+        }
+      });
 
-      const scene3d = document.getElementById('scene-3d');
-      if (s.gridType === '3d' && scene3d) {
-        const sized = await waitForContainerSize(scene3d);
+      await phase('Activate game screen', async () => {
+        this.switchScreen('game');
+        await waitFrame();
+        await waitFrame();
+      });
+
+      await phase('Build visual renderer', async () => {
+        try {
+          this.buildGrid();
+        } catch (error) {
+          console.error('[eWMT:init] Renderer build threw an exception', error);
+          throw error;
+        }
+      });
+
+      await phase('Build response controls', async () => {
+        this.buildSideControls();
+      });
+
+      if (s.gridType === '3d') {
+        const scene3d = document.getElementById('scene-3d');
+        if (!scene3d) throw new Error('#scene-3d container is missing');
+        const sized = await waitForLayout(scene3d);
         if (!sized) {
-          const width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 800);
-          const height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 600);
-          scene3d.style.width = `${width}px`;
-          scene3d.style.height = `${height}px`;
+          console.warn('[eWMT:3D] Container remained below usable size; applying viewport fallback.');
+          scene3d.style.width = `${Math.max(1, window.innerWidth || 800)}px`;
+          scene3d.style.height = `${Math.max(1, window.innerHeight || 600)}px`;
           void scene3d.offsetWidth;
           void scene3d.offsetHeight;
         }
         if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-          ThreeDGrid.fitCameraToMatrix();
+          const ok = ThreeDGrid.fitCameraToMatrix();
+          if (ok === false) console.warn('[eWMT:3D] Final camera sizing reported failure.');
         }
-        
-        // Final fallback timeout for safe rendering pass
-        setTimeout(() => {
-          if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-            ThreeDGrid.fitCameraToMatrix();
-          }
-        }, 100);
       }
 
       this.showInterMsg('GET READY', 800);
@@ -3780,28 +3683,49 @@ const App = {
       await waitFrame();
       if (!this.engine.isRunning || this.engine.isPaused) return;
 
-      try {
+      await phase('Generate first block', async () => {
         this.startBlock();
-      } catch (error) {
-        console.error('[ATTENTIONAL SHIELD] Block initialization failed:', error);
-        this.endSession('error');
-      }
+      });
+
+      console.info('%c[eWMT] SESSION INITIALIZED SUCCESSFULLY', 'color:#00ff9d;font-weight:bold;font-size:14px');
     } catch (error) {
-      console.error('[ATTENTIONAL SHIELD] Session initialization failed:', error);
+      console.error('%c[eWMT] SESSION INITIALIZATION FAILED', 'color:#ff3b6b;font-weight:bold;font-size:16px');
+      console.error('[eWMT] Error name:', error?.name);
+      console.error('[eWMT] Error message:', error?.message);
+      console.error('[eWMT] Stack:', error?.stack);
+      console.error('[eWMT] Engine state:', {
+        isRunning: this.engine?.isRunning,
+        isPaused: this.engine?.isPaused,
+        stimulusType: this.engine?.stimulusType,
+        animeMode: this.engine?.animeMode,
+        activeStimuli: this.engine?.activeStimuli,
+        gridType: this.engine?.getSettings?.()?.gridType
+      });
+
       this.engine.isRunning = false;
+      this.engine.isPaused = false;
       this.engine.isTrialActive = false;
-      if (this.engine.trialTimeout) clearTimeout(this.engine.trialTimeout);
-      if (this.engine.trialAdvanceTimeout) clearTimeout(this.engine.trialAdvanceTimeout);
-      if (this.engine.timerInterval) clearInterval(this.engine.timerInterval);
+      clearTimeout(this.engine.trialTimeout);
+      clearTimeout(this.engine.trialAdvanceTimeout);
+      clearInterval(this.engine.timerInterval);
       this.engine.trialTimeout = null;
       this.engine.trialAdvanceTimeout = null;
       this.engine.timerInterval = null;
-      cleanupRenderers();
+
+      try { cleanupRenderers(); } catch (cleanupError) {
+        console.error('[eWMT] Cleanup after initialization failure also failed:', cleanupError);
+      }
+
       const msg = document.getElementById('inter-msg');
-      if (msg) { msg.textContent = 'SESSION INITIALIZATION FAILED — PLEASE TRY AGAIN'; msg.classList.add('active'); }
+      if (msg) {
+        msg.textContent = 'SESSION INITIALIZATION FAILED — CHECK CONSOLE';
+        msg.classList.add('active');
+        setTimeout(() => msg.classList.remove('active'), 5000);
+      }
     } finally {
       setLoading(false);
       if (startButton) startButton.disabled = false;
+      console.debug('[eWMT:init] Initialization sequence finished.');
     }
   },
 
@@ -3838,20 +3762,45 @@ const App = {
     const s3d = document.getElementById('scene-3d');
 
     if (s.gridType === '3d') {
-      if (!s3d) { console.error('[ATTENTIONAL SHIELD] #scene-3d is missing.'); return; }
+      if (!s3d) throw new Error('#scene-3d is missing.');
+
       activate3DRenderer();
-      if (!ThreeDGrid.init(s3d)) {
-        console.error('[ATTENTIONAL SHIELD] Three.js initialization failed.');
-        activate2DRenderer();
-        return;
+
+      const display = getComputedStyle(s3d).display;
+      if (display === 'none') {
+        throw new Error('#scene-3d is display:none when Three.js initialization begins.');
       }
-      ThreeDGrid.setRotationSpeed(document.getElementById('rng-3d-speed')?.value || 40);
-      requestAnimationFrame(() => { if (typeof ThreeDGrid.fitCameraToMatrix === 'function') ThreeDGrid.fitCameraToMatrix(); });
+
+      try {
+        const initialized = ThreeDGrid.init(s3d);
+        if (!initialized) throw new Error('ThreeDGrid.init() returned false.');
+        ThreeDGrid.setRotationSpeed(document.getElementById('rng-3d-speed')?.value || 40);
+      } catch (error) {
+        console.error('[eWMT:3D] Renderer initialization failed:', error);
+        try { ThreeDGrid.destroy(); } catch (cleanupError) { console.warn('[eWMT:3D] Partial renderer cleanup failed:', cleanupError); }
+
+        // Non-fatal fallback: switch the UI selector to 2D and rebuild the grid.
+        const gridSelector = document.getElementById('sel-grid-type');
+        if (gridSelector) gridSelector.value = '2d';
+        activate2DRenderer();
+
+        if (!g2d) throw error;
+        console.warn('[eWMT:3D] Falling back to 2D renderer so the session can continue.');
+        return this.buildGrid();
+      }
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (ThreeDGrid.renderer && ThreeDGrid.camera && ThreeDGrid.container) {
+            ThreeDGrid.fitCameraToMatrix();
+          }
+        });
+      });
       return;
     }
 
     activate2DRenderer();
-    if (!g2d) return;
+    if (!g2d) throw new Error('#grid-2d is missing.');
 
     g2d.innerHTML = '';
     void g2d.offsetHeight;
@@ -3870,12 +3819,20 @@ const App = {
       const cell = document.createElement('div');
       cell.className = 'cell-2d';
       cell.id = 'pos-' + i;
-      Object.assign(cell.style, { minWidth:'0', minHeight:'0', width:'100%', height:'100%', maxWidth:'100%', maxHeight:'100%', overflow:'hidden', boxSizing:'border-box', flexShrink:'0' });
+      Object.assign(cell.style, {
+        minWidth:'0', minHeight:'0', width:'100%', height:'100%',
+        maxWidth:'100%', maxHeight:'100%', overflow:'hidden',
+        boxSizing:'border-box', flexShrink:'0'
+      });
 
       const img = document.createElement('img');
       img.className = 'face-img stimulus-image';
       img.alt = '';
-      Object.assign(img.style, { width:'100%', height:'100%', minWidth:'0', minHeight:'0', maxWidth:'100%', maxHeight:'100%', objectFit:'cover', display:'none', pointerEvents:'none', boxSizing:'border-box' });
+      Object.assign(img.style, {
+        width:'100%', height:'100%', minWidth:'0', minHeight:'0',
+        maxWidth:'100%', maxHeight:'100%', objectFit:'cover',
+        display:'none', pointerEvents:'none', boxSizing:'border-box'
+      });
 
       const fallback = document.createElement('div');
       fallback.className = 'face-fallback';
