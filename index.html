@@ -3448,56 +3448,22 @@ const App = {
       });
     }
 
-    // Keyboard: capture globally so focused buttons/controls can never
-    // prevent gameplay keys from reaching the application.
+    // Keyboard: one global capture-phase listener so key input is not dependent
+    // on which button/control currently owns focus.
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const ageGate = document.getElementById('age-gate');
         if (ageGate?.classList.contains('active')) {
+          e.preventDefault();
           this.cancelAgeGate();
           return;
         }
       }
-
-      const target = e.target;
-      const isFormField =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLSelectElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable;
-
-      // While a trial is active, stop browser scrolling/navigation keys,
-      // but never interfere with normal text/form input.
-      if (
-        this.engine.isRunning &&
-        !this.engine.isPaused &&
-        this.engine.isTrialActive &&
-        !isFormField &&
-        [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-         'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)
-      ) {
-        e.preventDefault();
-      }
-
       this.handleKeydown(e);
-    }, { capture: true });
+    }, { capture: true, passive: false });
 
-    // Never leave a clickable control holding keyboard focus. This is
-    // intentionally limited to clickable elements so normal text/form
-    // controls remain usable.
-    window.addEventListener('pointerup', (e) => {
-      const clicked = e.target?.closest?.(
-        'button, [role="button"], .mode-card, .stimulus-feature-card, ' +
-        '.anime-submode-btn, .accordion-header, .modality-btn, .keybind-btn, ' +
-        '#theme-toggle'
-      );
-      if (clicked && typeof clicked.blur === 'function') {
-        clicked.blur();
-      }
-    }, { capture: true });
-
-    // Keep keyboard focus on the gameplay area after clicking the game,
-    // without forcing focus onto response controls themselves.
+    // Keep keyboard focus on the gameplay area so responses are never lost
+    // after clicking the game, desktop controls, or mobile controls.
     const gameStage = document.getElementById('game-stage');
     if (gameStage) {
       const focusGameStage = () => {
@@ -3505,15 +3471,11 @@ const App = {
           gameStage.focus({ preventScroll: true });
         }
       };
-      gameStage.addEventListener('pointerdown', (e) => {
-        if (!e.target?.closest?.('button, [role="button"], input, select, textarea')) {
-          requestAnimationFrame(focusGameStage);
-        }
+      gameStage.addEventListener('pointerdown', () => {
+        requestAnimationFrame(focusGameStage);
       });
-      gameStage.addEventListener('click', (e) => {
-        if (!e.target?.closest?.('button, [role="button"], input, select, textarea')) {
-          requestAnimationFrame(focusGameStage);
-        }
+      gameStage.addEventListener('click', () => {
+        requestAnimationFrame(focusGameStage);
       });
       this._focusGameStage = focusGameStage;
     }
@@ -3877,37 +3839,69 @@ const App = {
   },
 
   handleKeydown(e) {
+    // Key binding capture must work regardless of which element currently has focus.
+    // Store the browser's e.key value so special keys (Arrow*, Space, etc.) remain valid.
     if (this.engine.listeningBind) {
       e.preventDefault();
-      this.engine.keys[this.engine.listeningBind] = e.key;
+      e.stopPropagation();
+      this.engine.keys[this.engine.listeningBind] = String(e.key || '');
       this.engine.listeningBind = null;
       this.onStimChange();
       this.saveSettings();
       return;
     }
 
-    // Only handle modality keys while an actual trial is running.
+    // Only handle response input during an active, unpaused trial.
     if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) return;
 
-    const tag = e.target?.tagName;
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
+    // Never interfere with normal typing/selecting in form controls.
+    const target = e.target;
+    const tag = target?.tagName;
+    if (
+      tag === 'INPUT' ||
+      tag === 'SELECT' ||
+      tag === 'TEXTAREA' ||
+      target?.isContentEditable ||
+      e.isComposing
+    ) return;
+
+    // While gameplay is active, stop browser navigation/scrolling keys from acting on the page.
+    // This does not affect normal form-field input because of the guard above.
+    const navigationKeys = new Set([
+      ' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'PageUp', 'PageDown', 'Home', 'End'
+    ]);
+    if (navigationKeys.has(e.key) || e.code === 'Space') {
+      e.preventDefault();
+    }
 
     if (this.engine.currentTrial >= this.engine.blockTrials) return;
 
-    const pressedKey = String(e.key || '').toLowerCase();
-    const pressedCode = String(e.code || '').toLowerCase();
+    // Normalize e.key for case-insensitive alphabet matching and e.code for
+    // physical-key matching. This supports letters plus Arrow*/Space bindings.
+    const pressedKey = String(e.key || '').trim().toLowerCase();
+    const pressedCode = String(e.code || '').trim().toLowerCase();
 
     for (const type of this.engine.activeStimuli) {
       const bound = String(this.engine.keys[type] || '').trim().toLowerCase();
       if (!bound) continue;
 
-      // Support both the existing stored e.key values (f, j, etc.)
-      // and physical KeyboardEvent.code values (KeyF, KeyJ, etc.).
-      const boundCode = bound.startsWith('key') || bound.startsWith('digit')
-        ? bound
-        : ('key' + bound);
+      // Match the configured e.key directly first (letters, Arrow*, Space),
+      // then support KeyboardEvent.code values such as KeyF / KeyJ.
+      const boundCode =
+        bound.startsWith('key') ||
+        bound.startsWith('digit') ||
+        bound.startsWith('arrow') ||
+        bound === 'space' ||
+        bound === 'spacebar'
+          ? bound
+          : ('key' + bound);
 
-      if (pressedKey === bound || pressedCode === bound || pressedCode === boundCode) {
+      if (
+        pressedKey === bound ||
+        pressedCode === bound ||
+        pressedCode === boundCode
+      ) {
         e.preventDefault();
         e.stopPropagation();
         this.handleModalityResponse(type);
@@ -3915,7 +3909,7 @@ const App = {
       }
     }
 
-    if (this.engine.getSettings().tally && e.code === 'Space') {
+    if (this.engine.getSettings().tally && (e.key === ' ' || e.code === 'Space')) {
       e.preventDefault();
       this.advanceTally();
     }
