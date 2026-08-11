@@ -1047,14 +1047,14 @@ body[data-theme="dark"] {
             <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◎</span><span><span class="stimulus-feature-title">Human Faces</span><span class="stimulus-feature-desc">Standard affective face stimuli</span></span></span>
           </button>
           <button type="button" class="stimulus-feature-card stimulus-primary-card" id="stimulus-anime-card" aria-pressed="false" data-stimulus-type="anime_faces">
-            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◉</span><span><span class="stimulus-feature-title">Anime Faces</span><span class="stimulus-feature-desc">Featured visual stimulus family</span></span></span>
+            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◉</span><span><span class="stimulus-feature-title">Anime&More</span><span class="stimulus-feature-desc">Featured visual stimulus family</span></span></span>
             <span class="stimulus-feature-badge">NEW</span>
           </button>
         </div>
         <div class="anime-submode-panel" id="anime-submode-panel" hidden>
-          <div class="anime-submode-heading"><span>Anime Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
+          <div class="anime-submode-heading"><span>Anime&More Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
           <div class="anime-submode-grid" role="group" aria-label="Anime stimulus subtype">
-            <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime Faces</strong><small>Standard</small></button>
+            <button type="button" class="anime-submode-btn active" data-anime-mode="standard" aria-pressed="true"><strong>Anime&More</strong><small>Standard</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="waifu" aria-pressed="false"><strong>Anime Waifu Faces</strong><small>Waifu • 56 assets</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="hentai" aria-pressed="false"><strong>Hentai Faces</strong><small>Hentai • 30 assets</small></button>
             <button type="button" class="anime-submode-btn" data-anime-mode="gore" aria-pressed="false"><strong>Gore</strong><small>Gore • sequential assets</small></button>
@@ -1359,7 +1359,7 @@ const FACES = Object.freeze([
 ]);
 
 // ==================== VISUAL ASSET PIPELINE ====================
-// Standard Anime Faces use the exact WebP files committed under
+// Standard Anime&More uses the exact WebP files committed under
 // assets/stimuli/anime/. No manifest.json or filename transformation is required.
 // The repository contains the Standard Anime WebP files directly in:
 //   assets/stimuli/anime/
@@ -3429,13 +3429,19 @@ const App = {
 
         const mode = btn.dataset.animeMode;
 
-        if (!['standard', 'waifu', 'hentai'].includes(mode)) {
+        if (!['standard', 'waifu', 'hentai', 'gore'].includes(mode)) {
           console.warn('[ATTENTIONAL SHIELD] Invalid Anime subtype:', mode);
           return;
         }
 
         try {
+          // Gore/Hentai are Anime&More submodes. Ensure the parent family is
+          // selected before applying the subtype and its age-gate flow.
+          if (this.engine.stimulusType !== 'anime_faces') {
+            this.setStimulusType('anime_faces', true);
+          }
           this.setAnimeMode(mode);
+        
         } catch (error) {
           console.error(
             '[ATTENTIONAL SHIELD] Anime subtype switch failed:',
@@ -3516,7 +3522,7 @@ const App = {
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
     this.setStimulusType(this._savedStimulusType || 'human_faces', false, { skipAgeGate: true });
-    this.setAnimeMode(this._savedAnimeMode || 'standard', false, { skipAgeGate: true });
+    this.setAnimeMode(this._savedAnimeMode || 'standard', false);
     this.refreshSettingDisplays();
     this.updateGlobalStats();
     this.onStimChange();
@@ -3598,7 +3604,7 @@ const App = {
       }
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
       this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-      this._savedAnimeMode = ['standard', 'waifu', 'hentai'].includes(saved?.animeMode)
+      this._savedAnimeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(saved?.animeMode)
         ? saved.animeMode
         : 'standard';
       this._savedVoiceName = saved?.voiceName || null;
@@ -3729,14 +3735,15 @@ const App = {
     }
     if (panel) panel.hidden = humanActive;
 
-    this.setAnimeMode(this.animeMode || 'standard', false, { skipAgeGate: true });
+    this.setAnimeMode(this.animeMode || 'standard', false);
 
     const status = document.getElementById('stimulus-type-status');
     if (status) {
       const labels = {
-        standard: 'Anime Faces • Standard',
-        waifu: 'Anime Faces • Waifu • 56 assets',
-        hentai: 'Anime Faces • Hentai • ' + HENTAI_COUNT + ' assets'
+        standard: 'Anime&More • Standard',
+        waifu: 'Anime&More • Waifu • 56 assets',
+        hentai: 'Anime&More • Hentai • ' + HENTAI_COUNT + ' assets',
+        gore: 'Anime&More • Gore • Sequential assets'
       };
       status.textContent = humanActive
         ? 'Human Faces • Standard affective faces'
@@ -3747,9 +3754,9 @@ const App = {
   },
 
   setAnimeMode(mode, persist = true, options = {}) {
-    // ONLY Hentai requires explicit 18+ verification.
-    if (mode === 'hentai' && !options.skipAgeGate && !this.ageVerified) {
-      this.pendingAgeAction = { type: 'set-anime-mode', value: 'hentai' };
+    // Hentai and Gore require the same explicit 18+ verification.
+    if ((mode === 'hentai' || mode === 'gore') && !options.skipAgeGate && !this.ageVerified) {
+      this.pendingAgeAction = { type: 'set-anime-mode', value: mode };
       this.openAgeGate();
       return;
     }
@@ -3776,13 +3783,13 @@ const App = {
     const status = document.getElementById('stimulus-type-status');
     if (status && this.engine.stimulusType === 'anime_faces') {
       if (normalized === 'waifu') {
-        status.textContent = 'Anime Faces • Waifu • 56 assets';
+        status.textContent = 'Anime&More • Waifu • 56 assets';
       } else if (normalized === 'hentai') {
-        status.textContent = 'Anime Faces • Hentai • ' + HENTAI_COUNT + ' assets';
+        status.textContent = 'Anime&More • Hentai • ' + HENTAI_COUNT + ' assets';
       } else if (normalized === 'gore') {
-        status.textContent = 'Gore • Sequential assets from assets/stimuli/gore/';
+        status.textContent = 'Anime&More • Gore • Sequential assets from assets/stimuli/gore/';
       } else {
-        status.textContent = 'Anime Faces • Standard';
+        status.textContent = 'Anime&More • Standard';
       }
     }
 
@@ -3948,7 +3955,7 @@ const App = {
   },
 
   isRestrictedStimulusSelection() {
-    return this.engine.stimulusType === 'anime_faces' && this.engine.animeMode === 'hentai';
+    return this.engine.stimulusType === 'anime_faces' && (this.engine.animeMode === 'hentai' || this.engine.animeMode === 'gore');
   },
 
   openAgeGate() {
