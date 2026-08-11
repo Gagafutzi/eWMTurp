@@ -944,6 +944,8 @@ body[data-theme="dark"] {
   color-scheme:dark;
 }
 
+body.theme-non-home #theme-toggle { display:none !important; }
+
 #theme-toggle {
   position:fixed;
   top:12px;
@@ -2148,19 +2150,19 @@ class ThreeDGridEngine {
       this.CELL_SIZE,
       this.CELL_SIZE
     );
+    const edgeGeometry = new THREE.EdgesGeometry(geometry);
 
     for (let i = 0; i < 27; i++) {
-      const material = new THREE.MeshBasicMaterial({
+      const material = new THREE.LineBasicMaterial({
         color: 0x71839a,
         transparent: true,
         opacity: 0.28,
-        wireframe: true,
         depthTest: true,
         depthWrite: false,
         fog: false
       });
 
-      const node = new THREE.Mesh(geometry, material);
+      const node = new THREE.LineSegments(edgeGeometry, material);
       node.name = `inactiveNode_${i}`;
       node.position.copy(this.getNodePosition(i));
       this.latticeGroup.add(node);
@@ -3592,6 +3594,8 @@ const App = {
       this.screens[id].classList.add('active');
     }
 
+    document.body.classList.toggle('theme-non-home', id !== 'setup');
+
     // Settle layouts then query parent dimensions to scale Three.js accurately.
     if (id === 'game') {
       requestAnimationFrame(() => {
@@ -4774,6 +4778,8 @@ else boot();
   const bootTheme = () => {
     applyTheme(getPreferredTheme());
     createToggle();
+    const setup = document.getElementById('screen-setup');
+    document.body.classList.toggle('theme-non-home', !setup || !setup.classList.contains('active'));
   };
 
   if (document.readyState === 'loading') {
