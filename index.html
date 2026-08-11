@@ -1245,18 +1245,16 @@ const DEFAULT_SESSION_DURATION_MIN = 10;
 // ISI is the blank/response interval after the stimulus.
 const TRIAL_TIMING = Object.freeze({ stimulusMs:700 });
 
-const FACES = [
-  {file:'assets/stimuli/faces/face_0.jpg', emotion:'neutral', valence:0},
-  {file:'assets/stimuli/faces/face_1.jpg', emotion:'positive', valence:1},
-  {file:'assets/stimuli/faces/face_2.jpg', emotion:'positive', valence:2},
-  {file:'assets/stimuli/faces/face_3.jpg', emotion:'negative', valence:-2},
-  {file:'assets/stimuli/faces/face_4.jpg', emotion:'negative', valence:-2},
-  {file:'assets/stimuli/faces/face_5.jpg', emotion:'negative', valence:-1},
-  {file:'assets/stimuli/faces/face_6.jpg', emotion:'surprise', valence:0},
-  {file:'assets/stimuli/faces/face_7.jpg', emotion:'negative', valence:-2},
-  {file:'assets/stimuli/faces/face_8.jpg', emotion:'neutral', valence:0},
-  {file:'assets/stimuli/faces/face_9.jpg', emotion:'negative', valence:-1}
-];
+const FACES = Object.freeze(
+  Array.from(
+    { length: 30 },
+    (_, index) => ({
+      file: `assets/stimuli/hentai/h${index + 1}.jpg`,
+      emotion: 'neutral',
+      valence: 0
+    })
+  )
+);
 
 // ==================== VISUAL ASSET PIPELINE ====================
 // Standard Anime Faces use the exact WebP files committed under
@@ -3252,12 +3250,56 @@ const App = {
     if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
 
     document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-      card.addEventListener('click', () => this.setMode(card.dataset.stimulusType));
+      if (!card) return;
+
+      card.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const stimulusType = card.dataset.stimulusType;
+
+        if (stimulusType !== 'human_faces' && stimulusType !== 'anime_faces') {
+          console.warn('[ATTENTIONAL SHIELD] Unknown stimulus type:', stimulusType);
+          return;
+        }
+
+        try {
+          this.setStimulusType(stimulusType);
+        } catch (error) {
+          console.error(
+            '[ATTENTIONAL SHIELD] Stimulus mode switch failed:',
+            stimulusType,
+            error
+          );
+        }
+      });
     });
+
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
-      btn.addEventListener('click', () => {
+      if (!btn) return;
+
+      btn.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+
         if (btn.disabled || btn.dataset.locked === 'true') return;
-        this.setAnimeMode(btn.dataset.animeMode);
+
+        const mode = btn.dataset.animeMode;
+
+        if (!['standard', 'waifu', 'hentai'].includes(mode)) {
+          console.warn('[ATTENTIONAL SHIELD] Invalid Anime subtype:', mode);
+          return;
+        }
+
+        try {
+          this.setAnimeMode(mode);
+        } catch (error) {
+          console.error(
+            '[ATTENTIONAL SHIELD] Anime subtype switch failed:',
+            mode,
+            error
+          );
+        }
       });
     });
 
