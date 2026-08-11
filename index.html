@@ -3847,22 +3847,29 @@ const App = {
     }
     if (!this.screens.game || !this.screens.game.classList.contains('active')) return;
     if (!this.engine.isRunning || this.engine.isPaused) return;
-    if (this.engine.isTrialActive && this.engine.currentTrial < this.engine.blockTrials) {
-      const tag = e.target?.tagName;
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
 
-      const pressed = String(e.key || '').toLowerCase();
-      this.engine.activeStimuli.forEach(type => {
-        const bound = String(this.engine.keys[type] || '').toLowerCase();
-        if (pressed === bound && !this.engine.responses[type][this.engine.currentTrial]) {
-          e.preventDefault();
-          this.processFeedback(type);
-        }
-      });
-    }
+    const tag = e.target?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
+
     if (this.engine.getSettings().tally && e.code === 'Space') {
       e.preventDefault();
       this.advanceTally();
+      return;
+    }
+
+    if (!this.engine.isTrialActive || this.engine.currentTrial >= this.engine.blockTrials) return;
+
+    const pressed = String(e.key || '').toLowerCase();
+    const trial = this.engine.currentTrial;
+
+    for (const type of this.engine.activeStimuli) {
+      const bound = String(this.engine.keys[type] || '').toLowerCase();
+      if (pressed === bound) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.tapFeedback(type);
+        return;
+      }
     }
   },
 
@@ -4196,12 +4203,20 @@ const App = {
       d.id = 'ind-' + type + idSuffix;
       d.dataset.type = type;
       d.setAttribute('role', 'button');
+      d.setAttribute('tabindex', '0');
       d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
       d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
-      d.addEventListener('pointerdown', (e) => {
+      d.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.tapFeedback(type);
+      });
+      d.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          this.tapFeedback(type);
+        }
       });
       return d;
     };
@@ -4219,6 +4234,7 @@ const App = {
   tapFeedback(type) {
     if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
     if (this.engine.currentTrial >= this.engine.blockTrials) return;
+    if (!this.engine.responses[type]) return;
     if (!this.engine.responses[type][this.engine.currentTrial]) this.processFeedback(type);
   },
 
