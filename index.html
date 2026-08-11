@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -231,6 +232,11 @@ select:focus, input:focus { border-color:var(--cyan); }
   touch-action:none;
   user-select:none;
   -webkit-user-select:none;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  box-sizing:border-box;
 }
 .inter-msg { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:var(--font-mono); font-size:1.2rem; font-weight:700; color:var(--cyan); text-align:center; z-index:100; display:none; text-shadow:0 0 16px rgba(0,240,255,0.4); letter-spacing:2px; }
 .inter-msg.active { display:block; animation:fadeIn 0.4s ease; }
@@ -857,6 +863,47 @@ button, input, select { position:relative; z-index:1; }
 }
 </style>
 
+
+<style id="final-session-layout-stability">
+/* Deterministic 2D grid/session layout. */
+#grid-2d {
+  display:none !important;
+  width:min(72vh,72vw,100%);
+  height:min(72vh,72vw,100%);
+  aspect-ratio:1 / 1;
+  flex:0 0 auto;
+  flex-shrink:0;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:100%;
+  max-height:100%;
+  box-sizing:border-box;
+  overflow:hidden !important;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:repeat(3,minmax(0,1fr));
+  align-content:stretch;
+  justify-content:stretch;
+}
+#grid-2d.active { display:grid !important; }
+#grid-2d > .cell-2d,
+#grid-2d > [class*="cell"] {
+  min-width:0 !important;
+  min-height:0 !important;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  flex-shrink:0 !important;
+  box-sizing:border-box;
+  overflow:hidden !important;
+}
+#grid-2d img, #grid-2d .stimulus-image, #grid-2d .face-img {
+  display:block; width:100%; height:100%; min-width:0; min-height:0;
+  max-width:100%; max-height:100%; object-fit:cover; box-sizing:border-box;
+}
+.scene-3d { min-width:0 !important; min-height:0 !important; }
+.scene-3d canvas { display:block !important; width:100% !important; height:100% !important; }
+</style>
 </head>
 <body>
 
@@ -1927,6 +1974,8 @@ class ThreeDGridEngine {
     this.ACTIVE_SIZE = 1;
     this.ACTIVE_SCALE = 1.18;
     this.VIEW_PADDING = 1.12;
+
+    this._resizeRetryTimer = null;
   }
 
   addSegment(vertices, ax, ay, az, bx, by, bz) {
@@ -2176,6 +2225,28 @@ class ThreeDGridEngine {
     );
   }
 
+  setActiveNodeTexture(index, texture) {
+    if (!this.activeCube || !texture) return;
+    this.activeTexture = texture;
+    const materials = Array.from({length:6}, () => new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: false,
+      side: THREE.FrontSide,
+      depthTest: true,
+      depthWrite: true
+    }));
+    const old = Array.isArray(this.activeCube.material) ? this.activeCube.material : [this.activeCube.material];
+    old.forEach(m => { if (m) m.dispose(); });
+    this.activeCube.material = materials;
+  }
+
+  clearActiveTexture() {
+    if (this.activeTexture) {
+      try { this.activeTexture.dispose(); } catch (_) {}
+      this.activeTexture = null;
+    }
+  }
+
   resetNode() {
     if (!this.activeCube) return;
 
@@ -2229,20 +2300,35 @@ class ThreeDGridEngine {
       !this.latticeGroup
     ) return;
 
-    const rect = this.container.getBoundingClientRect();
+    // Read live bounding sizes. If they are zero (which can happen during setup switches
+    // or when the parent container is display:none), trigger a safe deferred lookup.
+    const width = Math.round(this.container.clientWidth || 0);
+    const height = Math.round(this.container.clientHeight || 0);
 
-    const width = Math.max(
-      1,
-      Math.round(rect.width || this.container.clientWidth || 1)
-    );
+    if (width === 0 || height === 0) {
+      const rect = this.container.getBoundingClientRect();
+      const rWidth = Math.round(rect.width || 0);
+      const rHeight = Math.round(rect.height || 0);
 
-    const height = Math.max(
-      1,
-      Math.round(rect.height || this.container.clientHeight || 1)
-    );
+      if (rWidth > 0 && rHeight > 0) {
+        this.applyDimensions(rWidth, rHeight);
+        return;
+      }
 
-    if (width < 2 || height < 2) return;
+      // Schedule a subsequent loop retry frame to let flexbox paints finish
+      if (!this._resizeRetryTimer) {
+        this._resizeRetryTimer = setTimeout(() => {
+          this._resizeRetryTimer = null;
+          this.fitCameraToMatrix();
+        }, 50);
+      }
+      return;
+    }
 
+    this.applyDimensions(width, height);
+  }
+
+  applyDimensions(width, height) {
     const aspect = width / height;
     const isMobile = window.innerWidth < 768;
     const fov = window.innerWidth < 480
@@ -2362,8 +2448,9 @@ class ThreeDGridEngine {
         THREE.sRGBEncoding;
     }
 
-    this.renderer.domElement.style.width = '100%';
-    this.renderer.domElement.style.height = '100%';
+    // Force canvas styling to inherit matching dimensions dynamically
+    this.renderer.domElement.style.setProperty('width', '100%', 'important');
+    this.renderer.domElement.style.setProperty('height', '100%', 'important');
     this.renderer.domElement.style.display = 'block';
     this.renderer.domElement.style.touchAction = 'none';
     this.renderer.domElement.setAttribute(
@@ -2450,7 +2537,20 @@ class ThreeDGridEngine {
       );
     }
 
+    // Delay multiple sizing passes to permit CSS/view transitions to finish painting
     this.fitCameraToMatrix();
+
+    requestAnimationFrame(() => {
+      this.fitCameraToMatrix();
+      requestAnimationFrame(() => {
+        this.fitCameraToMatrix();
+      });
+    });
+
+    setTimeout(() => {
+      this.fitCameraToMatrix();
+    }, 150);
+
     this.animate();
 
     return true;
@@ -2578,6 +2678,11 @@ class ThreeDGridEngine {
 
   destroy() {
     ++this.textureRequestId;
+
+    if (this._resizeRetryTimer) {
+      clearTimeout(this._resizeRetryTimer);
+      this._resizeRetryTimer = null;
+    }
 
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(
@@ -3057,7 +3162,7 @@ const App = {
     if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
 
     document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-      card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
+      card.addEventListener('click', () => this.setMode(card.dataset.stimulusType));
     });
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -3240,6 +3345,28 @@ const App = {
 
     if (this.screens[id]) {
       this.screens[id].classList.add('active');
+    }
+
+    // Settle layouts then query parent dimensions to scale Three.js accurately.
+    if (id === 'game') {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (this.engine?.getSettings?.().gridType === '3d') {
+            if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
+              ThreeDGrid.fitCameraToMatrix();
+            }
+          }
+        });
+      });
+
+      // Defensive layout-settling delayed check
+      setTimeout(() => {
+        if (this.engine?.getSettings?.().gridType === '3d') {
+          if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
+            ThreeDGrid.fitCameraToMatrix();
+          }
+        }
+      }, 150);
     }
 
     if (id === 'setup') {
@@ -3527,10 +3654,8 @@ const App = {
   },
 
   async startSession(options = {}) {
-    // A new session always starts from a clean rendering state.
     cleanupRenderers();
 
-    // Adult/anime content requires an explicit 18+ confirmation.
     if (!options.skipAgeGate && this.isRestrictedStimulusSelection()) {
       this.pendingAgeAction = { type: 'start-session' };
       this.openAgeGate();
@@ -3541,79 +3666,143 @@ const App = {
     const loading = document.getElementById('asset-loading-overlay');
     const startButton = document.getElementById('btn-init-session');
 
-    // Set the selected visual family BEFORE preloading. This is critical for
-    // anime_waifu: the Waifu cache must be populated before trial generation.
-    this.engine.reset();
-    this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-    this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-    this.engine.animeMode = ['standard', 'waifu', 'hentai'].includes(s.animeMode)
-      ? s.animeMode
-      : 'standard';
-
-    if (loading) {
-      loading.classList.add('active');
-      loading.setAttribute('aria-hidden', 'false');
+    const setLoading = (active, message = 'LOADING ASSETS...') => {
+      if (!loading) return;
+      loading.classList.toggle('active', active);
+      loading.setAttribute('aria-hidden', active ? 'false' : 'true');
       const label = loading.querySelector('.asset-loading-label');
-      if (label) label.textContent = 'LOADING ASSETS...';
-    }
+      if (label) label.textContent = message;
+    };
+
+    const waitFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+
+    const waitForContainerSize = async (container, attempts = 10) => {
+      if (!container) return false;
+      for (let i = 0; i < attempts; i++) {
+        const width = container.clientWidth || container.getBoundingClientRect().width;
+        const height = container.clientHeight || container.getBoundingClientRect().height;
+        if (width > 0 && height > 0) return true;
+        void container.offsetWidth;
+        void container.offsetHeight;
+        await waitFrame();
+      }
+      return false;
+    };
+
+    const preloadWithTimeout = (timeoutMs = 8000) => {
+      let timer = null;
+      const timeout = new Promise(resolve => {
+        timer = setTimeout(() => resolve({ timedOut: true, loaded: false }), timeoutMs);
+      });
+      const preload = Promise.resolve()
+        .then(() => this.engine.preloadImages())
+        .then(result => ({ timedOut: false, loaded: true, result }))
+        .catch(error => ({ timedOut: false, loaded: false, error }));
+      return Promise.race([preload, timeout]).finally(() => { if (timer) clearTimeout(timer); });
+    };
+
     if (startButton) startButton.disabled = true;
+    setLoading(true);
 
     try {
-      const result = await this.engine.preloadImages();
-      console.info('[ATTENTIONAL SHIELD] Selected assets ready:', result);
-    } catch (error) {
-      console.warn('[ATTENTIONAL SHIELD] Preload promise rejected; continuing with available stimuli.', error);
-    } finally {
-      if (loading) {
-        loading.classList.remove('active');
-        loading.setAttribute('aria-hidden', 'true');
+      this.engine.reset();
+      this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
+      this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+      this.engine.animeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(s.animeMode) ? s.animeMode : 'standard';
+
+      const preloadResult = await preloadWithTimeout(8000);
+      if (preloadResult.timedOut) {
+        console.warn('[ATTENTIONAL SHIELD] Asset preload timed out; continuing with available assets.');
+      } else if (!preloadResult.loaded) {
+        console.warn('[ATTENTIONAL SHIELD] Asset preload failed; continuing with available assets.', preloadResult.error);
+      } else {
+        console.info('[ATTENTIONAL SHIELD] Selected assets ready:', preloadResult.result);
       }
-      if (startButton) startButton.disabled = false;
-    }
 
-    this.engine.setActiveStimuli();
-    this.engine.currentN = s.startN;
-    this.engine.highestN = s.startN;
-    this.engine.sessionStart = Date.now();
-    this.engine.lastTick = Date.now();
-    this.engine.sessionLimitMs = Math.max(1, s.sessionDurationMin) * 60000;
-    this.engine.sessionTrialsCompleted = 0;
-    const estimatedIsi = s.isiMode === 'fixed'
-      ? Math.max(500, Number(s.isiFixed) || 1300)
-      : (Math.max(500, Number(s.isiMin) || 1300) + Math.max(500, Number(s.isiMax) || 3000)) / 2;
-    const estimatedTrialMs = Math.max(500, Number(s.stimDur) || 1200) + estimatedIsi;
-    this.engine.sessionTotalTrials = Math.max(1, Math.floor(this.engine.sessionLimitMs / estimatedTrialMs));
-    this.engine.isRunning = true;
+      this.engine.setActiveStimuli();
+      this.engine.currentN = s.startN;
+      this.engine.highestN = s.startN;
+      this.engine.sessionStart = Date.now();
+      this.engine.lastTick = Date.now();
+      this.engine.sessionLimitMs = Math.max(1, Number(s.sessionDurationMin) || 10) * 60000;
+      this.engine.sessionTrialsCompleted = 0;
 
-    if (this.engine.stimulusType === 'anime_faces' && !this.engine.animeImagesLoaded) {
-      console.warn('[ATTENTIONAL SHIELD] Anime ' + this.engine.animeMode + ' assets are unavailable. Human faces will be used as a non-fatal fallback.');
-    }
+      const estimatedIsi = s.isiMode === 'fixed'
+        ? Math.max(500, Number(s.isiFixed) || DEFAULT_ISI)
+        : (Math.max(500, Number(s.isiMin) || 1300) + Math.max(500, Number(s.isiMax) || 3000)) / 2;
+      const estimatedTrialMs = Math.max(500, Number(s.stimDur) || TRIAL_TIMING.stimulusMs) + estimatedIsi;
+      this.engine.sessionTotalTrials = Math.max(1, Math.floor(this.engine.sessionLimitMs / estimatedTrialMs));
+      this.engine.isRunning = true;
 
-    AudioEngine.init();
-    if (AudioEngine.ctx && AudioEngine.ctx.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
+      AudioEngine.init();
+      if (AudioEngine.ctx?.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
 
-    this.buildGrid();
-    this.buildSideControls();
-    this.switchScreen('game');
-    this.showInterMsg('GET READY', 800);
-    setTimeout(() => {
+      // IMPORTANT: make the game screen visible BEFORE initializing
+      // Three.js. #scene-3d can otherwise report 0x0 while display:none.
+      this.switchScreen('game');
+      await waitFrame();
+
+      this.buildGrid();
+      this.buildSideControls();
+
+      // Allow the newly-visible flex/grid layout to settle before the
+      // first renderer sizing pass.
+      await waitFrame();
+
+      const scene3d = document.getElementById('scene-3d');
+      if (s.gridType === '3d' && scene3d) {
+        const sized = await waitForContainerSize(scene3d);
+        if (!sized) {
+          const width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 800);
+          const height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 600);
+          scene3d.style.width = `${width}px`;
+          scene3d.style.height = `${height}px`;
+          void scene3d.offsetWidth;
+          void scene3d.offsetHeight;
+        }
+        if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
+          ThreeDGrid.fitCameraToMatrix();
+        }
+        
+        // Final fallback timeout for safe rendering pass
+        setTimeout(() => {
+          if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
+            ThreeDGrid.fitCameraToMatrix();
+          }
+        }, 100);
+      }
+
+      this.showInterMsg('GET READY', 800);
+
+      if (this.engine.timerInterval) clearInterval(this.engine.timerInterval);
+      this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
+
+      await waitFrame();
       if (!this.engine.isRunning || this.engine.isPaused) return;
+
       try {
         this.startBlock();
       } catch (error) {
         console.error('[ATTENTIONAL SHIELD] Block initialization failed:', error);
-        // Last-resort recovery: switch the engine to human faces and retry.
-        this.engine.stimulusType = 'human_faces';
-        this.engine.animeMode = 'standard';
-        try { this.startBlock(); }
-        catch (retryError) {
-          console.error('[ATTENTIONAL SHIELD] Session recovery failed:', retryError);
-          this.endSession('error');
-        }
+        this.endSession('error');
       }
-    }, 850);
-
-    this.engine.timerInterval = setInterval(() => this.updateTimer(), 100);
+    } catch (error) {
+      console.error('[ATTENTIONAL SHIELD] Session initialization failed:', error);
+      this.engine.isRunning = false;
+      this.engine.isTrialActive = false;
+      if (this.engine.trialTimeout) clearTimeout(this.engine.trialTimeout);
+      if (this.engine.trialAdvanceTimeout) clearTimeout(this.engine.trialAdvanceTimeout);
+      if (this.engine.timerInterval) clearInterval(this.engine.timerInterval);
+      this.engine.trialTimeout = null;
+      this.engine.trialAdvanceTimeout = null;
+      this.engine.timerInterval = null;
+      cleanupRenderers();
+      const msg = document.getElementById('inter-msg');
+      if (msg) { msg.textContent = 'SESSION INITIALIZATION FAILED — PLEASE TRY AGAIN'; msg.classList.add('active'); }
+    } finally {
+      setLoading(false);
+      if (startButton) startButton.disabled = false;
+    }
   },
 
   updateLevelHUD() {
@@ -3643,52 +3832,50 @@ const App = {
 
   buildGrid() {
     const s = this.engine.getSettings();
-
-    // Always tear down any previous WebGL/DOM renderer first.
     cleanupRenderers();
 
     const g2d = document.getElementById('grid-2d');
     const s3d = document.getElementById('scene-3d');
 
     if (s.gridType === '3d') {
-      if (!s3d) {
-        console.error('[ATTENTIONAL SHIELD] #scene-3d is missing.');
-        return;
-      }
+      if (!s3d) { console.error('[ATTENTIONAL SHIELD] #scene-3d is missing.'); return; }
       activate3DRenderer();
       if (!ThreeDGrid.init(s3d)) {
         console.error('[ATTENTIONAL SHIELD] Three.js initialization failed.');
         activate2DRenderer();
         return;
       }
-      const speed = document.getElementById('rng-3d-speed')?.value || 40;
-      ThreeDGrid.setRotationSpeed(speed);
+      ThreeDGrid.setRotationSpeed(document.getElementById('rng-3d-speed')?.value || 40);
+      requestAnimationFrame(() => { if (typeof ThreeDGrid.fitCameraToMatrix === 'function') ThreeDGrid.fitCameraToMatrix(); });
       return;
     }
 
     activate2DRenderer();
-
     if (!g2d) return;
 
-    const sz = s.gridSize;
-    g2d.style.gridTemplateColumns = `repeat(${sz}, 1fr)`;
-    g2d.style.gridTemplateRows = `repeat(${sz}, 1fr)`;
+    g2d.innerHTML = '';
+    void g2d.offsetHeight;
+    g2d.style.removeProperty('width');
+    g2d.style.removeProperty('height');
+    g2d.style.removeProperty('padding');
+    g2d.style.removeProperty('gap');
+
+    const sz = Math.max(1, Math.min(3, Number(s.gridSize) || 3));
+    g2d.style.gridTemplateColumns = `repeat(${sz}, minmax(0, 1fr))`;
+    g2d.style.gridTemplateRows = `repeat(${sz}, minmax(0, 1fr))`;
+    g2d.style.aspectRatio = '1 / 1';
+    g2d.style.flexShrink = '0';
 
     for (let i = 0; i < sz * sz; i++) {
       const cell = document.createElement('div');
       cell.className = 'cell-2d';
       cell.id = 'pos-' + i;
+      Object.assign(cell.style, { minWidth:'0', minHeight:'0', width:'100%', height:'100%', maxWidth:'100%', maxHeight:'100%', overflow:'hidden', boxSizing:'border-box', flexShrink:'0' });
 
       const img = document.createElement('img');
       img.className = 'face-img stimulus-image';
       img.alt = '';
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-      img.style.display = 'none';
-      img.style.maxWidth = '100%';
-      img.style.maxHeight = '100%';
-      img.style.pointerEvents = 'none';
+      Object.assign(img.style, { width:'100%', height:'100%', minWidth:'0', minHeight:'0', maxWidth:'100%', maxHeight:'100%', objectFit:'cover', display:'none', pointerEvents:'none', boxSizing:'border-box' });
 
       const fallback = document.createElement('div');
       fallback.className = 'face-fallback';
@@ -3697,12 +3884,13 @@ const App = {
       const overlay = document.createElement('div');
       overlay.className = 'cell-overlay';
 
-      cell.appendChild(img);
-      cell.appendChild(fallback);
-      cell.appendChild(overlay);
+      cell.append(img, fallback, overlay);
       g2d.appendChild(cell);
     }
+
+    void g2d.offsetHeight;
   },
+
   buildSideControls() {
     const left = document.getElementById('side-left');
     const right = document.getElementById('side-right');
