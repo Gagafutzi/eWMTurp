@@ -974,12 +974,6 @@ body[data-theme="dark"] {
     transform .18s ease;
 }
 
-/* Theme toggle is only visible on the home/landing (setup) screen. */
-body:has(#screen-game.active) #theme-toggle,
-body:has(#screen-results.active) #theme-toggle {
-  display:none !important;
-}
-
 #theme-toggle:hover {
   border-color:var(--border-hover);
   transform:translateY(-1px);
@@ -2156,17 +2150,14 @@ class ThreeDGridEngine {
     );
 
     for (let i = 0; i < 27; i++) {
-      const material = new THREE.MeshPhysicalMaterial({
-        color: 0x101820,
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x71839a,
         transparent: true,
-        opacity: 0.22,
-        transmission: 0.18,
-        thickness: 0.15,
-        roughness: 0.72,
-        metalness: 0.0,
+        opacity: 0.28,
+        wireframe: true,
         depthTest: true,
         depthWrite: false,
-        side: THREE.DoubleSide
+        fog: false
       });
 
       const node = new THREE.Mesh(geometry, material);
@@ -2610,10 +2601,11 @@ class ThreeDGridEngine {
       new THREE.LineBasicMaterial({
         color: 0x71839a,
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.32,
         linewidth: 3,
         depthTest: true,
-        depthWrite: false
+        depthWrite: false,
+        fog: false
       });
 
     const latticeLines =
@@ -3208,7 +3200,7 @@ class GameEngine {
     if (this.blockTrials > 0 && this.currentTrial >= this.blockTrials) {
       this.sessionTrialsCompleted += this.currentTrial;
     }
-    this.blockTrials = 20 + (this.currentN * this.currentN);
+    this.blockTrials = 24;
     this.kSeq = [];
     const minK = s.variableN ? s.varMin : this.currentN;
     const maxK = s.variableN ? Math.min(s.varMax, this.currentN) : this.currentN;
