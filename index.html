@@ -944,8 +944,6 @@ body[data-theme="dark"] {
   color-scheme:dark;
 }
 
-body.theme-non-home #theme-toggle { display:none !important; }
-
 #theme-toggle {
   position:fixed;
   top:12px;
@@ -1239,7 +1237,7 @@ body.theme-non-home #theme-toggle { display:none !important; }
       <button class="hud-btn danger" id="btn-end-session">END</button>
     </div>
   </div>
-  <div class="game-stage">
+  <div class="game-stage" id="game-stage" tabindex="0">
     <div class="inter-msg" id="inter-msg">INITIALIZING...</div>
     <div class="side-controls" id="side-left"></div>
     <div class="center-display">
@@ -2150,9 +2148,9 @@ class ThreeDGridEngine {
       this.CELL_SIZE,
       this.CELL_SIZE
     );
-    const edgeGeometry = new THREE.EdgesGeometry(geometry);
 
     for (let i = 0; i < 27; i++) {
+      const edgeGeometry = new THREE.EdgesGeometry(geometry);
       const material = new THREE.LineBasicMaterial({
         color: 0x71839a,
         transparent: true,
@@ -3451,7 +3449,7 @@ const App = {
     }
 
     // Keyboard
-    document.addEventListener('keydown', (e) => {
+    window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const ageGate = document.getElementById('age-gate');
         if (ageGate?.classList.contains('active')) {
@@ -3460,7 +3458,25 @@ const App = {
         }
       }
       this.handleKeydown(e);
-    });
+    }, { capture: true });
+
+    // Keep keyboard focus on the gameplay area so responses are never lost
+    // after clicking the game, desktop controls, or mobile controls.
+    const gameStage = document.getElementById('game-stage');
+    if (gameStage) {
+      const focusGameStage = () => {
+        if (this.screens.game?.classList.contains('active')) {
+          gameStage.focus({ preventScroll: true });
+        }
+      };
+      gameStage.addEventListener('pointerdown', () => {
+        requestAnimationFrame(focusGameStage);
+      });
+      gameStage.addEventListener('click', () => {
+        requestAnimationFrame(focusGameStage);
+      });
+      this._focusGameStage = focusGameStage;
+    }
 
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
@@ -3594,11 +3610,15 @@ const App = {
       this.screens[id].classList.add('active');
     }
 
-    document.body.classList.toggle('theme-non-home', id !== 'setup');
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+      themeToggle.style.display = id === 'setup' ? 'inline-flex' : 'none';
+    }
 
     // Settle layouts then query parent dimensions to scale Three.js accurately.
     if (id === 'game') {
       requestAnimationFrame(() => {
+        if (this._focusGameStage) this._focusGameStage();
         requestAnimationFrame(() => {
           if (this.engine?.getSettings?.().gridType === '3d') {
             if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
@@ -4178,8 +4198,11 @@ const App = {
       d.setAttribute('role', 'button');
       d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
       d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
-      d.addEventListener('touchstart', (e) => { e.preventDefault(); this.tapFeedback(type); }, {passive:false});
-      d.addEventListener('mousedown', (e) => { e.preventDefault(); this.tapFeedback(type); });
+      d.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.tapFeedback(type);
+      });
       return d;
     };
 
@@ -4773,13 +4796,16 @@ else boot();
 
     document.body.appendChild(button);
     applyTheme(getPreferredTheme());
+
+    const activeScreen = document.querySelector('.screen.active');
+    button.style.display = activeScreen && activeScreen.id === 'screen-setup'
+      ? 'inline-flex'
+      : 'none';
   };
 
   const bootTheme = () => {
     applyTheme(getPreferredTheme());
     createToggle();
-    const setup = document.getElementById('screen-setup');
-    document.body.classList.toggle('theme-non-home', !setup || !setup.classList.contains('active'));
   };
 
   if (document.readyState === 'loading') {
