@@ -2050,13 +2050,17 @@ class ThreeDGridEngine {
     );
 
     for (let i = 0; i < 27; i++) {
-      const material = new THREE.MeshBasicMaterial({
+      const material = new THREE.MeshPhysicalMaterial({
         color: 0x101820,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.22,
+        transmission: 0.18,
+        thickness: 0.15,
+        roughness: 0.72,
+        metalness: 0.0,
         depthTest: true,
         depthWrite: false,
-        side: THREE.FrontSide
+        side: THREE.DoubleSide
       });
 
       const node = new THREE.Mesh(geometry, material);
@@ -2075,13 +2079,17 @@ class ThreeDGridEngine {
 
     const materials = Array.from(
       { length: 6 },
-      () => new THREE.MeshBasicMaterial({
+      () => new THREE.MeshPhysicalMaterial({
         color: 0xffffff,
-        transparent: false,
-        opacity: 1,
+        transparent: true,
+        opacity: 0.82,
+        transmission: 0.12,
+        thickness: 0.08,
+        roughness: 0.62,
+        metalness: 0.0,
         depthTest: true,
-        depthWrite: true,
-        side: THREE.FrontSide
+        depthWrite: false,
+        side: THREE.DoubleSide
       })
     );
 
@@ -2442,7 +2450,7 @@ class ThreeDGridEngine {
       powerPreference: 'high-performance'
     });
 
-    this.renderer.setClearColor(0x06070a, 0);
+    this.renderer.setClearColor(0x000000, 0);
     this.renderer.setPixelRatio(
       Math.min(window.devicePixelRatio || 1, 2)
     );
@@ -3996,41 +4004,58 @@ const App = {
     activate2DRenderer();
     if (!g2d) return;
 
-    g2d.innerHTML = '';
-    void g2d.offsetHeight;
-    g2d.style.removeProperty('width');
-    g2d.style.removeProperty('height');
-    g2d.style.removeProperty('padding');
-    g2d.style.removeProperty('gap');
+    // Hard reset: remove all previous descendants and every stale inline style.
+    g2d.replaceChildren();
+    g2d.removeAttribute('style');
 
     const sz = Math.max(1, Math.min(3, Number(s.gridSize) || 3));
+    g2d.style.display = 'grid';
     g2d.style.gridTemplateColumns = `repeat(${sz}, minmax(0, 1fr))`;
     g2d.style.gridTemplateRows = `repeat(${sz}, minmax(0, 1fr))`;
     g2d.style.aspectRatio = '1 / 1';
     g2d.style.flexShrink = '0';
+    g2d.style.minWidth = '0';
+    g2d.style.minHeight = '0';
+    g2d.style.maxWidth = '100%';
+    g2d.style.maxHeight = '100%';
+    g2d.style.boxSizing = 'border-box';
+    g2d.style.overflow = 'hidden';
+
+    const fragment = document.createDocumentFragment();
 
     for (let i = 0; i < sz * sz; i++) {
       const cell = document.createElement('div');
       cell.className = 'cell-2d';
       cell.id = 'pos-' + i;
-      Object.assign(cell.style, { minWidth:'0', minHeight:'0', width:'100%', height:'100%', maxWidth:'100%', maxHeight:'100%', overflow:'hidden', boxSizing:'border-box', flexShrink:'0' });
+      cell.removeAttribute('style');
 
       const img = document.createElement('img');
       img.className = 'face-img stimulus-image';
       img.alt = '';
-      Object.assign(img.style, { width:'100%', height:'100%', minWidth:'0', minHeight:'0', maxWidth:'100%', maxHeight:'100%', objectFit:'cover', display:'none', pointerEvents:'none', boxSizing:'border-box' });
+      img.removeAttribute('src');
+      img.removeAttribute('width');
+      img.removeAttribute('height');
+      img.style.display = 'none';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.pointerEvents = 'none';
+      img.style.boxSizing = 'border-box';
 
       const fallback = document.createElement('div');
       fallback.className = 'face-fallback';
+      fallback.textContent = '';
       fallback.style.display = 'none';
 
       const overlay = document.createElement('div');
       overlay.className = 'cell-overlay';
 
       cell.append(img, fallback, overlay);
-      g2d.appendChild(cell);
+      fragment.appendChild(cell);
     }
 
+    g2d.appendChild(fragment);
+    void g2d.offsetWidth;
     void g2d.offsetHeight;
   },
 
