@@ -904,6 +904,105 @@ button, input, select { position:relative; z-index:1; }
 .scene-3d { min-width:0 !important; min-height:0 !important; }
 .scene-3d canvas { display:block !important; width:100% !important; height:100% !important; }
 </style>
+
+<style id="attentional-shield-theme">
+/* ================================================================
+   ATTENTIONAL SHIELD // LIGHT / DARK THEME
+   Additive theme layer. Existing application CSS remains unchanged.
+   ================================================================ */
+
+body[data-theme="light"] {
+  --bg:#f4f7fb;
+  --bg-panel:#ffffff;
+  --bg-elevated:#eef2f7;
+  --border:#cbd5e1;
+  --border-hover:#94a3b8;
+  --text:#172033;
+  --text-muted:#526071;
+  --text-dim:#718096;
+
+  --cyan:#008fa3;
+  --cyan-dim:rgba(0,143,163,0.12);
+  --cyan-glow:rgba(0,143,163,0.22);
+
+  --magenta:#d81b60;
+  --magenta-dim:rgba(216,27,96,0.11);
+
+  --green:#008f5a;
+  --green-dim:rgba(0,143,90,0.11);
+
+  --amber:#b66a00;
+  --amber-dim:rgba(182,106,0,0.11);
+
+  --red:#c62828;
+  --red-dim:rgba(198,40,40,0.10);
+
+  color-scheme:light;
+}
+
+body[data-theme="dark"] {
+  color-scheme:dark;
+}
+
+#theme-toggle {
+  position:fixed;
+  top:12px;
+  right:12px;
+  z-index:10000;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-width:92px;
+  height:34px;
+  padding:0 11px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--bg-panel);
+  color:var(--text);
+  font-family:var(--font-mono);
+  font-size:.58rem;
+  font-weight:700;
+  letter-spacing:.6px;
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.12);
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    color .18s ease,
+    transform .18s ease;
+}
+
+#theme-toggle:hover {
+  border-color:var(--border-hover);
+  transform:translateY(-1px);
+}
+
+#theme-toggle:focus-visible {
+  outline:2px solid var(--cyan);
+  outline-offset:2px;
+}
+
+#theme-toggle .theme-icon {
+  font-size:.85rem;
+  line-height:1;
+}
+
+@media (max-width:767px) {
+  #theme-toggle {
+    top:8px;
+    right:8px;
+    min-width:38px;
+    width:38px;
+    padding:0;
+  }
+
+  #theme-toggle .theme-label {
+    display:none;
+  }
+}
+</style>
+
 </head>
 <body>
 
@@ -4601,6 +4700,88 @@ const boot = () => {
 };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
 else boot();
+})();
+
+
+/* attential-shield-theme-controller */
+/* ================================================================
+   ATTENTIONAL SHIELD // THEME CONTROLLER
+   Additive-only UI feature.
+   ================================================================ */
+(function initThemeToggle() {
+  const STORAGE_KEY = 'attentional-shield-theme';
+
+  const getPreferredTheme = () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'light' || saved === 'dark') return saved;
+
+    return window.matchMedia &&
+      window.matchMedia('(prefers-color-scheme: light)').matches
+      ? 'light'
+      : 'dark';
+  };
+
+  const applyTheme = theme => {
+    const safeTheme = theme === 'light' ? 'light' : 'dark';
+
+    document.body.setAttribute('data-theme', safeTheme);
+
+    const button = document.getElementById('theme-toggle');
+    if (!button) return;
+
+    const isLight = safeTheme === 'light';
+
+    button.setAttribute(
+      'aria-label',
+      isLight ? 'Switch to dark mode' : 'Switch to light mode'
+    );
+    button.setAttribute(
+      'title',
+      isLight ? 'Switch to dark mode' : 'Switch to light mode'
+    );
+    button.setAttribute('aria-pressed', String(isLight));
+
+    const icon = button.querySelector('.theme-icon');
+    const label = button.querySelector('.theme-label');
+
+    if (icon) icon.textContent = isLight ? '☀' : '☾';
+    if (label) label.textContent = isLight ? 'LIGHT' : 'DARK';
+  };
+
+  const createToggle = () => {
+    if (!document.body || document.getElementById('theme-toggle')) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'theme-toggle';
+    button.innerHTML =
+      '<span class="theme-icon" aria-hidden="true"></span>' +
+      '<span class="theme-label"></span>';
+
+    button.addEventListener('click', () => {
+      const next =
+        document.body.getAttribute('data-theme') === 'light'
+          ? 'dark'
+          : 'light';
+
+      localStorage.setItem(STORAGE_KEY, next);
+      applyTheme(next);
+    });
+
+    document.body.appendChild(button);
+    applyTheme(getPreferredTheme());
+  };
+
+  const bootTheme = () => {
+    applyTheme(getPreferredTheme());
+    createToggle();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootTheme, { once:true });
+  } else {
+    bootTheme();
+  }
 })();
 
 </script>
