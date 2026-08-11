@@ -3448,19 +3448,17 @@ const App = {
       });
     }
 
-    // Keyboard: one global capture-phase listener so key input is not dependent
-    // on which button/control currently owns focus.
+    // Keyboard
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const ageGate = document.getElementById('age-gate');
         if (ageGate?.classList.contains('active')) {
-          e.preventDefault();
           this.cancelAgeGate();
           return;
         }
       }
       this.handleKeydown(e);
-    }, { capture: true, passive: false });
+    }, { capture: true });
 
     // Keep keyboard focus on the gameplay area so responses are never lost
     // after clicking the game, desktop controls, or mobile controls.
@@ -3839,69 +3837,37 @@ const App = {
   },
 
   handleKeydown(e) {
-    // Key binding capture must work regardless of which element currently has focus.
-    // Store the browser's e.key value so special keys (Arrow*, Space, etc.) remain valid.
     if (this.engine.listeningBind) {
       e.preventDefault();
-      e.stopPropagation();
-      this.engine.keys[this.engine.listeningBind] = String(e.key || '');
+      this.engine.keys[this.engine.listeningBind] = e.key;
       this.engine.listeningBind = null;
       this.onStimChange();
       this.saveSettings();
       return;
     }
 
-    // Only handle response input during an active, unpaused trial.
+    // Only handle modality keys while an actual trial is running.
     if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) return;
 
-    // Never interfere with normal typing/selecting in form controls.
-    const target = e.target;
-    const tag = target?.tagName;
-    if (
-      tag === 'INPUT' ||
-      tag === 'SELECT' ||
-      tag === 'TEXTAREA' ||
-      target?.isContentEditable ||
-      e.isComposing
-    ) return;
-
-    // While gameplay is active, stop browser navigation/scrolling keys from acting on the page.
-    // This does not affect normal form-field input because of the guard above.
-    const navigationKeys = new Set([
-      ' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-      'PageUp', 'PageDown', 'Home', 'End'
-    ]);
-    if (navigationKeys.has(e.key) || e.code === 'Space') {
-      e.preventDefault();
-    }
+    const tag = e.target?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
 
     if (this.engine.currentTrial >= this.engine.blockTrials) return;
 
-    // Normalize e.key for case-insensitive alphabet matching and e.code for
-    // physical-key matching. This supports letters plus Arrow*/Space bindings.
-    const pressedKey = String(e.key || '').trim().toLowerCase();
-    const pressedCode = String(e.code || '').trim().toLowerCase();
+    const pressedKey = String(e.key || '').toLowerCase();
+    const pressedCode = String(e.code || '').toLowerCase();
 
     for (const type of this.engine.activeStimuli) {
       const bound = String(this.engine.keys[type] || '').trim().toLowerCase();
       if (!bound) continue;
 
-      // Match the configured e.key directly first (letters, Arrow*, Space),
-      // then support KeyboardEvent.code values such as KeyF / KeyJ.
-      const boundCode =
-        bound.startsWith('key') ||
-        bound.startsWith('digit') ||
-        bound.startsWith('arrow') ||
-        bound === 'space' ||
-        bound === 'spacebar'
-          ? bound
-          : ('key' + bound);
+      // Support both the existing stored e.key values (f, j, etc.)
+      // and physical KeyboardEvent.code values (KeyF, KeyJ, etc.).
+      const boundCode = bound.startsWith('key') || bound.startsWith('digit')
+        ? bound
+        : ('key' + bound);
 
-      if (
-        pressedKey === bound ||
-        pressedCode === bound ||
-        pressedCode === boundCode
-      ) {
+      if (pressedKey === bound || pressedCode === bound || pressedCode === boundCode) {
         e.preventDefault();
         e.stopPropagation();
         this.handleModalityResponse(type);
@@ -3909,7 +3875,7 @@ const App = {
       }
     }
 
-    if (this.engine.getSettings().tally && (e.key === ' ' || e.code === 'Space')) {
+    if (this.engine.getSettings().tally && e.code === 'Space') {
       e.preventDefault();
       this.advanceTally();
     }
@@ -4234,49 +4200,108 @@ const App = {
     const left = document.getElementById('side-left');
     const right = document.getElementById('side-right');
     const mobile = document.getElementById('mobile-response-controls');
+
     if (left) left.innerHTML = '';
     if (right) right.innerHTML = '';
     if (mobile) mobile.innerHTML = '';
 
     const stims = this.engine.activeStimuli;
+
     const makeBtn = (type, idSuffix = '') => {
       const d = document.createElement('div');
+
       d.className = 'modality-btn';
       d.id = 'ind-' + type + idSuffix;
       d.dataset.type = type;
       d.setAttribute('role', 'button');
+      d.setAttribute('tabindex', '0');
       d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
-      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
-      d.addEventListener('pointerdown', (e) => {
+
+      d.innerHTML =
+        '<span class="mod-initial">' +
+        MOD_INITIALS[type] +
+        '</span>' +
+        '<span class="mod-key">' +
+        formatKey(this.engine.keys[type]) +
+        '</span>';
+
+      const respond = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.handleModalityResponse(type);
+
+        if (document.activeElement === d) {
+          d.blur();
+        }
+
+        this.handleModalityResponse(type, d);
+      };
+
+      // Pointer events cover mouse, touch and pen input.
+      d.addEventListener('pointerdown', respond, { passive: false });
+
+      // Allow keyboard activation when a response control has focus.
+      d.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          this.handleModalityResponse(type, d);
+        }
       });
-      d.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.handleModalityResponse(type);
-      });
+
       return d;
     };
 
-    let leftStims = [], rightStims = [];
-    if (stims.length >= 4) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
-    else if (stims.length === 3) { leftStims = stims.slice(0, 2); rightStims = stims.slice(2); }
-    else if (stims.length === 2) { leftStims = [stims[0]]; rightStims = [stims[1]]; }
-    else { leftStims = stims; }
-    leftStims.forEach(t => { if (left) left.appendChild(makeBtn(t)); });
-    rightStims.forEach(t => { if (right) right.appendChild(makeBtn(t)); });
-    if (mobile) stims.forEach(t => mobile.appendChild(makeBtn(t, '-mobile')));
+    let leftStims = [];
+    let rightStims = [];
+
+    if (stims.length >= 4) {
+      leftStims = stims.slice(0, 2);
+      rightStims = stims.slice(2);
+    } else if (stims.length === 3) {
+      leftStims = stims.slice(0, 2);
+      rightStims = stims.slice(2);
+    } else if (stims.length === 2) {
+      leftStims = [stims[0]];
+      rightStims = [stims[1]];
+    } else {
+      leftStims = stims;
+    }
+
+    leftStims.forEach(type => {
+      if (left) left.appendChild(makeBtn(type));
+    });
+
+    rightStims.forEach(type => {
+      if (right) right.appendChild(makeBtn(type));
+    });
+
+    if (mobile) {
+      stims.forEach(type => mobile.appendChild(makeBtn(type, '-mobile')));
+    }
   },
 
-  handleModalityResponse(type) {
-    if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
-    if (this.engine.currentTrial >= this.engine.blockTrials) return;
-    if (!this.engine.responses[type]) this.engine.responses[type] = [];
-    if (!this.engine.responses[type][this.engine.currentTrial]) {
-      this.processFeedback(type);
+  handleModalityResponse(type, clickedButton = null) {
+    if (
+      !this.engine.isRunning ||
+      !this.engine.isTrialActive ||
+      this.engine.isPaused
+    ) {
+      return;
     }
+
+    if (this.engine.currentTrial >= this.engine.blockTrials) {
+      return;
+    }
+
+    if (!this.engine.responses[type]) {
+      this.engine.responses[type] = [];
+    }
+
+    if (this.engine.responses[type][this.engine.currentTrial]) {
+      return;
+    }
+
+    this.processFeedback(type, clickedButton);
   },
 
   tapFeedback(type) {
@@ -4517,19 +4542,34 @@ const App = {
     if (shapeDisp) shapeDisp.style.visibility = 'hidden';
   },
 
-  processFeedback(type) {
-    this.engine.responses[type][this.engine.currentTrial] = true;
-    const k = this.engine.kSeq[this.engine.currentTrial];
+  processFeedback(type, clickedButton = null) {
+    const trialIndex = this.engine.currentTrial;
+
+    this.engine.responses[type][trialIndex] = true;
+
+    const k = this.engine.kSeq[trialIndex];
     let isTarget = false;
-    if (this.engine.currentTrial >= k) {
-      const current = this.engine.trials[this.engine.currentTrial];
-      const previous = this.engine.trials[this.engine.currentTrial - k];
-      if (type === 'aud') isTarget = current.audWord === previous.audWord;
-      else if (type === 'pos') isTarget = current.pos === previous.pos;
-      else if (type === 'shp') isTarget = current.shp === previous.shp;
-      else if (type === 'col') isTarget = current.col === previous.col;
+
+    if (trialIndex >= k) {
+      const current = this.engine.trials[trialIndex];
+      const previous = this.engine.trials[trialIndex - k];
+
+      if (type === 'aud') {
+        isTarget = current.audWord === previous.audWord;
+      } else if (type === 'pos') {
+        isTarget = current.pos === previous.pos;
+      } else if (type === 'shp') {
+        isTarget = current.shp === previous.shp;
+      } else if (type === 'col') {
+        isTarget = current.col === previous.col;
+      }
     }
-    this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
+
+    this.flashIndicator(
+      type,
+      isTarget ? 'correct' : 'wrong',
+      clickedButton
+    );
   },
 
   showMissedFeedback() {
@@ -4552,17 +4592,31 @@ const App = {
     if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
   },
 
-  flashIndicator(type, status) {
+  flashIndicator(type, status, clickedButton = null) {
     const mobile = document.getElementById('ind-' + type + '-mobile');
     const desktop = document.getElementById('ind-' + type);
-    const el = mobile && window.getComputedStyle(mobile).display !== 'none'
-      ? mobile
-      : desktop;
+
+    // Clear stale feedback from both desktop and mobile controls.
+    [desktop, mobile].forEach(el => {
+      if (!el) return;
+      el.classList.remove('correct', 'wrong', 'neutral');
+    });
+
+    // When a physical button was clicked, give feedback to that exact button.
+    const el = clickedButton || (
+      mobile && window.getComputedStyle(mobile).display !== 'none'
+        ? mobile
+        : desktop
+    );
+
     if (!el) return;
-    el.classList.remove('correct', 'wrong', 'neutral');
+
     void el.offsetWidth;
     el.classList.add(status);
-    setTimeout(() => el.classList.remove('correct', 'wrong', 'neutral'), 300);
+
+    setTimeout(() => {
+      el.classList.remove('correct', 'wrong', 'neutral');
+    }, 300);
   },
 
   evaluateBlock() {
