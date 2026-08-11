@@ -3448,7 +3448,8 @@ const App = {
       });
     }
 
-    // Keyboard
+    // Keyboard: capture globally so focused buttons/controls can never
+    // prevent gameplay keys from reaching the application.
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         const ageGate = document.getElementById('age-gate');
@@ -3457,11 +3458,46 @@ const App = {
           return;
         }
       }
+
+      const target = e.target;
+      const isFormField =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+
+      // While a trial is active, stop browser scrolling/navigation keys,
+      // but never interfere with normal text/form input.
+      if (
+        this.engine.isRunning &&
+        !this.engine.isPaused &&
+        this.engine.isTrialActive &&
+        !isFormField &&
+        [' ', 'Spacebar', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+         'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)
+      ) {
+        e.preventDefault();
+      }
+
       this.handleKeydown(e);
     }, { capture: true });
 
-    // Keep keyboard focus on the gameplay area so responses are never lost
-    // after clicking the game, desktop controls, or mobile controls.
+    // Never leave a clickable control holding keyboard focus. This is
+    // intentionally limited to clickable elements so normal text/form
+    // controls remain usable.
+    window.addEventListener('pointerup', (e) => {
+      const clicked = e.target?.closest?.(
+        'button, [role="button"], .mode-card, .stimulus-feature-card, ' +
+        '.anime-submode-btn, .accordion-header, .modality-btn, .keybind-btn, ' +
+        '#theme-toggle'
+      );
+      if (clicked && typeof clicked.blur === 'function') {
+        clicked.blur();
+      }
+    }, { capture: true });
+
+    // Keep keyboard focus on the gameplay area after clicking the game,
+    // without forcing focus onto response controls themselves.
     const gameStage = document.getElementById('game-stage');
     if (gameStage) {
       const focusGameStage = () => {
@@ -3469,11 +3505,15 @@ const App = {
           gameStage.focus({ preventScroll: true });
         }
       };
-      gameStage.addEventListener('pointerdown', () => {
-        requestAnimationFrame(focusGameStage);
+      gameStage.addEventListener('pointerdown', (e) => {
+        if (!e.target?.closest?.('button, [role="button"], input, select, textarea')) {
+          requestAnimationFrame(focusGameStage);
+        }
       });
-      gameStage.addEventListener('click', () => {
-        requestAnimationFrame(focusGameStage);
+      gameStage.addEventListener('click', (e) => {
+        if (!e.target?.closest?.('button, [role="button"], input, select, textarea')) {
+          requestAnimationFrame(focusGameStage);
+        }
       });
       this._focusGameStage = focusGameStage;
     }
