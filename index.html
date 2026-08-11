@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1246,16 +1245,16 @@ const DEFAULT_SESSION_DURATION_MIN = 10;
 const TRIAL_TIMING = Object.freeze({ stimulusMs:700 });
 
 const FACES = [
-  {file:'face_0.jpg', emotion:'neutral', valence:0},
-  {file:'face_1.jpg', emotion:'positive', valence:1},
-  {file:'face_2.jpg', emotion:'positive', valence:2},
-  {file:'face_3.jpg', emotion:'negative', valence:-2},
-  {file:'face_4.jpg', emotion:'negative', valence:-2},
-  {file:'face_5.jpg', emotion:'negative', valence:-1},
-  {file:'face_6.jpg', emotion:'surprise', valence:0},
-  {file:'face_7.jpg', emotion:'negative', valence:-2},
-  {file:'face_8.jpg', emotion:'neutral', valence:0},
-  {file:'face_9.jpg', emotion:'negative', valence:-1}
+  {file:'assets/stimuli/faces/face_0.jpg', emotion:'neutral', valence:0},
+  {file:'assets/stimuli/faces/face_1.jpg', emotion:'positive', valence:1},
+  {file:'assets/stimuli/faces/face_2.jpg', emotion:'positive', valence:2},
+  {file:'assets/stimuli/faces/face_3.jpg', emotion:'negative', valence:-2},
+  {file:'assets/stimuli/faces/face_4.jpg', emotion:'negative', valence:-2},
+  {file:'assets/stimuli/faces/face_5.jpg', emotion:'negative', valence:-1},
+  {file:'assets/stimuli/faces/face_6.jpg', emotion:'surprise', valence:0},
+  {file:'assets/stimuli/faces/face_7.jpg', emotion:'negative', valence:-2},
+  {file:'assets/stimuli/faces/face_8.jpg', emotion:'neutral', valence:0},
+  {file:'assets/stimuli/faces/face_9.jpg', emotion:'negative', valence:-1}
 ];
 
 // ==================== VISUAL ASSET PIPELINE ====================
@@ -1974,8 +1973,6 @@ class ThreeDGridEngine {
     this.ACTIVE_SIZE = 1;
     this.ACTIVE_SCALE = 1.18;
     this.VIEW_PADDING = 1.12;
-
-    this._resizeRetryTimer = null;
   }
 
   addSegment(vertices, ax, ay, az, bx, by, bz) {
@@ -2225,28 +2222,6 @@ class ThreeDGridEngine {
     );
   }
 
-  setActiveNodeTexture(index, texture) {
-    if (!this.activeCube || !texture) return;
-    this.activeTexture = texture;
-    const materials = Array.from({length:6}, () => new THREE.MeshBasicMaterial({
-      map: texture,
-      transparent: false,
-      side: THREE.FrontSide,
-      depthTest: true,
-      depthWrite: true
-    }));
-    const old = Array.isArray(this.activeCube.material) ? this.activeCube.material : [this.activeCube.material];
-    old.forEach(m => { if (m) m.dispose(); });
-    this.activeCube.material = materials;
-  }
-
-  clearActiveTexture() {
-    if (this.activeTexture) {
-      try { this.activeTexture.dispose(); } catch (_) {}
-      this.activeTexture = null;
-    }
-  }
-
   resetNode() {
     if (!this.activeCube) return;
 
@@ -2300,35 +2275,25 @@ class ThreeDGridEngine {
       !this.latticeGroup
     ) return;
 
-    // Read live bounding sizes. If they are zero (which can happen during setup switches
-    // or when the parent container is display:none), trigger a safe deferred lookup.
-    const width = Math.round(this.container.clientWidth || 0);
-    const height = Math.round(this.container.clientHeight || 0);
+    // Always read the LIVE container dimensions after the view is visible.
+    // getBoundingClientRect() can briefly report 0 during a display/flex
+    // transition, so clientWidth/clientHeight are the primary values and
+    // viewport dimensions are the final defensive fallback.
+    let width = Math.round(this.container.clientWidth || 0);
+    let height = Math.round(this.container.clientHeight || 0);
 
-    if (width === 0 || height === 0) {
+    if (width < 2 || height < 2) {
       const rect = this.container.getBoundingClientRect();
-      const rWidth = Math.round(rect.width || 0);
-      const rHeight = Math.round(rect.height || 0);
-
-      if (rWidth > 0 && rHeight > 0) {
-        this.applyDimensions(rWidth, rHeight);
-        return;
-      }
-
-      // Schedule a subsequent loop retry frame to let flexbox paints finish
-      if (!this._resizeRetryTimer) {
-        this._resizeRetryTimer = setTimeout(() => {
-          this._resizeRetryTimer = null;
-          this.fitCameraToMatrix();
-        }, 50);
-      }
-      return;
+      width = Math.round(rect.width || width || 0);
+      height = Math.round(rect.height || height || 0);
     }
 
-    this.applyDimensions(width, height);
-  }
+    if (width < 2) width = Math.round(window.innerWidth || document.documentElement.clientWidth || 800);
+    if (height < 2) height = Math.round(window.innerHeight || document.documentElement.clientHeight || 600);
 
-  applyDimensions(width, height) {
+    width = Math.max(1, width);
+    height = Math.max(1, height);
+
     const aspect = width / height;
     const isMobile = window.innerWidth < 768;
     const fov = window.innerWidth < 480
@@ -2448,9 +2413,8 @@ class ThreeDGridEngine {
         THREE.sRGBEncoding;
     }
 
-    // Force canvas styling to inherit matching dimensions dynamically
-    this.renderer.domElement.style.setProperty('width', '100%', 'important');
-    this.renderer.domElement.style.setProperty('height', '100%', 'important');
+    this.renderer.domElement.style.width = '100%';
+    this.renderer.domElement.style.height = '100%';
     this.renderer.domElement.style.display = 'block';
     this.renderer.domElement.style.touchAction = 'none';
     this.renderer.domElement.setAttribute(
@@ -2537,19 +2501,24 @@ class ThreeDGridEngine {
       );
     }
 
-    // Delay multiple sizing passes to permit CSS/view transitions to finish painting
+    // The container may only have just become visible. Perform an
+    // immediate defensive sizing pass, then repeat after two paint frames
+    // and a short timeout so flexbox/layout has settled.
     this.fitCameraToMatrix();
 
     requestAnimationFrame(() => {
-      this.fitCameraToMatrix();
       requestAnimationFrame(() => {
-        this.fitCameraToMatrix();
+        if (this.renderer && this.camera && this.container) {
+          this.fitCameraToMatrix();
+        }
       });
     });
 
     setTimeout(() => {
-      this.fitCameraToMatrix();
-    }, 150);
+      if (this.renderer && this.camera && this.container) {
+        this.fitCameraToMatrix();
+      }
+    }, 80);
 
     this.animate();
 
@@ -2678,11 +2647,6 @@ class ThreeDGridEngine {
 
   destroy() {
     ++this.textureRequestId;
-
-    if (this._resizeRetryTimer) {
-      clearTimeout(this._resizeRetryTimer);
-      this._resizeRetryTimer = null;
-    }
 
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(
@@ -3162,7 +3126,7 @@ const App = {
     if (modeQuad) modeQuad.addEventListener('click', () => this.setMode('quad'));
 
     document.querySelectorAll('[data-stimulus-type]').forEach(card => {
-      card.addEventListener('click', () => this.setMode(card.dataset.stimulusType));
+      card.addEventListener('click', () => this.setStimulusType(card.dataset.stimulusType));
     });
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -3347,26 +3311,18 @@ const App = {
       this.screens[id].classList.add('active');
     }
 
-    // Settle layouts then query parent dimensions to scale Three.js accurately.
+    // The 3D scene may have been display:none immediately before this
+    // switch. Give CSS/flexbox a paint opportunity, then size Three.js
+    // from the container's LIVE dimensions.
     if (id === 'game') {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (this.engine?.getSettings?.().gridType === '3d') {
-            if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-              ThreeDGrid.fitCameraToMatrix();
-            }
+          if (this.engine?.getSettings?.().gridType === '3d' &&
+              typeof ThreeDGrid.fitCameraToMatrix === 'function') {
+            ThreeDGrid.fitCameraToMatrix();
           }
         });
       });
-
-      // Defensive layout-settling delayed check
-      setTimeout(() => {
-        if (this.engine?.getSettings?.().gridType === '3d') {
-          if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-            ThreeDGrid.fitCameraToMatrix();
-          }
-        }
-      }, 150);
     }
 
     if (id === 'setup') {
@@ -3760,16 +3716,7 @@ const App = {
           void scene3d.offsetWidth;
           void scene3d.offsetHeight;
         }
-        if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-          ThreeDGrid.fitCameraToMatrix();
-        }
-        
-        // Final fallback timeout for safe rendering pass
-        setTimeout(() => {
-          if (typeof ThreeDGrid.fitCameraToMatrix === 'function') {
-            ThreeDGrid.fitCameraToMatrix();
-          }
-        }, 100);
+        if (typeof ThreeDGrid.fitCameraToMatrix === 'function') ThreeDGrid.fitCameraToMatrix();
       }
 
       this.showInterMsg('GET READY', 800);
