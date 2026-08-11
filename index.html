@@ -1474,10 +1474,25 @@ async function preloadAssets(options = {}) {
     ? (ANIME_IMAGE_CACHE[animeMode] || (ANIME_IMAGE_CACHE[animeMode] = Object.create(null)))
     : FACE_IMAGE_CACHE;
 
-  const results = await Promise.all(paths.map(async path => ({
-    path,
-    ok: await preloadImage(path, cache)
-  })));
+  const settled = await Promise.allSettled(
+    paths.map(path => preloadImage(path, cache))
+  );
+
+  const results = settled.map((entry, index) => {
+    const path = paths[index];
+
+    if (entry.status === 'fulfilled') {
+      return { path, ok: !!entry.value };
+    }
+
+    console.warn(
+      '[ATTENTIONAL SHIELD] Non-fatal anime asset rejection:',
+      path,
+      entry.reason
+    );
+
+    return { path, ok: false };
+  });
 
   return {
     stimulusType,
@@ -2824,31 +2839,106 @@ class GameEngine {
   }
 
   async preloadImages() {
-    const selectedType = this.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
-    const selectedMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
-    const key = selectedType + ':' + selectedMode;
+    const selectedType =
+      this.stimulusType === 'anime_faces'
+        ? 'anime_faces'
+        : 'human_faces';
 
-    if (this._selectedPreloadKey === key && this._selectedPreloadResult) {
+    const selectedMode =
+      ANIME_MODES.includes(this.animeMode)
+        ? this.animeMode
+        : 'standard';
+
+    const key =
+      selectedType + ':' + selectedMode;
+
+    if (
+      this._selectedPreloadKey === key &&
+      this._selectedPreloadResult
+    ) {
       return this._selectedPreloadResult;
     }
 
-    this._selectedPreloadKey = key;
-    this._selectedPreloadResult = preloadAssets({ stimulusType: selectedType, animeMode: selectedMode })
-      .then(result => {
+    const preload = (async () => {
+      try {
+        const result = await preloadAssets({
+          stimulusType: selectedType,
+          animeMode: selectedMode
+        });
+
         FACES.forEach(face => {
           const image = FACE_IMAGE_CACHE[face.file];
-          if (image instanceof HTMLImageElement) this.imageCache[face.file] = image;
+          this.imageCache[face.file] =
+            image instanceof HTMLImageElement &&
+            image.complete &&
+            image.naturalWidth > 0;
         });
-        this.imagesLoaded = selectedType === 'human_faces' ? result.ready : true;
-        this.animeImagesLoaded = selectedType === 'anime_faces' ? result.ready : getCachedAnimePaths(selectedMode).length > 0;
-        return result;
-      })
-      .catch(error => {
-        console.warn('[ATTENTIONAL SHIELD] Selected asset preload failed; continuing with fallbacks.', error);
-        return { stimulusType: selectedType, animeMode: selectedMode, requested: 0, loaded: [], failed: [], ready: false };
-      });
 
-    return this._selectedPreloadResult;
+        this.imagesLoaded = true;
+
+        const animeLoaded =
+          getCachedAnimePaths(selectedMode).length;
+
+        this.animeImagesLoaded =
+          animeLoaded > 0;
+
+        const finalResult = {
+          stimulusType: selectedType,
+          animeMode: selectedMode,
+          animeReady:
+            selectedType === 'anime_faces'
+              ? animeLoaded > 0
+              : true,
+          animeLoaded,
+          requested: result.requested,
+          loaded: result.loaded,
+          failed: result.failed,
+          ready: result.ready
+        };
+
+        console.info(
+          '[ATTENTIONAL SHIELD] Selected image preload complete:',
+          finalResult
+        );
+
+        return finalResult;
+      } catch (error) {
+        this.imagesLoaded = true;
+
+        const animeLoaded =
+          getCachedAnimePaths(selectedMode).length;
+
+        this.animeImagesLoaded =
+          animeLoaded > 0;
+
+        const fallbackResult = {
+          stimulusType: selectedType,
+          animeMode: selectedMode,
+          animeReady:
+            selectedType === 'anime_faces'
+              ? animeLoaded > 0
+              : true,
+          animeLoaded,
+          requested: 0,
+          loaded: [],
+          failed: [],
+          ready: true,
+          error
+        };
+
+        console.warn(
+          '[ATTENTIONAL SHIELD] Non-fatal selected image preload issue:',
+          error
+        );
+
+        return fallbackResult;
+      }
+    })();
+
+    this._selectedPreloadKey = key;
+    this._selectedPreloadResult = preload;
+
+    return preload;
   }
 
   initVoices() {
@@ -3233,8 +3323,13 @@ const App = {
     this.onISIModeChange();
     this.saveSettings();
 
-    // Preload images non-blocking
-    this.engine.preloadImages();
+    // Preload images non-blocking; never create an unhandled rejection.
+    this.engine.preloadImages().catch(error => {
+      console.warn(
+        '[ATTENTIONAL SHIELD] Background stimulus preload failed:',
+        error
+      );
+    });
     this._initialized = true;
   },
 
@@ -3407,6 +3502,8 @@ const App = {
 
     this.engine.stimulusType = normalized;
     this.engine.animeMode = this.animeMode || 'standard';
+    this.engine._selectedPreloadKey = null;
+    this.engine._selectedPreloadResult = null;
 
     const human = document.getElementById('stimulus-human-card');
     const anime = document.getElementById('stimulus-anime-card');
@@ -3456,6 +3553,8 @@ const App = {
 
     this.engine.animeMode = normalized;
     this.animeMode = normalized;
+    this.engine._selectedPreloadKey = null;
+    this.engine._selectedPreloadResult = null;
 
     document.querySelectorAll('[data-anime-mode]').forEach(btn => {
       const btnMode = btn.dataset.animeMode;
