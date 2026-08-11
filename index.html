@@ -3845,31 +3845,39 @@ const App = {
       this.saveSettings();
       return;
     }
-    if (!this.screens.game || !this.screens.game.classList.contains('active')) return;
-    if (!this.engine.isRunning || this.engine.isPaused) return;
+
+    // Only handle modality keys while an actual trial is running.
+    if (!this.engine.isRunning || this.engine.isPaused || !this.engine.isTrialActive) return;
 
     const tag = e.target?.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.isComposing) return;
 
+    if (this.engine.currentTrial >= this.engine.blockTrials) return;
+
+    const pressedKey = String(e.key || '').toLowerCase();
+    const pressedCode = String(e.code || '').toLowerCase();
+
+    for (const type of this.engine.activeStimuli) {
+      const bound = String(this.engine.keys[type] || '').trim().toLowerCase();
+      if (!bound) continue;
+
+      // Support both the existing stored e.key values (f, j, etc.)
+      // and physical KeyboardEvent.code values (KeyF, KeyJ, etc.).
+      const boundCode = bound.startsWith('key') || bound.startsWith('digit')
+        ? bound
+        : ('key' + bound);
+
+      if (pressedKey === bound || pressedCode === bound || pressedCode === boundCode) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleModalityResponse(type);
+        return;
+      }
+    }
+
     if (this.engine.getSettings().tally && e.code === 'Space') {
       e.preventDefault();
       this.advanceTally();
-      return;
-    }
-
-    if (!this.engine.isTrialActive || this.engine.currentTrial >= this.engine.blockTrials) return;
-
-    const pressed = String(e.key || '').toLowerCase();
-    const trial = this.engine.currentTrial;
-
-    for (const type of this.engine.activeStimuli) {
-      const bound = String(this.engine.keys[type] || '').toLowerCase();
-      if (pressed === bound) {
-        e.preventDefault();
-        e.stopPropagation();
-        this.tapFeedback(type);
-        return;
-      }
     }
   },
 
@@ -4203,20 +4211,17 @@ const App = {
       d.id = 'ind-' + type + idSuffix;
       d.dataset.type = type;
       d.setAttribute('role', 'button');
-      d.setAttribute('tabindex', '0');
       d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
       d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
+      d.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleModalityResponse(type);
+      });
       d.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.tapFeedback(type);
-      });
-      d.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          this.tapFeedback(type);
-        }
+        this.handleModalityResponse(type);
       });
       return d;
     };
@@ -4231,11 +4236,17 @@ const App = {
     if (mobile) stims.forEach(t => mobile.appendChild(makeBtn(t, '-mobile')));
   },
 
-  tapFeedback(type) {
+  handleModalityResponse(type) {
     if (!this.engine.isRunning || !this.engine.isTrialActive || this.engine.isPaused) return;
     if (this.engine.currentTrial >= this.engine.blockTrials) return;
-    if (!this.engine.responses[type]) return;
-    if (!this.engine.responses[type][this.engine.currentTrial]) this.processFeedback(type);
+    if (!this.engine.responses[type]) this.engine.responses[type] = [];
+    if (!this.engine.responses[type][this.engine.currentTrial]) {
+      this.processFeedback(type);
+    }
+  },
+
+  tapFeedback(type) {
+    this.handleModalityResponse(type);
   },
 
   renderWordInterference(word, targetEl, gridType) {
