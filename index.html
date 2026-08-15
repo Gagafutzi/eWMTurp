@@ -1131,6 +1131,10 @@ body[data-theme="dark"] {
             <div class="control-label">Adaptive D Prime</div>
             <label class="toggle-switch"><input type="checkbox" id="chk-adaptive" checked><span class="toggle-slider"></span></label>
           </div>
+          <div class="control-row">
+            <div class="control-label">Keyboard / Modality Feedback</div>
+            <label class="toggle-switch"><input type="checkbox" id="chk-feedback" checked><span class="toggle-slider"></span></label>
+          </div>
           <div class="panel-title amber" style="margin-top:16px">Timing &amp; Control</div>
           <div class="control-row">
             <div class="control-label">ISI Mode</div>
@@ -1175,6 +1179,13 @@ body[data-theme="dark"] {
           <div class="control-row">
             <div class="control-label">Buzzer Sound on Miss</div>
             <label class="toggle-switch"><input type="checkbox" id="chk-buzzer"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="control-row">
+            <div>
+              <div class="control-label">Keyboard / Modality Feedback</div>
+              <small style="display:block;color:var(--text-dim);font-size:.62rem;line-height:1.35;max-width:320px;margin-top:3px">Show green/red visual feedback on modality response keys during trials.</small>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="chk-feedback" checked><span class="toggle-slider"></span></label>
           </div>
           <div class="panel-title" style="margin-top:16px;color:var(--amber)">ADVANCED DISTRACTORS</div>
           <div class="control-row">
@@ -2169,8 +2180,8 @@ class ThreeDGridEngine {
     this.SPACING = this.CELL_SIZE + this.GAP;
     this.GRID_HALF = (this.SPACING * 3) / 2;
     this.ACTIVE_SIZE = 1;
-    this.ACTIVE_SCALE = 1.18;
-    this.VIEW_PADDING = 1.12;
+    this.ACTIVE_SCALE = 1.28;
+    this.VIEW_PADDING = 1.06;
 
     this._resizeRetryTimer = null;
   }
@@ -2274,6 +2285,7 @@ class ThreeDGridEngine {
 
     this.activeCube = new THREE.Mesh(geometry, materials);
     this.activeCube.name = 'ActiveStimulusCube';
+    this.activeCube.renderOrder = 10;
     this.activeCube.visible = false;
     this.activeCube.scale.setScalar(this.ACTIVE_SCALE);
     this.latticeGroup.add(this.activeCube);
@@ -2434,12 +2446,13 @@ class ThreeDGridEngine {
       map: texture,
       transparent: false,
       side: THREE.FrontSide,
-      depthTest: true,
-      depthWrite: true
+      depthTest: false,
+      depthWrite: false
     }));
     const old = Array.isArray(this.activeCube.material) ? this.activeCube.material : [this.activeCube.material];
     old.forEach(m => { if (m) m.dispose(); });
     this.activeCube.material = materials;
+    this.activeCube.renderOrder = 10;
   }
 
   clearActiveTexture() {
@@ -2540,7 +2553,7 @@ class ThreeDGridEngine {
     this.camera.fov = fov;
     this.camera.aspect = aspect;
 
-    const halfExtent = this.GRID_HALF * 1.45;
+    const halfExtent = this.GRID_HALF * 1.58;
     const activeHalfExtent = this.ACTIVE_SIZE * this.ACTIVE_SCALE;
     const extent = Math.max(
       halfExtent,
@@ -2572,7 +2585,7 @@ class ThreeDGridEngine {
       Math.max(
         verticalDistance,
         horizontalDistance
-      ) * 1.05
+      ) * 1.02
     );
 
     this.camera.near = 0.05;
@@ -2673,7 +2686,7 @@ class ThreeDGridEngine {
 
     this.latticeGroup = new THREE.Group();
     this.latticeGroup.name = 'SpatialLattice';
-    this.latticeGroup.scale.setScalar(1.45);
+    this.latticeGroup.scale.setScalar(1.58);
     this.scene.add(this.latticeGroup);
 
     this.latticeGeometry =
@@ -3169,6 +3182,7 @@ class GameEngine {
       varMin: safeInt('rng-var-min', 1),
       varMax: safeInt('inp-var-max', 3),
       adaptive: safeBool('chk-adaptive'),
+      modalityFeedback: document.getElementById('chk-feedback') ? document.getElementById('chk-feedback').checked : true,
       isiMode: safeVal('sel-isi-mode', 'fixed'),
       isiFixed: safeInt('rng-isi-fixed', DEFAULT_ISI),
       isiMin: safeInt('rng-isi-min', 1300),
@@ -3177,6 +3191,7 @@ class GameEngine {
       sessionDurationMin: safeInt('rng-session-duration', DEFAULT_SESSION_DURATION_MIN),
       tally: safeBool('chk-tally'),
       buzzerOnMiss: safeBool('chk-buzzer'),
+      modalityFeedback: safeBool('chk-feedback'),
       wordInterference: safeBool('chk-word-interference'),
       emoLoad: safeInt('rng-emo-load', 70),
       interference: safeInt('rng-interference', 40),
@@ -3594,7 +3609,7 @@ const App = {
       'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed',
       'chk-variable-n','rng-var-min','inp-var-max','chk-adaptive','sel-isi-mode',
       'rng-isi-fixed','rng-isi-min','rng-isi-max','rng-stim-dur','rng-session-duration',
-      'chk-tally','chk-buzzer','chk-word-interference','rng-interference','rng-match-rate','sel-voice',
+      'chk-tally','chk-buzzer','chk-feedback','chk-word-interference','rng-interference','rng-match-rate','sel-voice',
       'chk-pos','chk-aud','chk-shp','chk-col'
     ];
   },
@@ -4634,6 +4649,14 @@ const App = {
   },
 
   flashIndicator(type, status) {
+    // Respect the visual feedback setting without changing response/evaluation logic.
+    if (!this.engine.getSettings().modalityFeedback) {
+      document.querySelectorAll('.modality-btn[data-type="' + type + '"]').forEach(el => {
+        el.classList.remove('correct', 'wrong', 'neutral');
+      });
+      return;
+    }
+
     // There are desktop and mobile copies of each response control. Apply
     // feedback to every matching control so the visible one always flashes.
     const controls = Array.from(document.querySelectorAll('.modality-btn[data-type="' + type + '"]'));
