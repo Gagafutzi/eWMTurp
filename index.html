@@ -55,7 +55,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .mode-card.active { border-color:var(--cyan); background:var(--cyan-dim); box-shadow:0 0 16px rgba(0,240,255,0.08); }
 .mode-card .mode-name { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; color:var(--text); margin-bottom:2px; }
 .mode-card .mode-desc { font-size:0.65rem; color:var(--text-muted); line-height:1.3; }
-.stimulus-primary-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 8px; }
+.stimulus-primary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0 8px; }
 .stimulus-primary-card { width:100%; text-align:left; font:inherit; color:inherit; }
 .anime-submode-panel { margin:8px 0 10px; padding:10px; border:1px solid rgba(0,240,255,.22); border-radius:10px; background:rgba(0,240,255,.035); }
 .anime-submode-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-family:var(--font-mono); font-size:.62rem; letter-spacing:.8px; color:var(--text-muted); text-transform:uppercase; }
@@ -1050,6 +1050,10 @@ body[data-theme="dark"] {
             <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◉</span><span><span class="stimulus-feature-title">Anime&More</span><span class="stimulus-feature-desc">Featured visual stimulus family</span></span></span>
             <span class="stimulus-feature-badge">NEW</span>
           </button>
+          <button type="button" class="stimulus-feature-card stimulus-primary-card" id="stimulus-porn-card" aria-pressed="false" data-stimulus-type="porn">
+            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◈</span><span><span class="stimulus-feature-title">Porn</span><span class="stimulus-feature-desc">Sequential p1.webp, p2.webp, … stimulus pool</span></span></span>
+            <span class="stimulus-feature-badge">CUSTOM</span>
+          </button>
         </div>
         <div class="anime-submode-panel" id="anime-submode-panel" hidden>
           <div class="anime-submode-heading"><span>Anime&More Stimulus Mode</span><span class="stimulus-feature-badge">FEATURED</span></div>
@@ -1385,7 +1389,7 @@ const HENTAI_COUNT = 30;
 
 const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
   standard: Object.freeze([
-    'assets/stimuli/anime/a.webp', 'assets/stimuli/anime/b.webp', 'assets/stimuli/anime/c.webp',
+    'assets/stimuli/anime/a.webp', 'assets/stimuli/anime/b.webp',
     'assets/stimuli/anime/d.webp', 'assets/stimuli/anime/e.webp', 'assets/stimuli/anime/f.webp',
     'assets/stimuli/anime/g.webp', 'assets/stimuli/anime/h.webp', 'assets/stimuli/anime/i.webp',
     'assets/stimuli/anime/j.webp', 'assets/stimuli/anime/k.webp', 'assets/stimuli/anime/l.webp'
@@ -1461,8 +1465,18 @@ const ANIME_MODES = Object.freeze(['standard','waifu','hentai','gore']);
 const GORE_ASSET_PATHS = [];
 const GORE_MAX_DISCOVERY_INDEX = 5000;
 
+// Porn stimulus family: p1.webp, p2.webp, ...
+const PORN_MAX_DISCOVERY_INDEX = 5000;
+const PORN_ASSET_MANIFEST = Object.freeze(
+  Array.from({ length: PORN_MAX_DISCOVERY_INDEX }, (_, index) =>
+    `assets/stimuli/porn/p${index + 1}.webp`
+  )
+);
+const PORN_ASSET_PATHS = [];
+
 const FACE_IMAGE_CACHE = Object.create(null);
 const ANIME_IMAGE_CACHE = Object.create(null);
+const PORN_IMAGE_CACHE = Object.create(null);
 
 ANIME_MODES.forEach(mode => {
   ANIME_IMAGE_CACHE[mode] = Object.create(null);
@@ -1573,70 +1587,71 @@ function getCachedAnimePaths(mode = 'standard') {
   });
 }
 
+function getCachedPornPaths() {
+  return PORN_ASSET_PATHS.filter(path => {
+    const img = PORN_IMAGE_CACHE[path];
+    return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
+  });
+}
+
 // ==================== SELECTED ASSET PRELOADER ====================
 // Preload the visual family selected for the upcoming session. The same
 // verified HTMLImageElement instances are consumed by the 2D renderer and
 // Three.js, so the game never starts by racing the first stimulus against a
 // network request. Individual failures remain non-fatal.
 async function preloadAssets(options = {}) {
-  const stimulusType = options.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+  const stimulusType =
+    options.stimulusType === 'anime_faces'
+      ? 'anime_faces'
+      : options.stimulusType === 'porn'
+        ? 'porn'
+        : 'human_faces';
   const animeMode = ANIME_MODES.includes(options.animeMode) ? options.animeMode : 'standard';
-  let paths;
 
-  if (stimulusType === 'anime_faces' && animeMode === 'gore') {
-    // GitHub Pages cannot enumerate a directory, so discover contiguous
-    // gore_1, gore_2, ... files by trying the supported extensions.
-    // Discovery stops at the first missing index, matching the user's
-    // sequential naming convention without requiring a hard-coded count.
+  let paths;
+  let cache;
+
+  if (stimulusType === 'porn') {
+    PORN_ASSET_PATHS.length = 0;
+    cache = PORN_IMAGE_CACHE;
+
+    // GitHub Pages cannot enumerate directories. Probe the sequential p1.webp,
+    // p2.webp, ... pool until the first missing asset, then use only verified files.
+    for (const path of PORN_ASSET_MANIFEST) {
+      const loaded = await preloadImage(path, cache);
+      if (!loaded) break;
+      PORN_ASSET_PATHS.push(path);
+    }
+    paths = PORN_ASSET_PATHS.slice();
+  } else if (stimulusType === 'anime_faces' && animeMode === 'gore') {
     GORE_ASSET_PATHS.length = 0;
     const goreCache = ANIME_IMAGE_CACHE.gore || (ANIME_IMAGE_CACHE.gore = Object.create(null));
-
     for (let index = 1; index <= GORE_MAX_DISCOVERY_INDEX; index++) {
       const candidates = [
         `assets/stimuli/gore/gore_${index}.webp`,
         `assets/stimuli/gore/gore_${index}.jpg`,
         `assets/stimuli/gore/gore_${index}.jpeg`
       ];
-
-      const results = await Promise.all(
-        candidates.map(path => preloadImage(path, goreCache))
-      );
+      const results = await Promise.all(candidates.map(path => preloadImage(path, goreCache)));
       const found = candidates.find((path, i) => results[i]);
-
       if (!found) break;
       GORE_ASSET_PATHS.push(found);
     }
-
     paths = GORE_ASSET_PATHS.slice();
+    cache = goreCache;
+  } else if (stimulusType === 'anime_faces') {
+    paths = ANIME_FACE_ASSET_MANIFEST[animeMode] || [];
+    cache = ANIME_IMAGE_CACHE[animeMode] || (ANIME_IMAGE_CACHE[animeMode] = Object.create(null));
   } else {
-    paths = stimulusType === 'anime_faces'
-      ? (ANIME_FACE_ASSET_MANIFEST[animeMode] || [])
-      : FACES.map(face => face.file);
+    paths = FACES.map(face => face.file);
+    cache = FACE_IMAGE_CACHE;
   }
 
-  const cache = stimulusType === 'anime_faces'
-    ? (ANIME_IMAGE_CACHE[animeMode] || (ANIME_IMAGE_CACHE[animeMode] = Object.create(null)))
-    : FACE_IMAGE_CACHE;
-
-  const settled = stimulusType === 'anime_faces' && animeMode === 'gore'
-    ? paths.map(path => ({ status: 'fulfilled', value: true }))
-    : await Promise.allSettled(
-        paths.map(path => preloadImage(path, cache))
-      );
-
+  const settled = await Promise.allSettled(paths.map(path => preloadImage(path, cache)));
   const results = settled.map((entry, index) => {
     const path = paths[index];
-
-    if (entry.status === 'fulfilled') {
-      return { path, ok: !!entry.value };
-    }
-
-    console.warn(
-      '[ATTENTIONAL SHIELD] Non-fatal anime asset rejection:',
-      path,
-      entry.reason
-    );
-
+    if (entry.status === 'fulfilled') return { path, ok: !!entry.value };
+    console.warn('[ATTENTIONAL SHIELD] Non-fatal stimulus asset rejection:', path, entry.reason);
     return { path, ok: false };
   });
 
@@ -1652,6 +1667,10 @@ async function preloadAssets(options = {}) {
 
 function getPreloadedImage(path, stimulusType = 'human_faces', animeMode = 'standard') {
   if (!path) return null;
+  if (stimulusType === 'porn') {
+    const image = PORN_IMAGE_CACHE[path];
+    return image instanceof HTMLImageElement && image.naturalWidth > 0 ? image : null;
+  }
   if (stimulusType === 'anime_faces') {
     const mode = ANIME_MODES.includes(animeMode) ? animeMode : 'standard';
     const image = ANIME_IMAGE_CACHE[mode]?.[path];
@@ -1915,6 +1934,7 @@ function formatKey(k) {
 const AudioEngine = {
   ctx: null,
   bufferCache: new Map(),
+  bufferLoadPromises: new Map(),
   activeSources: new Set(),
   nextDichoticPan: -1,
   dichoticEnabled: false,
@@ -2172,52 +2192,61 @@ const AudioEngine = {
   async loadAudioBuffer(url) {
     const ctx = this.ensureContext();
 
-    if (!ctx || !url) {
-      return null;
+    if (!ctx || !url) return null;
+
+    // Defensive initialization: protect against lifecycle/race conditions
+    // replacing either cache while asynchronous audio work is in flight.
+    if (!(this.bufferCache instanceof Map)) {
+      this.bufferCache = new Map();
     }
 
+    if (!(this.bufferLoadPromises instanceof Map)) {
+      this.bufferLoadPromises = new Map();
+    }
+
+    // Already decoded.
     if (this.bufferCache.has(url)) {
       return this.bufferCache.get(url);
     }
 
-    try {
-      const response = await fetch(
-        url,
-        { cache: 'force-cache' }
-      );
+    // Already being fetched/decoded. Share the same promise rather than
+    // starting another network request or decode operation.
+    if (this.bufferLoadPromises.has(url)) {
+      return this.bufferLoadPromises.get(url);
+    }
 
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status} while loading ${url}`
-        );
+    const loadPromise = (async () => {
+      try {
+        const response = await fetch(url, { cache: 'force-cache' });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} while loading ${url}`);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+        // The cache may have been replaced while fetch/decode was awaiting.
+        if (!(this.bufferCache instanceof Map)) {
+          this.bufferCache = new Map();
+        }
+
+        this.bufferCache.set(url, audioBuffer);
+        return audioBuffer;
+      } catch (error) {
+        console.warn('[AudioEngine] MP3 unavailable:', url, error);
+        return null;
       }
+    })();
 
-      const arrayBuffer =
-        await response.arrayBuffer();
+    this.bufferLoadPromises.set(url, loadPromise);
 
-      const audioBuffer =
-        await ctx.decodeAudioData(arrayBuffer);
-
-      this.bufferCache.set(
-        url,
-        audioBuffer
-      );
-
-      return audioBuffer;
-    } catch (error) {
-      /*
-       * IMPORTANT:
-       * Missing individual MP3s are now a recoverable condition.
-       * We return null to allow speak() to use its safe synthetic
-       * dichotic fallback rather than breaking the session.
-       */
-      console.warn(
-        '[AudioEngine] MP3 unavailable:',
-        url,
-        error
-      );
-
-      return null;
+    try {
+      return await loadPromise;
+    } finally {
+      if (this.bufferLoadPromises instanceof Map) {
+        this.bufferLoadPromises.delete(url);
+      }
     }
   },
 
@@ -3666,7 +3695,9 @@ class GameEngine {
     const selectedType =
       this.stimulusType === 'anime_faces'
         ? 'anime_faces'
-        : 'human_faces';
+        : this.stimulusType === 'porn'
+          ? 'porn'
+          : 'human_faces';
 
     const selectedMode =
       ANIME_MODES.includes(this.animeMode)
@@ -3702,6 +3733,7 @@ class GameEngine {
 
         const animeLoaded =
           getCachedAnimePaths(selectedMode).length;
+        const pornLoaded = getCachedPornPaths().length;
 
         this.animeImagesLoaded =
           animeLoaded > 0;
@@ -3714,6 +3746,8 @@ class GameEngine {
               ? animeLoaded > 0
               : true,
           animeLoaded,
+          pornReady: selectedType === 'porn' ? pornLoaded > 0 : true,
+          pornLoaded,
           requested: result.requested,
           loaded: result.loaded,
           failed: result.failed,
@@ -3731,6 +3765,7 @@ class GameEngine {
 
         const animeLoaded =
           getCachedAnimePaths(selectedMode).length;
+        const pornLoaded = getCachedPornPaths().length;
 
         this.animeImagesLoaded =
           animeLoaded > 0;
@@ -3743,6 +3778,8 @@ class GameEngine {
               ? animeLoaded > 0
               : true,
           animeLoaded,
+          pornReady: selectedType === 'porn' ? pornLoaded > 0 : true,
+          pornLoaded,
           requested: 0,
           loaded: [],
           failed: [],
@@ -3862,18 +3899,29 @@ class GameEngine {
     return available[Math.floor(Math.random() * available.length)];
   }
 
+  pickPornStimulus() {
+    const available = getCachedPornPaths();
+    if (!available.length) return null;
+    return available[Math.floor(Math.random() * available.length)];
+  }
+
   pickVisualStimulus(emoLoad) {
+    if (this.stimulusType === 'porn') {
+      const pornPath = this.pickPornStimulus();
+      if (pornPath) {
+        return { type:'porn', path:pornPath, emotion:'porn', animeMode:null, fallbackFromPorn:false };
+      }
+      console.warn('[ATTENTIONAL SHIELD] Porn stimulus assets unavailable; falling back to human face stimuli for this trial.');
+      const face = this.pickFace(emoLoad);
+      return { type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null, fallbackFromPorn:true };
+    }
+
     if (this.stimulusType === 'anime_faces') {
-      const safeMode = ANIME_MODES.includes(this.animeMode)
-        ? this.animeMode
-        : 'standard';
+      const safeMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
       const animePath = this.pickAnimeFace(safeMode);
       if (animePath) {
         return {type:'anime_faces', path:animePath, emotion:'anime', animeMode:safeMode, fallbackFromAnime:false};
       }
-
-      // Anime is optional. If its files are unavailable, continue the actual
-      // training session using a verified human face rather than throwing.
       console.warn('[ATTENTIONAL SHIELD] Anime ' + safeMode + ' assets unavailable; falling back to human face stimuli for this trial.');
       const face = this.pickFace(emoLoad);
       return {type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null, fallbackFromAnime:true};
@@ -3951,6 +3999,7 @@ class GameEngine {
         animeAsset:visual.type === 'anime_faces' ? visual.path : null,
         animeMode:visual.type === 'anime_faces' ? visual.animeMode : null,
         fallbackFromAnime:!!visual.fallbackFromAnime,
+        fallbackFromPorn:!!visual.fallbackFromPorn,
         word, audWord,
         wordInterference: s.wordInterference ? pickWordInterference() : ''
       });
@@ -4087,7 +4136,7 @@ const App = {
 
         const stimulusType = card.dataset.stimulusType;
 
-        if (stimulusType !== 'human_faces' && stimulusType !== 'anime_faces') {
+        if (!['human_faces', 'anime_faces', 'porn'].includes(stimulusType)) {
           console.warn('[ATTENTIONAL SHIELD] Unknown stimulus type:', stimulusType);
           return;
         }
@@ -4208,7 +4257,7 @@ const App = {
 
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
-    this.setStimulusType(this._savedStimulusType || 'human_faces', false, { skipAgeGate: true });
+    this.setStimulusType(['human_faces', 'anime_faces', 'porn'].includes(this._savedStimulusType) ? this._savedStimulusType : 'human_faces', false, { skipAgeGate: true });
     this.setAnimeMode(this._savedAnimeMode || 'standard', false);
     this.refreshSettingDisplays();
     this.updateGlobalStats();
@@ -4393,15 +4442,12 @@ const App = {
   },
 
   setStimulusType(type, persist = true, options = {}) {
-    const normalized = type === 'anime_faces' || type === 'anime_standard'
-      ? 'anime_faces'
-      : 'human_faces';
+    const normalized = type === 'porn'
+      ? 'porn'
+      : (type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces');
 
-    // Preserve the selected Anime subtype when switching the visual family.
     if (normalized === 'anime_faces') {
-      this.animeMode = ANIME_MODES.includes(this.animeMode)
-        ? this.animeMode
-        : 'standard';
+      this.animeMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
     }
 
     this.engine.stimulusType = normalized;
@@ -4411,18 +4457,25 @@ const App = {
 
     const human = document.getElementById('stimulus-human-card');
     const anime = document.getElementById('stimulus-anime-card');
+    const porn = document.getElementById('stimulus-porn-card');
     const panel = document.getElementById('anime-submode-panel');
     const humanActive = normalized === 'human_faces';
+    const animeActive = normalized === 'anime_faces';
+    const pornActive = normalized === 'porn';
 
     if (human) {
       human.classList.toggle('active', humanActive);
       human.setAttribute('aria-pressed', humanActive ? 'true' : 'false');
     }
     if (anime) {
-      anime.classList.toggle('active', !humanActive);
-      anime.setAttribute('aria-pressed', humanActive ? 'false' : 'true');
+      anime.classList.toggle('active', animeActive);
+      anime.setAttribute('aria-pressed', animeActive ? 'true' : 'false');
     }
-    if (panel) panel.hidden = humanActive;
+    if (porn) {
+      porn.classList.toggle('active', pornActive);
+      porn.setAttribute('aria-pressed', pornActive ? 'true' : 'false');
+    }
+    if (panel) panel.hidden = !animeActive;
 
     this.setAnimeMode(this.animeMode || 'standard', false);
 
@@ -4436,7 +4489,9 @@ const App = {
       };
       status.textContent = humanActive
         ? 'Human Faces • Standard affective faces'
-        : (labels[this.animeMode] || labels.standard);
+        : animeActive
+          ? (labels[this.animeMode] || labels.standard)
+          : 'Porn • Sequential p1.webp, p2.webp, … assets';
     }
 
     if (persist) this.saveSettings();
@@ -4752,16 +4807,18 @@ const App = {
     try {
       this.engine.reset();
       this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-      this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+      this.engine.stimulusType = ['human_faces', 'anime_faces', 'porn'].includes(s.stimulusType) ? s.stimulusType : 'human_faces';
       this.engine.animeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(s.animeMode) ? s.animeMode : 'standard';
 
-      const preloadResult = await preloadWithTimeout(8000);
-      if (preloadResult.timedOut) {
-        console.warn('[ATTENTIONAL SHIELD] Asset preload timed out; continuing with available assets.');
-      } else if (!preloadResult.loaded) {
-        console.warn('[ATTENTIONAL SHIELD] Asset preload failed; continuing with available assets.', preloadResult.error);
+      // Strict session preload barrier: do not enter the trial loop until
+      // the selected stimulus family has finished attempting to preload.
+      // Individual missing assets remain non-fatal; preloadImages() records
+      // them as failed and returns the successfully loaded set.
+      const preloadResult = await this.engine.preloadImages();
+      if (!preloadResult || !preloadResult.ready) {
+        console.warn('[ATTENTIONAL SHIELD] Selected stimulus assets are not ready.', preloadResult);
       } else {
-        console.info('[ATTENTIONAL SHIELD] Selected assets ready:', preloadResult.result);
+        console.info('[ATTENTIONAL SHIELD] Selected assets ready:', preloadResult);
       }
 
       this.engine.setActiveStimuli();
@@ -5102,10 +5159,19 @@ const App = {
     if (this.engine.activeStimuli.includes('pos')) {
       const targetEl = document.getElementById('pos-' + trial.pos);
       const isAnime = trial.visualType === 'anime_faces';
+      const isPorn = trial.visualType === 'porn';
       const animeMode = isAnime && ANIME_MODES.includes(trial.animeMode) ? trial.animeMode : 'standard';
-      const imageCache = isAnime ? (ANIME_IMAGE_CACHE[animeMode] || {}) : this.engine.imageCache;
+      const imageCache = isPorn
+        ? PORN_IMAGE_CACHE
+        : isAnime
+          ? (ANIME_IMAGE_CACHE[animeMode] || {})
+          : this.engine.imageCache;
       const imagePath = trial.face;
-      const preloadedImage = getPreloadedImage(imagePath, isAnime ? 'anime_faces' : 'human_faces', animeMode);
+      const preloadedImage = getPreloadedImage(
+        imagePath,
+        isPorn ? 'porn' : (isAnime ? 'anime_faces' : 'human_faces'),
+        animeMode
+      );
 
       const showFallback = (label) => {
         if (s.gridType === '3d') {
