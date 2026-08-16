@@ -1385,7 +1385,7 @@ const HENTAI_COUNT = 30;
 
 const ANIME_FACE_ASSET_MANIFEST = Object.freeze({
   standard: Object.freeze([
-    'assets/stimuli/anime/a.webp', 'assets/stimuli/anime/b.webp',
+    'assets/stimuli/anime/a.webp', 'assets/stimuli/anime/b.webp', 'assets/stimuli/anime/c.webp',
     'assets/stimuli/anime/d.webp', 'assets/stimuli/anime/e.webp', 'assets/stimuli/anime/f.webp',
     'assets/stimuli/anime/g.webp', 'assets/stimuli/anime/h.webp', 'assets/stimuli/anime/i.webp',
     'assets/stimuli/anime/j.webp', 'assets/stimuli/anime/k.webp', 'assets/stimuli/anime/l.webp'
@@ -1915,7 +1915,6 @@ function formatKey(k) {
 const AudioEngine = {
   ctx: null,
   bufferCache: new Map(),
-  bufferLoadPromises: new Map(),
   activeSources: new Set(),
   nextDichoticPan: -1,
   dichoticEnabled: false,
@@ -2173,61 +2172,52 @@ const AudioEngine = {
   async loadAudioBuffer(url) {
     const ctx = this.ensureContext();
 
-    if (!ctx || !url) return null;
-
-    // Defensive initialization: protect against lifecycle/race conditions
-    // replacing either cache while asynchronous audio work is in flight.
-    if (!(this.bufferCache instanceof Map)) {
-      this.bufferCache = new Map();
+    if (!ctx || !url) {
+      return null;
     }
 
-    if (!(this.bufferLoadPromises instanceof Map)) {
-      this.bufferLoadPromises = new Map();
-    }
-
-    // Already decoded.
     if (this.bufferCache.has(url)) {
       return this.bufferCache.get(url);
     }
 
-    // Already being fetched/decoded. Share the same promise rather than
-    // starting another network request or decode operation.
-    if (this.bufferLoadPromises.has(url)) {
-      return this.bufferLoadPromises.get(url);
-    }
-
-    const loadPromise = (async () => {
-      try {
-        const response = await fetch(url, { cache: 'force-cache' });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status} while loading ${url}`);
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-
-        // The cache may have been replaced while fetch/decode was awaiting.
-        if (!(this.bufferCache instanceof Map)) {
-          this.bufferCache = new Map();
-        }
-
-        this.bufferCache.set(url, audioBuffer);
-        return audioBuffer;
-      } catch (error) {
-        console.warn('[AudioEngine] MP3 unavailable:', url, error);
-        return null;
-      }
-    })();
-
-    this.bufferLoadPromises.set(url, loadPromise);
-
     try {
-      return await loadPromise;
-    } finally {
-      if (this.bufferLoadPromises instanceof Map) {
-        this.bufferLoadPromises.delete(url);
+      const response = await fetch(
+        url,
+        { cache: 'force-cache' }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status} while loading ${url}`
+        );
       }
+
+      const arrayBuffer =
+        await response.arrayBuffer();
+
+      const audioBuffer =
+        await ctx.decodeAudioData(arrayBuffer);
+
+      this.bufferCache.set(
+        url,
+        audioBuffer
+      );
+
+      return audioBuffer;
+    } catch (error) {
+      /*
+       * IMPORTANT:
+       * Missing individual MP3s are now a recoverable condition.
+       * We return null to allow speak() to use its safe synthetic
+       * dichotic fallback rather than breaking the session.
+       */
+      console.warn(
+        '[AudioEngine] MP3 unavailable:',
+        url,
+        error
+      );
+
+      return null;
     }
   },
 
@@ -4765,15 +4755,13 @@ const App = {
       this.engine.stimulusType = s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
       this.engine.animeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(s.animeMode) ? s.animeMode : 'standard';
 
-      // Strict session preload barrier: do not enter the trial loop until
-      // the selected stimulus family has finished attempting to preload.
-      // Individual missing assets remain non-fatal; preloadImages() records
-      // them as failed and returns the successfully loaded set.
-      const preloadResult = await this.engine.preloadImages();
-      if (!preloadResult || !preloadResult.ready) {
-        console.warn('[ATTENTIONAL SHIELD] Selected stimulus assets are not ready.', preloadResult);
+      const preloadResult = await preloadWithTimeout(8000);
+      if (preloadResult.timedOut) {
+        console.warn('[ATTENTIONAL SHIELD] Asset preload timed out; continuing with available assets.');
+      } else if (!preloadResult.loaded) {
+        console.warn('[ATTENTIONAL SHIELD] Asset preload failed; continuing with available assets.', preloadResult.error);
       } else {
-        console.info('[ATTENTIONAL SHIELD] Selected assets ready:', preloadResult);
+        console.info('[ATTENTIONAL SHIELD] Selected assets ready:', preloadResult.result);
       }
 
       this.engine.setActiveStimuli();
