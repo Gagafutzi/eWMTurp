@@ -1917,6 +1917,7 @@ const AudioEngine = {
   bufferCache: new Map(),
   activeSources: new Set(),
   nextDichoticPan: -1,
+  dichoticEnabled: false,
 
   audioManifest: Object.freeze({
     "APOCALYPSE": "assets/stimuli/audio/apocalypse.mp3",
@@ -1949,6 +1950,22 @@ const AudioEngine = {
     const ctx = this.init();
     if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
     return ctx;
+  },
+
+  // Public state setter used by App.init(), the Dichotic Audio toggle,
+  // and startSession(). This method intentionally owns the mode state so
+  // AudioEngine.speak() does not depend on a second source of truth.
+  setDichotic(enabled) {
+    this.dichoticEnabled = !!enabled;
+    this.resetDichoticSequence();
+
+    // When switching back to normal speech, terminate any currently
+    // playing dichotic AudioBufferSourceNodes immediately.
+    if (!this.dichoticEnabled) {
+      this.stopAll();
+    }
+
+    return this.dichoticEnabled;
   },
 
   resetDichoticSequence() {
@@ -2080,9 +2097,7 @@ const AudioEngine = {
   },
 
   async speak(word) {
-    const dichotic = typeof getChecked === 'function'
-      ? getChecked('chk-dichotic', false)
-      : !!document.getElementById('chk-dichotic')?.checked;
+    const dichotic = !!this.dichoticEnabled;
 
     if (dichotic) {
       const url = this.getAudioUrl(word);
