@@ -1051,7 +1051,7 @@ body[data-theme="dark"] {
             <span class="stimulus-feature-badge">NEW</span>
           </button>
           <button type="button" class="stimulus-feature-card stimulus-primary-card" id="stimulus-porn-card" aria-pressed="false" data-stimulus-type="porn">
-            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◈</span><span><span class="stimulus-feature-title">Porn</span><span class="stimulus-feature-desc">Sequential p1.webp, p2.webp, … stimulus pool</span></span></span>
+            <span class="stimulus-feature-main"><span class="stimulus-feature-icon">◈</span><span><span class="stimulus-feature-title">Porn</span></span></span>
             <span class="stimulus-feature-badge">CUSTOM</span>
           </button>
         </div>
@@ -1465,13 +1465,10 @@ const ANIME_MODES = Object.freeze(['standard','waifu','hentai','gore']);
 const GORE_ASSET_PATHS = [];
 const GORE_MAX_DISCOVERY_INDEX = 5000;
 
-// Porn stimulus family: p1.webp, p2.webp, ...
+// Porn stimulus family. Assets may use mixed extensions
+// (for example p1.jpg, p10.jpg, p11.webp, etc.).
 const PORN_MAX_DISCOVERY_INDEX = 5000;
-const PORN_ASSET_MANIFEST = Object.freeze(
-  Array.from({ length: PORN_MAX_DISCOVERY_INDEX }, (_, index) =>
-    `assets/stimuli/porn/p${index + 1}.webp`
-  )
-);
+const PORN_ASSET_EXTENSIONS = Object.freeze(['jpg', 'webp', 'png']);
 const PORN_ASSET_PATHS = [];
 
 const FACE_IMAGE_CACHE = Object.create(null);
@@ -1615,12 +1612,28 @@ async function preloadAssets(options = {}) {
     PORN_ASSET_PATHS.length = 0;
     cache = PORN_IMAGE_CACHE;
 
-    // GitHub Pages cannot enumerate directories. Probe the sequential p1.webp,
-    // p2.webp, ... pool until the first missing asset, then use only verified files.
-    for (const path of PORN_ASSET_MANIFEST) {
-      const loaded = await preloadImage(path, cache);
-      if (!loaded) break;
-      PORN_ASSET_PATHS.push(path);
+    // GitHub Pages cannot enumerate directories. Probe each sequential index
+    // against every supported extension so mixed .jpg/.webp/.png assets do not
+    // stop the loader at the first extension mismatch.
+    for (let index = 1; index <= PORN_MAX_DISCOVERY_INDEX; index++) {
+      const candidates = PORN_ASSET_EXTENSIONS.map(
+        ext => `assets/stimuli/porn/p${index}.${ext}`
+      );
+
+      let found = null;
+
+      for (const path of candidates) {
+        const loaded = await preloadImage(path, cache);
+        if (loaded) {
+          found = path;
+          break;
+        }
+      }
+
+      // No supported extension exists for this index, so the sequential pool ends.
+      if (!found) break;
+
+      PORN_ASSET_PATHS.push(found);
     }
     paths = PORN_ASSET_PATHS.slice();
   } else if (stimulusType === 'anime_faces' && animeMode === 'gore') {
@@ -4491,7 +4504,7 @@ const App = {
         ? 'Human Faces • Standard affective faces'
         : animeActive
           ? (labels[this.animeMode] || labels.standard)
-          : 'Porn • Sequential p1.webp, p2.webp, … assets';
+          : 'Porn';
     }
 
     if (persist) this.saveSettings();
