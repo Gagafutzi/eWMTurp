@@ -1613,8 +1613,15 @@ async function preloadAssets(options = {}) {
     cache = PORN_IMAGE_CACHE;
 
     // GitHub Pages cannot enumerate directories. Probe each sequential index
-    // against every supported extension so mixed .jpg/.webp/.png assets do not
-    // stop the loader at the first extension mismatch.
+    // against every supported extension. A missing extension is NOT a reason
+    // to stop: e.g. p10.jpg may be followed by p11.webp.
+    //
+    // We only stop after a run of missing indices so sparse pools do not cause
+    // an early fallback while still avoiding thousands of unnecessary requests
+    // after the actual sequential collection has ended.
+    const MAX_CONSECUTIVE_MISSES = 10;
+    let consecutiveMisses = 0;
+
     for (let index = 1; index <= PORN_MAX_DISCOVERY_INDEX; index++) {
       const candidates = PORN_ASSET_EXTENSIONS.map(
         ext => `assets/stimuli/porn/p${index}.${ext}`
@@ -1630,11 +1637,15 @@ async function preloadAssets(options = {}) {
         }
       }
 
-      // No supported extension exists for this index, so the sequential pool ends.
-      if (!found) break;
-
-      PORN_ASSET_PATHS.push(found);
+      if (found) {
+        PORN_ASSET_PATHS.push(found);
+        consecutiveMisses = 0;
+      } else {
+        consecutiveMisses++;
+        if (consecutiveMisses >= MAX_CONSECUTIVE_MISSES) break;
+      }
     }
+
     paths = PORN_ASSET_PATHS.slice();
   } else if (stimulusType === 'anime_faces' && animeMode === 'gore') {
     GORE_ASSET_PATHS.length = 0;
@@ -4353,7 +4364,9 @@ const App = {
         });
       }
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
-      this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+      this._savedStimulusType = ['human_faces', 'anime_faces', 'porn'].includes(saved?.stimulusType)
+        ? saved.stimulusType
+        : 'human_faces';
       this._savedAnimeMode = ['standard', 'waifu', 'hentai', 'gore'].includes(saved?.animeMode)
         ? saved.animeMode
         : 'standard';
@@ -4458,6 +4471,15 @@ const App = {
     const normalized = type === 'porn'
       ? 'porn'
       : (type === 'anime_faces' || type === 'anime_standard' ? 'anime_faces' : 'human_faces');
+
+    // Porn uses the exact same shared 18+ confirmation flow as Hentai/Gore.
+    // Do this before changing the active stimulus state so cancelling the
+    // warning leaves the previous selection untouched.
+    if (normalized === 'porn' && !options.skipAgeGate && !this.ageVerified) {
+      this.pendingAgeAction = { type: 'set-stimulus-type', value: 'porn' };
+      this.openAgeGate();
+      return;
+    }
 
     if (normalized === 'anime_faces') {
       this.animeMode = ANIME_MODES.includes(this.animeMode) ? this.animeMode : 'standard';
@@ -4712,7 +4734,9 @@ const App = {
   },
 
   isRestrictedStimulusSelection() {
-    return this.engine.stimulusType === 'anime_faces' && (this.engine.animeMode === 'hentai' || this.engine.animeMode === 'gore');
+    return this.engine.stimulusType === 'porn' ||
+      (this.engine.stimulusType === 'anime_faces' &&
+        (this.engine.animeMode === 'hentai' || this.engine.animeMode === 'gore'));
   },
 
   openAgeGate() {
