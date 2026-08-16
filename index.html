@@ -2106,181 +2106,116 @@ const AudioEngine = {
     return resolvedUrl;
   },
 
-  createStereoRoute(pan) {
+  prepareDichoticGraph() {
     const ctx = this.ensureContext();
 
-    if (!ctx) {
+    if (!ctx || this.dichoticRoutes) {
+      return this.dichoticRoutes;
+    }
+
+    if (typeof ctx.createStereoPanner !== 'function') {
       return null;
     }
 
-    const hardPan =
-      pan <= -1 ? -1 :
-      pan >= 1 ? 1 : 0;
+    /* Allocate the dichotic routing graph once, outside trial ticks. */
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(1, ctx.currentTime);
+    master.connect(ctx.destination);
 
-    if (typeof ctx.createStereoPanner === 'function') {
-      const panner = ctx.createStereoPanner();
+    const left = ctx.createStereoPanner();
+    const right = ctx.createStereoPanner();
 
-      panner.pan.setValueAtTime(
-        hardPan,
-        ctx.currentTime
-      );
+    left.pan.setValueAtTime(-1, ctx.currentTime);
+    right.pan.setValueAtTime(1, ctx.currentTime);
 
-      return {
-        input: panner,
-        output: panner,
+    left.connect(master);
+    right.connect(master);
 
-        disconnect() {
-          try { panner.disconnect(); } catch (e) {}
-        }
-      };
-    }
-
-    const splitter = ctx.createChannelSplitter(2);
-    const merger = ctx.createChannelMerger(2);
-    const leftGain = ctx.createGain();
-    const rightGain = ctx.createGain();
-
-    if (hardPan === -1) {
-      leftGain.gain.value = 1;
-      rightGain.gain.value = 0;
-    } else if (hardPan === 1) {
-      leftGain.gain.value = 0;
-      rightGain.gain.value = 1;
-    } else {
-      leftGain.gain.value = 1;
-      rightGain.gain.value = 1;
-    }
-
-    splitter.connect(leftGain, 0);
-    splitter.connect(rightGain, 1);
-    leftGain.connect(merger, 0, 0);
-    rightGain.connect(merger, 0, 1);
-
-    return {
-      input: splitter,
-      output: merger,
-
-      disconnect() {
-        try { splitter.disconnect(); } catch (e) {}
-        try { leftGain.disconnect(); } catch (e) {}
-        try { rightGain.disconnect(); } catch (e) {}
-        try { merger.disconnect(); } catch (e) {}
-      }
+    this.dichoticRoutes = {
+      left: { input: left, output: master },
+      right: { input: right, output: master },
+      master
     };
+
+    return this.dichoticRoutes;
+  },
+
+  createStereoRoute(pan) {
+    const routes = this.prepareDichoticGraph();
+    if (!routes) return null;
+    return pan <= -1 ? routes.left : routes.right;
+  },
+
+  preloadDichoticBuffers() {
+    if (!this.dichoticEnabled) return;
+    Object.values(this.audioManifest).forEach(url => {
+      this.loadAudioBuffer(url).catch(() => {});
+    });
   },
 
   async loadAudioBuffer(url) {
     const ctx = this.ensureContext();
 
-    if (!ctx || !url) {
-      return null;
+    if (!ctx || !url) return null;
+    if (this.bufferCache.has(url)) return this.bufferCache.get(url);
+
+    /* Share one in-flight fetch/decode between preload and playback. */
+    if (this.bufferLoadPromises.has(url)) {
+      return this.bufferLoadPromises.get(url);
     }
 
-    if (this.bufferCache.has(url)) {
-      return this.bufferCache.get(url);
-    }
-
-    try {
-      const response = await fetch(
-        url,
-        { cache: 'force-cache' }
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status} while loading ${url}`
-        );
+    const loadPromise = (async () => {
+      try {
+        const response = await fetch(url, { cache: 'force-cache' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} while loading ${url}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        this.bufferCache.set(url, audioBuffer);
+        return audioBuffer;
+      } catch (error) {
+        console.warn('[AudioEngine] MP3 unavailable:', url, error);
+        return null;
       }
+    })();
 
-      const arrayBuffer =
-        await response.arrayBuffer();
-
-      const audioBuffer =
-        await ctx.decodeAudioData(arrayBuffer);
-
-      this.bufferCache.set(
-        url,
-        audioBuffer
-      );
-
-      return audioBuffer;
-    } catch (error) {
-      /*
-       * IMPORTANT:
-       * Missing individual MP3s are now a recoverable condition.
-       * We return null to allow speak() to use its safe synthetic
-       * dichotic fallback rather than breaking the session.
-       */
-      console.warn(
-        '[AudioEngine] MP3 unavailable:',
-        url,
-        error
-      );
-
-      return null;
-    }
+    this.bufferLoadPromises.set(url, loadPromise);
+    loadPromise.finally(() => this.bufferLoadPromises.delete(url)).catch(() => {});
+    return loadPromise;
   },
 
   playBuffer(audioBuffer, pan, options = {}) {
     const ctx = this.ensureContext();
+    if (!ctx || !audioBuffer) return null;
 
-    if (!ctx || !audioBuffer) {
-      return null;
-    }
-
-    const volume = Number.isFinite(options.volume)
-      ? Math.max(0, Math.min(1, options.volume))
-      : 1;
+    const routes = this.prepareDichoticGraph();
+    const route = pan <= -1 ? routes?.left : routes?.right;
+    if (!route) return null;
 
     const source = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    const route = this.createStereoRoute(pan);
-
-    if (!route) {
-      return null;
-    }
-
     source.buffer = audioBuffer;
+    source.connect(route.input);
 
-    gain.gain.setValueAtTime(
-      volume,
-      ctx.currentTime
-    );
+    /* Web Audio owns the precise playback clock; schedule from currentTime. */
+    const startAt = Number.isFinite(options.startAt)
+      ? Math.max(ctx.currentTime, options.startAt)
+      : ctx.currentTime;
 
-    source.connect(gain);
-    gain.connect(route.input);
-    route.output.connect(ctx.destination);
-
-    const record = {
-      source,
-      gain,
-      route
-    };
-
+    const record = { source };
     this.activeSources.add(record);
 
     source.onended = () => {
       try { source.disconnect(); } catch (e) {}
-      try { gain.disconnect(); } catch (e) {}
-      try { route.disconnect(); } catch (e) {}
-
       this.activeSources.delete(record);
     };
 
     try {
-      source.start(ctx.currentTime);
+      source.start(startAt);
     } catch (error) {
-      console.error(
-        '[AudioEngine] AudioBuffer playback failed:',
-        error
-      );
-
+      console.error('[AudioEngine] AudioBuffer playback failed:', error);
       try { source.disconnect(); } catch (e) {}
-      try { gain.disconnect(); } catch (e) {}
-      try { route.disconnect(); } catch (e) {}
-
       this.activeSources.delete(record);
-
       return null;
     }
 
@@ -2357,21 +2292,14 @@ const AudioEngine = {
 
     osc.connect(gain);
     gain.connect(route.input);
-    route.output.connect(ctx.destination);
 
-    const record = {
-      source: osc,
-      gain,
-      route
-    };
+    const record = { source: osc, gain };
 
     this.activeSources.add(record);
 
     osc.onended = () => {
       try { osc.disconnect(); } catch (e) {}
       try { gain.disconnect(); } catch (e) {}
-      try { route.disconnect(); } catch (e) {}
-
       this.activeSources.delete(record);
     };
 
@@ -2381,8 +2309,6 @@ const AudioEngine = {
     } catch (error) {
       try { osc.disconnect(); } catch (e) {}
       try { gain.disconnect(); } catch (e) {}
-      try { route.disconnect(); } catch (e) {}
-
       this.activeSources.delete(record);
 
       return null;
@@ -2422,10 +2348,12 @@ const AudioEngine = {
           await this.loadAudioBuffer(url);
 
         if (buffer) {
+          const ctx = this.ensureContext();
+          const startAt = ctx ? ctx.currentTime : undefined;
           return this.playBuffer(
             buffer,
             pan,
-            { volume: 1 }
+            { volume: 1, startAt }
           );
         }
 
@@ -2523,9 +2451,7 @@ const AudioEngine = {
         record.gain.disconnect();
       } catch (e) {}
 
-      try {
-        record.route.disconnect();
-      } catch (e) {}
+      /* Persistent dichotic routes intentionally remain connected. */
     }
 
     this.activeSources.clear();
@@ -2540,6 +2466,13 @@ const AudioEngine = {
       } catch (e) {}
     }
 
+    if (this.dichoticRoutes) {
+      try { this.dichoticRoutes.left.input.disconnect(); } catch (e) {}
+      try { this.dichoticRoutes.right.input.disconnect(); } catch (e) {}
+      try { this.dichoticRoutes.master.disconnect(); } catch (e) {}
+    }
+    this.dichoticRoutes = null;
+    this.bufferLoadPromises.clear();
     this.ctx = null;
     this.bufferCache.clear();
   },
