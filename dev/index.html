@@ -1207,13 +1207,13 @@ body[data-theme="dark"] {
             <div class="control-label">Audio Voice</div>
             <select id="sel-voice" style="max-width:140px"></select>
           </div>
-            <div class="control-row">
-              <div>
-                <div class="control-label">Dichotic Audio</div>
-                <small style="display:block;color:var(--text-dim);font-size:.62rem;line-height:1.35;max-width:320px;margin-top:3px">Split auditory stimuli independently to left and right audio channels</small>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="chk-dichotic"><span class="toggle-slider"></span></label>
+          <div class="control-row">
+            <div>
+              <div class="control-label">Dichotic Audio</div>
+              <small style="display:block;color:var(--text-dim);font-size:.62rem;line-height:1.35;max-width:320px;margin-top:3px">Split auditory stimuli independently to left and right audio channels</small>
             </div>
+            <label class="toggle-switch"><input type="checkbox" id="chk-dichotic"><span class="toggle-slider"></span></label>
+          </div>
           <div class="panel-title green" style="margin-top:16px">Active Modalities</div>
           <div class="stimuli-grid" id="stimuli-grid">
             <label class="stim-check"><input type="checkbox" id="chk-pos" checked onchange="App.onStimChange()"><span class="check-box"></span><span class="check-label">Position</span></label>
@@ -1914,101 +1914,186 @@ function formatKey(k) {
 // ==================== AUDIO ENGINE (Safe Fallback) ====================
 const AudioEngine = {
   ctx: null,
-  dichoticEar: -1,
+  activeNodes: new Set(),
+  nextDichoticPan: -1,
 
   init() {
-    try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.ctx = null; }
+    if (this.ctx) return this.ctx;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      return this.ctx;
+    } catch (e) {
+      console.warn('[AudioEngine] Web Audio unavailable:', e);
+      this.ctx = null;
+      return null;
+    }
+  },
+
+  ensureContext() {
+    const ctx = this.init();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    return ctx;
   },
 
   setDichotic(enabled) {
-    this.dichoticEar = enabled ? -1 : null;
+    if (enabled) this.resetDichoticSequence();
+  },
+
+  resetDichoticSequence() {
+    this.nextDichoticPan = -1;
+  },
+
+  getNextDichoticPan() {
+    const pan = this.nextDichoticPan;
+    this.nextDichoticPan = pan === -1 ? 1 : -1;
+    return pan;
+  },
+
+  createStereoRoute(pan = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return null;
+    const safePan = Math.max(-1, Math.min(1, Number(pan) || 0));
+
+    if (typeof ctx.createStereoPanner === 'function') {
+      const panner = ctx.createStereoPanner();
+      panner.pan.setValueAtTime(safePan, ctx.currentTime);
+      return {
+        input: panner,
+        output: panner,
+        disconnect() { try { panner.disconnect(); } catch (e) {} }
+      };
+    }
+
+    // Compatibility fallback: hard-route mono source to exactly one output channel.
+    const splitter = ctx.createChannelSplitter(2);
+    const merger = ctx.createChannelMerger(2);
+    const leftGain = ctx.createGain();
+    const rightGain = ctx.createGain();
+
+    leftGain.gain.value = safePan <= 0 ? 1 : 0;
+    rightGain.gain.value = safePan >= 0 ? 1 : 0;
+
+    splitter.connect(leftGain, 0);
+    splitter.connect(rightGain, 0);
+    leftGain.connect(merger, 0, 0);
+    rightGain.connect(merger, 0, 1);
+
+    return {
+      input: splitter,
+      output: merger,
+      disconnect() {
+        try { splitter.disconnect(); } catch (e) {}
+        try { leftGain.disconnect(); } catch (e) {}
+        try { rightGain.disconnect(); } catch (e) {}
+        try { merger.disconnect(); } catch (e) {}
+      }
+    };
+  },
+
+  playTone({ frequency = 440, duration = 0.3, volume = 0.05, pan = 0 } = {}) {
+    const ctx = this.ensureContext();
+    if (!ctx) return null;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const route = this.createStereoRoute(pan);
+    if (!route) return null;
+
+    const now = ctx.currentTime;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(route.input);
+    route.output.connect(ctx.destination);
+
+    const record = { source: osc, gain, route };
+    this.activeNodes.add(record);
+
+    osc.onended = () => this.disposeNode(record);
+    osc.start(now);
+    osc.stop(now + duration);
+    return record;
+  },
+
+  playBuffer(buffer, pan = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx || !buffer) return null;
+
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    const route = this.createStereoRoute(pan);
+    if (!route) return null;
+
+    source.buffer = buffer;
+    gain.gain.setValueAtTime(1, ctx.currentTime);
+    source.connect(gain);
+    gain.connect(route.input);
+    route.output.connect(ctx.destination);
+
+    const record = { source, gain, route };
+    this.activeNodes.add(record);
+    source.onended = () => this.disposeNode(record);
+    source.start();
+    return record;
+  },
+
+  disposeNode(record) {
+    if (!record) return;
+    this.activeNodes.delete(record);
+    try { record.source.onended = null; } catch (e) {}
+    try { record.source.stop(); } catch (e) {}
+    try { record.source.disconnect(); } catch (e) {}
+    try { record.gain.disconnect(); } catch (e) {}
+    try { record.route.disconnect(); } catch (e) {}
+  },
+
+  stopAll() {
+    try { if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel(); } catch (e) {}
+    [...this.activeNodes].forEach(record => this.disposeNode(record));
   },
 
   speak(word) {
-    const dichotic = !!document.getElementById('chk-dichotic')?.checked;
+    const dichotic = getChecked('chk-dichotic', false);
 
-    // SpeechSynthesis cannot be connected to StereoPannerNode portably.
-    // Dichotic mode therefore uses the Web Audio fallback exclusively,
-    // guaranteeing hard left/right channel separation.
-    if (dichotic) {
-      this.speakDichotic(word);
+    if (!dichotic) {
+      if (typeof speechSynthesis !== 'undefined') {
+        try {
+          const voices = speechSynthesis.getVoices();
+          if (voices && voices.length > 0) {
+            const msg = new SpeechSynthesisUtterance(word);
+            const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
+            if (preferred) msg.voice = preferred;
+            msg.rate = 1.1;
+            speechSynthesis.cancel();
+            speechSynthesis.speak(msg);
+            return;
+          }
+        } catch (e) {}
+      }
+      this.playTone({ frequency: 440 + (String(word || '').length * 30), pan: 0 });
       return;
     }
 
-    if (typeof speechSynthesis !== 'undefined') {
-      try {
-        const voices = speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-          const msg = new SpeechSynthesisUtterance(word);
-          const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
-          if (preferred) msg.voice = preferred;
-          msg.rate = 1.1;
-          speechSynthesis.cancel();
-          speechSynthesis.speak(msg);
-          return;
-        }
-      } catch(e) {}
-    }
-
-    this.speakTone(word, 0);
-  },
-
-  speakDichotic(word) {
-    if (!this.ctx) this.init();
-    if (!this.ctx) return;
-
-    try {
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-      const pan = this.dichoticEar === 1 ? 1 : -1;
-      this.dichoticEar = pan === -1 ? 1 : -1;
-      this.speakTone(word, pan);
-    } catch(e) {}
-  },
-
-  speakTone(word, pan = 0) {
-    if (!this.ctx) this.init();
-    if (!this.ctx) return;
-
-    try {
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const panner = this.ctx.createStereoPanner();
-
-      osc.type = 'sine';
-      osc.frequency.value = 440 + (String(word || '').length * 30);
-      panner.pan.setValueAtTime(Math.max(-1, Math.min(1, pan)), now);
-
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-
-      osc.connect(gain);
-      gain.connect(panner);
-      panner.connect(this.ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.3);
-    } catch(e) {}
+    // Native speechSynthesis cannot be inserted into a Web Audio graph.
+    // Dichotic mode therefore uses Web Audio for guaranteed hard L/R routing.
+    const pan = this.getNextDichoticPan();
+    this.playTone({
+      frequency: 440 + (String(word || '').length * 30),
+      duration: 0.3,
+      volume: 0.05,
+      pan
+    });
   },
 
   buzzMiss() {
-    if (!this.ctx) this.init();
-    if (!this.ctx) return;
-    try {
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(170, now);
-      osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.008);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
-      osc.connect(gain); gain.connect(this.ctx.destination);
-      osc.start(now); osc.stop(now + 0.15);
-    } catch(e) {}
+    this.playTone({ frequency: 170, duration: 0.15, volume: 0.12, pan: 0 });
   }
 };
 
@@ -3747,6 +3832,7 @@ const App = {
     // Leaving the game screen must terminate the previous renderer before
     // another screen becomes visible.
     if (id !== 'game') {
+      AudioEngine.stopAll();
       cleanupRenderers();
     }
 
@@ -4591,6 +4677,9 @@ const App = {
       if (shapeDisp) shapeDisp.style.visibility = 'hidden';
     }
 
+    // Audio: terminate any previous trial's audio before presenting the next stimulus.
+    AudioEngine.stopAll();
+
     // Audio
     if (this.engine.activeStimuli.includes('aud')) {
       AudioEngine.speak(trial.audWord);
@@ -4776,6 +4865,7 @@ const App = {
       clearTimeout(this.engine.trialTimeout);
       clearTimeout(this.engine.trialAdvanceTimeout);
       try { window.speechSynthesis.cancel(); } catch(e) {}
+      AudioEngine.stopAll();
       if (btn) btn.textContent = 'RESUME';
       this.clearGrid();
       this.showInterMsg('PAUSED', 999999);
@@ -4800,6 +4890,7 @@ const App = {
     clearTimeout(this.engine.trialAdvanceTimeout);
     clearInterval(this.engine.timerInterval);
     try { window.speechSynthesis.cancel(); } catch(e) {}
+    AudioEngine.stopAll();
 
     const now = Date.now();
     this.engine.sessionMs += (now - this.engine.lastTick);
