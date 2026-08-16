@@ -1914,19 +1914,32 @@ function formatKey(k) {
 // ==================== AUDIO ENGINE (Safe Fallback) ====================
 const AudioEngine = {
   ctx: null,
-  activeNodes: new Set(),
+  bufferCache: new Map(),
+  activeSources: new Set(),
   nextDichoticPan: -1,
 
+  audioManifest: Object.freeze({
+    "APOCALYPSE": "assets/stimuli/audio/apocalypse.mp3",
+    "DANGER":     "assets/stimuli/audio/danger.mp3",
+    "FEAR":       "assets/stimuli/audio/fear.mp3",
+    "LOSS":       "assets/stimuli/audio/loss.mp3",
+    "PANIC":      "assets/stimuli/audio/panic.mp3",
+    "THREAT":     "assets/stimuli/audio/threat.mp3"
+  }),
+
   init() {
-    if (this.ctx) return this.ctx;
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return null;
-      this.ctx = new AudioCtx();
+    if (this.ctx) {
       if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
       return this.ctx;
-    } catch (e) {
-      console.warn('[AudioEngine] Web Audio unavailable:', e);
+    }
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      this.ctx = new AudioContextClass();
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      return this.ctx;
+    } catch (error) {
+      console.error('[AudioEngine] AudioContext initialization failed:', error);
       this.ctx = null;
       return null;
     }
@@ -1936,10 +1949,6 @@ const AudioEngine = {
     const ctx = this.init();
     if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
     return ctx;
-  },
-
-  setDichotic(enabled) {
-    if (enabled) this.resetDichoticSequence();
   },
 
   resetDichoticSequence() {
@@ -1952,32 +1961,42 @@ const AudioEngine = {
     return pan;
   },
 
-  createStereoRoute(pan = 0) {
+  createStereoRoute(pan) {
     const ctx = this.ensureContext();
     if (!ctx) return null;
-    const safePan = Math.max(-1, Math.min(1, Number(pan) || 0));
+
+    const hardPan = pan <= -1 ? -1 : pan >= 1 ? 1 : 0;
 
     if (typeof ctx.createStereoPanner === 'function') {
       const panner = ctx.createStereoPanner();
-      panner.pan.setValueAtTime(safePan, ctx.currentTime);
+      panner.pan.setValueAtTime(hardPan, ctx.currentTime);
       return {
         input: panner,
         output: panner,
-        disconnect() { try { panner.disconnect(); } catch (e) {} }
+        disconnect() {
+          try { panner.disconnect(); } catch (e) {}
+        }
       };
     }
 
-    // Compatibility fallback: hard-route mono source to exactly one output channel.
     const splitter = ctx.createChannelSplitter(2);
     const merger = ctx.createChannelMerger(2);
     const leftGain = ctx.createGain();
     const rightGain = ctx.createGain();
 
-    leftGain.gain.value = safePan <= 0 ? 1 : 0;
-    rightGain.gain.value = safePan >= 0 ? 1 : 0;
+    if (hardPan === -1) {
+      leftGain.gain.value = 1;
+      rightGain.gain.value = 0;
+    } else if (hardPan === 1) {
+      leftGain.gain.value = 0;
+      rightGain.gain.value = 1;
+    } else {
+      leftGain.gain.value = 1;
+      rightGain.gain.value = 1;
+    }
 
     splitter.connect(leftGain, 0);
-    splitter.connect(rightGain, 0);
+    splitter.connect(rightGain, 1);
     leftGain.connect(merger, 0, 0);
     rightGain.connect(merger, 0, 1);
 
@@ -1993,107 +2012,158 @@ const AudioEngine = {
     };
   },
 
-  playTone({ frequency = 440, duration = 0.3, volume = 0.05, pan = 0 } = {}) {
+  async loadAudioBuffer(url) {
     const ctx = this.ensureContext();
-    if (!ctx) return null;
+    if (!ctx || !url) return null;
+    if (this.bufferCache.has(url)) return this.bufferCache.get(url);
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const route = this.createStereoRoute(pan);
-    if (!route) return null;
-
-    const now = ctx.currentTime;
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(frequency, now);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-    osc.connect(gain);
-    gain.connect(route.input);
-    route.output.connect(ctx.destination);
-
-    const record = { source: osc, gain, route };
-    this.activeNodes.add(record);
-
-    osc.onended = () => this.disposeNode(record);
-    osc.start(now);
-    osc.stop(now + duration);
-    return record;
+    try {
+      const response = await fetch(url, { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status} while loading ${url}`);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      this.bufferCache.set(url, audioBuffer);
+      return audioBuffer;
+    } catch (error) {
+      console.error('[AudioEngine] Failed to load/decode audio:', url, error);
+      return null;
+    }
   },
 
-  playBuffer(buffer, pan = 0) {
+  playBuffer(audioBuffer, pan, options = {}) {
     const ctx = this.ensureContext();
-    if (!ctx || !buffer) return null;
+    if (!ctx || !audioBuffer) return null;
+
+    const volume = Number.isFinite(options.volume)
+      ? Math.max(0, Math.min(1, options.volume))
+      : 1;
 
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
     const route = this.createStereoRoute(pan);
     if (!route) return null;
 
-    source.buffer = buffer;
-    gain.gain.setValueAtTime(1, ctx.currentTime);
+    source.buffer = audioBuffer;
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+
     source.connect(gain);
     gain.connect(route.input);
     route.output.connect(ctx.destination);
 
     const record = { source, gain, route };
-    this.activeNodes.add(record);
-    source.onended = () => this.disposeNode(record);
-    source.start();
+    this.activeSources.add(record);
+
+    source.onended = () => {
+      try { source.disconnect(); } catch (e) {}
+      try { gain.disconnect(); } catch (e) {}
+      try { route.disconnect(); } catch (e) {}
+      this.activeSources.delete(record);
+    };
+
+    try {
+      source.start(ctx.currentTime);
+    } catch (error) {
+      console.error('[AudioEngine] AudioBufferSourceNode start failed:', error);
+      try { source.disconnect(); } catch (e) {}
+      try { gain.disconnect(); } catch (e) {}
+      try { route.disconnect(); } catch (e) {}
+      this.activeSources.delete(record);
+      return null;
+    }
+
     return record;
   },
 
-  disposeNode(record) {
-    if (!record) return;
-    this.activeNodes.delete(record);
-    try { record.source.onended = null; } catch (e) {}
-    try { record.source.stop(); } catch (e) {}
-    try { record.source.disconnect(); } catch (e) {}
-    try { record.gain.disconnect(); } catch (e) {}
-    try { record.route.disconnect(); } catch (e) {}
+  getAudioUrl(word) {
+    if (!word) return null;
+    return this.audioManifest[String(word).trim().toUpperCase()] || null;
+  },
+
+  async speak(word) {
+    const dichotic = typeof getChecked === 'function'
+      ? getChecked('chk-dichotic', false)
+      : !!document.getElementById('chk-dichotic')?.checked;
+
+    if (dichotic) {
+      const url = this.getAudioUrl(word);
+      if (!url) {
+        console.warn('[AudioEngine] No MP3 registered for:', word);
+        return null;
+      }
+
+      const pan = this.getNextDichoticPan();
+      const buffer = await this.loadAudioBuffer(url);
+      if (!buffer) return null;
+
+      return this.playBuffer(buffer, pan, { volume: 1 });
+    }
+
+    if (typeof speechSynthesis !== 'undefined') {
+      try {
+        const voices = speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+          const msg = new SpeechSynthesisUtterance(word);
+          const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
+          if (preferred) msg.voice = preferred;
+          msg.rate = 1.1;
+          speechSynthesis.cancel();
+          speechSynthesis.speak(msg);
+          return null;
+        }
+      } catch (error) {
+        console.warn('[AudioEngine] Speech synthesis failed:', error);
+      }
+    }
+
+    // No oscillator fallback for speech stimuli.
+    return null;
   },
 
   stopAll() {
-    try { if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel(); } catch (e) {}
-    [...this.activeNodes].forEach(record => this.disposeNode(record));
+    try {
+      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    } catch (e) {}
+
+    for (const record of this.activeSources) {
+      try { record.source.stop(); } catch (e) {}
+      try { record.source.disconnect(); } catch (e) {}
+      try { record.gain.disconnect(); } catch (e) {}
+      try { record.route.disconnect(); } catch (e) {}
+    }
+    this.activeSources.clear();
   },
 
-  speak(word) {
-    const dichotic = getChecked('chk-dichotic', false);
-
-    if (!dichotic) {
-      if (typeof speechSynthesis !== 'undefined') {
-        try {
-          const voices = speechSynthesis.getVoices();
-          if (voices && voices.length > 0) {
-            const msg = new SpeechSynthesisUtterance(word);
-            const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
-            if (preferred) msg.voice = preferred;
-            msg.rate = 1.1;
-            speechSynthesis.cancel();
-            speechSynthesis.speak(msg);
-            return;
-          }
-        } catch (e) {}
-      }
-      this.playTone({ frequency: 440 + (String(word || '').length * 30), pan: 0 });
-      return;
+  async close() {
+    this.stopAll();
+    if (this.ctx) {
+      try { await this.ctx.close(); } catch (e) {}
     }
-
-    // Native speechSynthesis cannot be inserted into a Web Audio graph.
-    // Dichotic mode therefore uses Web Audio for guaranteed hard L/R routing.
-    const pan = this.getNextDichoticPan();
-    this.playTone({
-      frequency: 440 + (String(word || '').length * 30),
-      duration: 0.3,
-      volume: 0.05,
-      pan
-    });
+    this.ctx = null;
+    this.bufferCache.clear();
   },
 
   buzzMiss() {
-    this.playTone({ frequency: 170, duration: 0.15, volume: 0.12, pan: 0 });
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(170, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch (e) {}
   }
 };
 
@@ -3668,6 +3738,7 @@ const App = {
     if (ageCancel) ageCancel.addEventListener('click', () => this.cancelAgeGate());
 
     if (ageOverlay) {
+    AudioEngine.stopAll();
       ageOverlay.addEventListener('click', (e) => {
         if (e.target === ageOverlay) this.cancelAgeGate();
       });
@@ -4284,6 +4355,8 @@ const App = {
       this.engine.isRunning = true;
 
       AudioEngine.init();
+      AudioEngine.resetDichoticSequence();
+      AudioEngine.stopAll();
       AudioEngine.setDichotic(!!s.dichoticAudio);
       if (AudioEngine.ctx?.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
 
@@ -4682,6 +4755,7 @@ const App = {
 
     // Audio
     if (this.engine.activeStimuli.includes('aud')) {
+      AudioEngine.stopAll();
       AudioEngine.speak(trial.audWord);
     }
 
