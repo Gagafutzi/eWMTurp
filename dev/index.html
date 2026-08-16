@@ -1928,16 +1928,37 @@ const AudioEngine = {
     "THREAT":     "assets/stimuli/audio/threat.mp3"
   }),
 
+  /*
+   * Optional aliases can be populated at runtime without changing
+   * the original manifest. This allows trial vocabulary to grow
+   * without making the audio system brittle.
+   */
+  manifestAliases: Object.create(null),
+
   init() {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
       return this.ctx;
     }
+
     try {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return null;
+      const AudioContextClass =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+      if (!AudioContextClass) {
+        console.error('[AudioEngine] Web Audio API unavailable.');
+        return null;
+      }
+
       this.ctx = new AudioContextClass();
-      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+
       return this.ctx;
     } catch (error) {
       console.error('[AudioEngine] AudioContext initialization failed:', error);
@@ -1948,19 +1969,18 @@ const AudioEngine = {
 
   ensureContext() {
     const ctx = this.init();
-    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
     return ctx;
   },
 
-  // Public state setter used by App.init(), the Dichotic Audio toggle,
-  // and startSession(). This method intentionally owns the mode state so
-  // AudioEngine.speak() does not depend on a second source of truth.
   setDichotic(enabled) {
     this.dichoticEnabled = !!enabled;
     this.resetDichoticSequence();
 
-    // When switching back to normal speech, terminate any currently
-    // playing dichotic AudioBufferSourceNodes immediately.
     if (!this.dichoticEnabled) {
       this.stopAll();
     }
@@ -1978,18 +1998,137 @@ const AudioEngine = {
     return pan;
   },
 
+  /*
+   * Normalize trial vocabulary safely:
+   *   "OBSESSION" -> "OBSESSION"
+   *   "obsession" -> "OBSESSION"
+   *   "Obsession" -> "OBSESSION"
+   *   " obsession " -> "OBSESSION"
+   */
+  normalizeWord(word) {
+    if (word === null || word === undefined) {
+      return '';
+    }
+
+    return String(word)
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
+  },
+
+  /*
+   * Resolve an audio URL without assuming that the manifest's
+   * property casing matches the trial word casing.
+   *
+   * Resolution order:
+   * 1. Exact manifest key
+   * 2. Case-insensitive manifest key
+   * 3. Runtime alias
+   * 4. Conventional generated filename
+   */
+  getAudioUrl(word) {
+    const normalized = this.normalizeWord(word);
+
+    if (!normalized) {
+      return null;
+    }
+
+    // Exact key.
+    if (this.audioManifest[normalized]) {
+      return this.audioManifest[normalized];
+    }
+
+    // Case-insensitive manifest scan.
+    const manifestKeys = Object.keys(this.audioManifest);
+
+    const matchingKey = manifestKeys.find(
+      key => this.normalizeWord(key) === normalized
+    );
+
+    if (matchingKey && this.audioManifest[matchingKey]) {
+      return this.audioManifest[matchingKey];
+    }
+
+    // Runtime aliases.
+    const aliasKeys = Object.keys(this.manifestAliases);
+
+    const matchingAlias = aliasKeys.find(
+      key => this.normalizeWord(key) === normalized
+    );
+
+    if (matchingAlias && this.manifestAliases[matchingAlias]) {
+      return this.manifestAliases[matchingAlias];
+    }
+
+    /*
+     * Auto-generated conventional path.
+     *
+     * Example:
+     *   OBSESSION -> assets/stimuli/audio/obsession.mp3
+     *
+     * The actual fetch/decode result is still validated. A missing
+     * generated asset therefore cannot crash the session.
+     */
+    const safeFilename = normalized
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    if (!safeFilename) {
+      return null;
+    }
+
+    return `assets/stimuli/audio/${safeFilename}.mp3`;
+  },
+
+  /*
+   * Allows dynamically generated trial vocabularies to register
+   * their conventional MP3 path explicitly when desired.
+   */
+  registerAudioWord(word, url = null) {
+    const normalized = this.normalizeWord(word);
+
+    if (!normalized) {
+      return null;
+    }
+
+    const resolvedUrl =
+      url ||
+      `assets/stimuli/audio/${
+        normalized
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]+/g, '_')
+          .replace(/^_+|_+$/g, '')
+      }.mp3`;
+
+    this.manifestAliases[normalized] = resolvedUrl;
+
+    return resolvedUrl;
+  },
+
   createStereoRoute(pan) {
     const ctx = this.ensureContext();
-    if (!ctx) return null;
 
-    const hardPan = pan <= -1 ? -1 : pan >= 1 ? 1 : 0;
+    if (!ctx) {
+      return null;
+    }
+
+    const hardPan =
+      pan <= -1 ? -1 :
+      pan >= 1 ? 1 : 0;
 
     if (typeof ctx.createStereoPanner === 'function') {
       const panner = ctx.createStereoPanner();
-      panner.pan.setValueAtTime(hardPan, ctx.currentTime);
+
+      panner.pan.setValueAtTime(
+        hardPan,
+        ctx.currentTime
+      );
+
       return {
         input: panner,
         output: panner,
+
         disconnect() {
           try { panner.disconnect(); } catch (e) {}
         }
@@ -2020,6 +2159,7 @@ const AudioEngine = {
     return {
       input: splitter,
       output: merger,
+
       disconnect() {
         try { splitter.disconnect(); } catch (e) {}
         try { leftGain.disconnect(); } catch (e) {}
@@ -2031,25 +2171,62 @@ const AudioEngine = {
 
   async loadAudioBuffer(url) {
     const ctx = this.ensureContext();
-    if (!ctx || !url) return null;
-    if (this.bufferCache.has(url)) return this.bufferCache.get(url);
+
+    if (!ctx || !url) {
+      return null;
+    }
+
+    if (this.bufferCache.has(url)) {
+      return this.bufferCache.get(url);
+    }
 
     try {
-      const response = await fetch(url, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`HTTP ${response.status} while loading ${url}`);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      this.bufferCache.set(url, audioBuffer);
+      const response = await fetch(
+        url,
+        { cache: 'force-cache' }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `HTTP ${response.status} while loading ${url}`
+        );
+      }
+
+      const arrayBuffer =
+        await response.arrayBuffer();
+
+      const audioBuffer =
+        await ctx.decodeAudioData(arrayBuffer);
+
+      this.bufferCache.set(
+        url,
+        audioBuffer
+      );
+
       return audioBuffer;
     } catch (error) {
-      console.error('[AudioEngine] Failed to load/decode audio:', url, error);
+      /*
+       * IMPORTANT:
+       * Missing individual MP3s are now a recoverable condition.
+       * We return null to allow speak() to use its safe synthetic
+       * dichotic fallback rather than breaking the session.
+       */
+      console.warn(
+        '[AudioEngine] MP3 unavailable:',
+        url,
+        error
+      );
+
       return null;
     }
   },
 
   playBuffer(audioBuffer, pan, options = {}) {
     const ctx = this.ensureContext();
-    if (!ctx || !audioBuffer) return null;
+
+    if (!ctx || !audioBuffer) {
+      return null;
+    }
 
     const volume = Number.isFinite(options.volume)
       ? Math.max(0, Math.min(1, options.volume))
@@ -2058,108 +2235,321 @@ const AudioEngine = {
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
     const route = this.createStereoRoute(pan);
-    if (!route) return null;
+
+    if (!route) {
+      return null;
+    }
 
     source.buffer = audioBuffer;
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
+
+    gain.gain.setValueAtTime(
+      volume,
+      ctx.currentTime
+    );
 
     source.connect(gain);
     gain.connect(route.input);
     route.output.connect(ctx.destination);
 
-    const record = { source, gain, route };
+    const record = {
+      source,
+      gain,
+      route
+    };
+
     this.activeSources.add(record);
 
     source.onended = () => {
       try { source.disconnect(); } catch (e) {}
       try { gain.disconnect(); } catch (e) {}
       try { route.disconnect(); } catch (e) {}
+
       this.activeSources.delete(record);
     };
 
     try {
       source.start(ctx.currentTime);
     } catch (error) {
-      console.error('[AudioEngine] AudioBufferSourceNode start failed:', error);
+      console.error(
+        '[AudioEngine] AudioBuffer playback failed:',
+        error
+      );
+
       try { source.disconnect(); } catch (e) {}
       try { gain.disconnect(); } catch (e) {}
       try { route.disconnect(); } catch (e) {}
+
       this.activeSources.delete(record);
+
       return null;
     }
 
     return record;
   },
 
-  getAudioUrl(word) {
-    if (!word) return null;
-    return this.audioManifest[String(word).trim().toUpperCase()] || null;
+  /*
+   * Safe synthetic fallback for a missing MP3.
+   *
+   * This is intentionally ONLY used when a dichotic MP3 is missing.
+   * It prevents a missing asset from making the auditory modality
+   * silent or breaking the trial sequence.
+   *
+   * The fallback itself is still routed through the same hard
+   * left/right StereoPannerNode architecture.
+   */
+  playDichoticFallback(word, pan) {
+    const ctx = this.ensureContext();
+
+    if (!ctx) {
+      return null;
+    }
+
+    const route = this.createStereoRoute(pan);
+
+    if (!route) {
+      return null;
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    /*
+     * Deterministic frequency from the word so different missing
+     * vocabulary items do not all sound identical.
+     */
+    const normalized = this.normalizeWord(word);
+
+    let hash = 0;
+
+    for (let i = 0; i < normalized.length; i++) {
+      hash =
+        ((hash << 5) - hash + normalized.charCodeAt(i)) |
+        0;
+    }
+
+    const frequency =
+      260 + (Math.abs(hash) % 360);
+
+    const now = ctx.currentTime;
+    const duration = 0.18;
+
+    osc.type = 'sine';
+
+    osc.frequency.setValueAtTime(
+      frequency,
+      now
+    );
+
+    gain.gain.setValueAtTime(
+      0.0001,
+      now
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.10,
+      now + 0.012
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      now + duration
+    );
+
+    osc.connect(gain);
+    gain.connect(route.input);
+    route.output.connect(ctx.destination);
+
+    const record = {
+      source: osc,
+      gain,
+      route
+    };
+
+    this.activeSources.add(record);
+
+    osc.onended = () => {
+      try { osc.disconnect(); } catch (e) {}
+      try { gain.disconnect(); } catch (e) {}
+      try { route.disconnect(); } catch (e) {}
+
+      this.activeSources.delete(record);
+    };
+
+    try {
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (error) {
+      try { osc.disconnect(); } catch (e) {}
+      try { gain.disconnect(); } catch (e) {}
+      try { route.disconnect(); } catch (e) {}
+
+      this.activeSources.delete(record);
+
+      return null;
+    }
+
+    console.warn(
+      `[AudioEngine] Using dichotic fallback for "${word}" on ${pan === -1 ? 'LEFT' : 'RIGHT'} channel.`
+    );
+
+    return record;
   },
 
   async speak(word) {
     const dichotic = !!this.dichoticEnabled;
 
     if (dichotic) {
-      const url = this.getAudioUrl(word);
-      if (!url) {
-        console.warn('[AudioEngine] No MP3 registered for:', word);
+      const normalized =
+        this.normalizeWord(word);
+
+      if (!normalized) {
         return null;
       }
 
-      const pan = this.getNextDichoticPan();
-      const buffer = await this.loadAudioBuffer(url);
-      if (!buffer) return null;
+      /*
+       * Select the ear regardless of whether the MP3 exists.
+       * This guarantees that a missing asset cannot break the
+       * dichotic sequence.
+       */
+      const pan =
+        this.getNextDichoticPan();
 
-      return this.playBuffer(buffer, pan, { volume: 1 });
+      const url =
+        this.getAudioUrl(normalized);
+
+      if (url) {
+        const buffer =
+          await this.loadAudioBuffer(url);
+
+        if (buffer) {
+          return this.playBuffer(
+            buffer,
+            pan,
+            { volume: 1 }
+          );
+        }
+
+        console.warn(
+          `[AudioEngine] Falling back because MP3 could not be decoded: ${normalized}`
+        );
+      } else {
+        console.warn(
+          `[AudioEngine] No MP3 path resolved for: ${normalized}`
+        );
+      }
+
+      /*
+       * Never leave the auditory modality silent merely because
+       * one asset is absent.
+       */
+      return this.playDichoticFallback(
+        normalized,
+        pan
+      );
     }
 
-    if (typeof speechSynthesis !== 'undefined') {
+    /*
+     * Normal non-dichotic mode retains native speech synthesis.
+     */
+    if (
+      typeof speechSynthesis !==
+      'undefined'
+    ) {
       try {
-        const voices = speechSynthesis.getVoices();
-        if (voices && voices.length > 0) {
-          const msg = new SpeechSynthesisUtterance(word);
-          const preferred = voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
-          if (preferred) msg.voice = preferred;
+        const voices =
+          speechSynthesis.getVoices();
+
+        if (
+          voices &&
+          voices.length > 0
+        ) {
+          const msg =
+            new SpeechSynthesisUtterance(
+              word
+            );
+
+          const preferred =
+            voices.find(
+              voice =>
+                voice.lang &&
+                voice.lang.startsWith('en')
+            ) || voices[0];
+
+          if (preferred) {
+            msg.voice = preferred;
+          }
+
           msg.rate = 1.1;
+
           speechSynthesis.cancel();
           speechSynthesis.speak(msg);
+
           return null;
         }
       } catch (error) {
-        console.warn('[AudioEngine] Speech synthesis failed:', error);
+        console.warn(
+          '[AudioEngine] Speech synthesis failed:',
+          error
+        );
       }
     }
 
-    // No oscillator fallback for speech stimuli.
     return null;
   },
 
   stopAll() {
     try {
-      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+      if (
+        typeof speechSynthesis !==
+        'undefined'
+      ) {
+        speechSynthesis.cancel();
+      }
     } catch (e) {}
 
-    for (const record of this.activeSources) {
-      try { record.source.stop(); } catch (e) {}
-      try { record.source.disconnect(); } catch (e) {}
-      try { record.gain.disconnect(); } catch (e) {}
-      try { record.route.disconnect(); } catch (e) {}
+    for (
+      const record
+      of this.activeSources
+    ) {
+      try {
+        record.source.stop();
+      } catch (e) {}
+
+      try {
+        record.source.disconnect();
+      } catch (e) {}
+
+      try {
+        record.gain.disconnect();
+      } catch (e) {}
+
+      try {
+        record.route.disconnect();
+      } catch (e) {}
     }
+
     this.activeSources.clear();
   },
 
   async close() {
     this.stopAll();
+
     if (this.ctx) {
-      try { await this.ctx.close(); } catch (e) {}
+      try {
+        await this.ctx.close();
+      } catch (e) {}
     }
+
     this.ctx = null;
     this.bufferCache.clear();
   },
 
   buzzMiss() {
     const ctx = this.ensureContext();
-    if (!ctx) return;
+
+    if (!ctx) {
+      return;
+    }
 
     try {
       const now = ctx.currentTime;
@@ -2167,15 +2557,35 @@ const AudioEngine = {
       const gain = ctx.createGain();
 
       osc.type = 'square';
-      osc.frequency.setValueAtTime(170, now);
-      osc.frequency.exponentialRampToValueAtTime(95, now + 0.12);
 
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.008);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+      osc.frequency.setValueAtTime(
+        170,
+        now
+      );
+
+      osc.frequency.exponentialRampToValueAtTime(
+        95,
+        now + 0.12
+      );
+
+      gain.gain.setValueAtTime(
+        0.0001,
+        now
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.008
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.14
+      );
 
       osc.connect(gain);
       gain.connect(ctx.destination);
+
       osc.start(now);
       osc.stop(now + 0.15);
     } catch (e) {}
