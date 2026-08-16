@@ -1207,6 +1207,13 @@ body[data-theme="dark"] {
             <div class="control-label">Audio Voice</div>
             <select id="sel-voice" style="max-width:140px"></select>
           </div>
+            <div class="control-row">
+              <div>
+                <div class="control-label">Dichotic Audio</div>
+                <small style="display:block;color:var(--text-dim);font-size:.62rem;line-height:1.35;max-width:320px;margin-top:3px">Split auditory stimuli independently to left and right audio channels</small>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="chk-dichotic"><span class="toggle-slider"></span></label>
+            </div>
           <div class="panel-title green" style="margin-top:16px">Active Modalities</div>
           <div class="stimuli-grid" id="stimuli-grid">
             <label class="stim-check"><input type="checkbox" id="chk-pos" checked onchange="App.onStimChange()"><span class="check-box"></span><span class="check-label">Position</span></label>
@@ -1907,10 +1914,27 @@ function formatKey(k) {
 // ==================== AUDIO ENGINE (Safe Fallback) ====================
 const AudioEngine = {
   ctx: null,
+  dichoticEar: -1,
+
   init() {
     try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.ctx = null; }
   },
+
+  setDichotic(enabled) {
+    this.dichoticEar = enabled ? -1 : null;
+  },
+
   speak(word) {
+    const dichotic = !!document.getElementById('chk-dichotic')?.checked;
+
+    // SpeechSynthesis cannot be connected to StereoPannerNode portably.
+    // Dichotic mode therefore uses the Web Audio fallback exclusively,
+    // guaranteeing hard left/right channel separation.
+    if (dichotic) {
+      this.speakDichotic(word);
+      return;
+    }
+
     if (typeof speechSynthesis !== 'undefined') {
       try {
         const voices = speechSynthesis.getVoices();
@@ -1925,21 +1949,49 @@ const AudioEngine = {
         }
       } catch(e) {}
     }
-    // Web Audio fallback
-    if (!this.ctx) this.init();
-    if (this.ctx) {
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 440 + (word.length * 30);
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + 0.3);
-      } catch(e) {}
-    }
+
+    this.speakTone(word, 0);
   },
+
+  speakDichotic(word) {
+    if (!this.ctx) this.init();
+    if (!this.ctx) return;
+
+    try {
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      const pan = this.dichoticEar === 1 ? 1 : -1;
+      this.dichoticEar = pan === -1 ? 1 : -1;
+      this.speakTone(word, pan);
+    } catch(e) {}
+  },
+
+  speakTone(word, pan = 0) {
+    if (!this.ctx) this.init();
+    if (!this.ctx) return;
+
+    try {
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const panner = this.ctx.createStereoPanner();
+
+      osc.type = 'sine';
+      osc.frequency.value = 440 + (String(word || '').length * 30);
+      panner.pan.setValueAtTime(Math.max(-1, Math.min(1, pan)), now);
+
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      osc.connect(gain);
+      gain.connect(panner);
+      panner.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } catch(e) {}
+  },
+
   buzzMiss() {
     if (!this.ctx) this.init();
     if (!this.ctx) return;
@@ -3183,6 +3235,7 @@ class GameEngine {
       buzzerOnMiss: safeBool('chk-buzzer'),
       feedbackEnabled: safeBool('chk-feedback'),
       wordInterference: safeBool('chk-word-interference'),
+      dichoticAudio: safeBool('chk-dichotic'),
       emoLoad: safeInt('rng-emo-load', 70),
       interference: safeInt('rng-interference', 40),
       matchRate: safeInt('rng-match-rate', 30) / 100,
@@ -3430,6 +3483,7 @@ const App = {
     bindInput('rng-interference', 'input', e => { setText('disp-interference', e.target.value + '%'); });
     bindInput('rng-match-rate', 'input', e => { setText('disp-match-rate', e.target.value + '%'); });
     bindInput('chk-word-interference', 'change', () => this.saveSettings());
+    bindInput('chk-dichotic', 'change', e => { AudioEngine.setDichotic(!!e.target.checked); this.saveSettings(); });
     bindInput('chk-pos', 'change', () => this.onStimChange());
     bindInput('chk-aud', 'change', () => this.onStimChange());
     bindInput('chk-shp', 'change', () => this.onStimChange());
@@ -3577,6 +3631,7 @@ const App = {
     this.setAnimeMode(this._savedAnimeMode || 'standard', false);
     this.refreshSettingDisplays();
     this.updateGlobalStats();
+    AudioEngine.setDichotic(getChecked('chk-dichotic', false));
     this.onStimChange();
     this.onVariableNToggle();
     this.onGridTypeChange();
@@ -3599,7 +3654,7 @@ const App = {
       'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed',
       'chk-variable-n','rng-var-min','inp-var-max','chk-adaptive','sel-isi-mode',
       'rng-isi-fixed','rng-isi-min','rng-isi-max','rng-stim-dur','rng-session-duration',
-      'chk-tally','chk-buzzer','chk-feedback','chk-word-interference','rng-interference','rng-match-rate','sel-voice',
+      'chk-tally','chk-buzzer','chk-feedback','chk-word-interference','chk-dichotic','rng-interference','rng-match-rate','sel-voice',
       'chk-pos','chk-aud','chk-shp','chk-col'
     ];
   },
@@ -4143,6 +4198,7 @@ const App = {
       this.engine.isRunning = true;
 
       AudioEngine.init();
+      AudioEngine.setDichotic(!!s.dichoticAudio);
       if (AudioEngine.ctx?.state === 'suspended') AudioEngine.ctx.resume().catch(() => {});
 
       // IMPORTANT: make the game screen visible BEFORE initializing
@@ -4971,4 +5027,3 @@ else boot();
 </script>
 </body>
 </html>
-
