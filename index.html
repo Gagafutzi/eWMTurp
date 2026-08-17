@@ -1619,10 +1619,24 @@ async function preloadAssets(options = {}) {
     const pornCache = ANIME_IMAGE_CACHE.porn || (ANIME_IMAGE_CACHE.porn = Object.create(null));
 
     for (let index = 1; index <= PORN_MAX_DISCOVERY_INDEX; index++) {
-      const path = `assets/stimuli/porn/p${index}.webp`;
-      const found = await preloadImage(path, pornCache);
-      if (!found) break;
-      PORN_ASSET_PATHS.push(path);
+      const jpgPath = `assets/stimuli/porn/p${index}.jpg`;
+      const webpPath = `assets/stimuli/porn/p${index}.webp`;
+
+      const foundJpg = await preloadImage(jpgPath, pornCache);
+
+      if (foundJpg) {
+        PORN_ASSET_PATHS.push(jpgPath);
+        continue;
+      }
+
+      const foundWebp = await preloadImage(webpPath, pornCache);
+
+      if (foundWebp) {
+        PORN_ASSET_PATHS.push(webpPath);
+        continue;
+      }
+
+      break;
     }
 
     paths = PORN_ASSET_PATHS.slice();
