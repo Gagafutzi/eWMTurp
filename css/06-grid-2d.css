@@ -130,22 +130,33 @@
  * Above `.cell-overlay`, which is a darkening gradient the shape has to read
  * against.
  */
+/*
+ * Low in the cell, and smaller than the picture it sits on.
+ *
+ * Centred and at 20% it covered the face it was supposed to accompany. Down at
+ * the bottom edge it reads as a second mark on the same trial rather than a
+ * badge over the first, and a face is mostly upper-cell anyway — so this is the
+ * part of the square with least to lose.
+ */
 .cell-2d .cell-shape {
   position:absolute;
-  inset:20%;
+  left:0; right:0; bottom:6%;
+  height:26%;
   z-index:3;
   display:flex;
-  align-items:center;
+  align-items:flex-end;
   justify-content:center;
   pointer-events:none;
 }
 
 .cell-2d .cell-shape svg {
-  width:100%;
+  width:auto;
   height:100%;
+  max-width:60%;
   /* Enough separation from whatever it is lying over, at any brightness. */
   filter: drop-shadow(0 0 7px rgba(0,0,0,0.9));
 }
 
 /* An empty cell: the shape is the whole stimulus there, so it may take more. */
-.cell-2d:not(.active) .cell-shape { inset:14%; }
+.cell-2d:not(.active) .cell-shape { height:34%; bottom:8%; }
+.cell-2d:not(.active) .cell-shape svg { max-width:75%; }

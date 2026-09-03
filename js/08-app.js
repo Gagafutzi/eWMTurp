@@ -1324,8 +1324,18 @@ const App = {
         c.classList.remove('active');
         const img = c.querySelector('.face-img');
         const fb = c.querySelector('.face-fallback');
+        const shape = c.querySelector('.cell-shape');
         if (img) { img.style.display = 'none'; }
         if (fb) fb.style.display = 'none';
+        /*
+         * The shape goes when the picture does.
+         *
+         * It was only being cleared at the start of the *next* trial's render,
+         * so it outlived the stimulus it belonged to and sat on an empty grid
+         * through the whole inter-stimulus interval — which is exactly the gap
+         * where there is meant to be nothing to look at.
+         */
+        if (shape) shape.innerHTML = '';
       });
     }
     const shapeDisp = document.getElementById('shape-display');
