@@ -1189,6 +1189,9 @@ const App = {
   },
 
   startBlock() {
+    // A fresh block has not been counted yet, which is what lets `endSession`
+    // tell "already scored" from "stopped part-way through".
+    this.engine._blockScored = false;
     this.engine.generateBlock();
     this.updateHUD();
     this.updateLevelHUD();
@@ -1468,12 +1471,18 @@ const App = {
     }, 560);
   },
 
-  evaluateBlock() {
-    const s = this.engine.getSettings();
+  /**
+   * Count a stretch of trials into the running stats.
+   *
+   * Split out of `evaluateBlock` because ending a session early has to count
+   * the trials that were played, and `evaluateBlock` also moves the N level —
+   * which a partial block has no business doing. This is the counting alone.
+   */
+  tallyTrials(limit) {
     let blockHits = 0, blockMisses = 0, blockFA = 0, blockCR = 0;
     this.engine.activeStimuli.forEach(type => {
       const st = this.engine.stats[type];
-      for (let i = 0; i < this.engine.blockTrials; i++) {
+      for (let i = 0; i < limit; i++) {
         const k = this.engine.kSeq[i];
         if (i < k) continue;
         const current = this.engine.trials[i];
@@ -1490,6 +1499,14 @@ const App = {
         else { st.correctRejects++; blockCR++; }
       }
     });
+    this.engine._blockScored = true;
+    return { blockHits, blockMisses, blockFA, blockCR };
+  },
+
+  evaluateBlock() {
+    const s = this.engine.getSettings();
+    const { blockHits, blockMisses, blockFA, blockCR } =
+      this.tallyTrials(this.engine.blockTrials);
 
     const totalTargets = blockHits + blockMisses;
     const totalLures = blockFA + blockCR;
@@ -1618,6 +1635,19 @@ const App = {
     try { window.speechSynthesis.cancel(); } catch(e) {}
     AudioEngine.stopAll();
 
+    /*
+     * Count what was actually played before reporting on it.
+     *
+     * Stats were only written when a block *completed*, so ending part-way
+     * through the first block reported zeroes across the board — five trials
+     * answered, and a results screen claiming d' 0.00 for everything while
+     * naming a best and a worst out of four ties. Quitting early is the
+     * ordinary case, not the exception.
+     */
+    if (!this.engine._blockScored && this.engine.currentTrial > 0) {
+      this.tallyTrials(this.engine.currentTrial);
+    }
+
     const now = Date.now();
     this.engine.sessionMs += (now - this.engine.lastTick);
 
@@ -1695,7 +1725,17 @@ const App = {
        * trigger-happy you were — plus which kind of error dominated, is the
        * part somebody would act on.
        */
-      if (modalityStats.length > 1) {
+      /*
+       * Nothing to compare is a thing worth saying, rather than a ranking of
+       * four zeroes. A handful of trials cannot separate the modalities and the
+       * sentence should not pretend it did.
+       */
+      const answered = modalityStats.reduce((n, m) => n + m.hits + m.miss + m.fa, 0);
+      if (modalityStats.length > 1 && answered < 4) {
+        html += '<div class="break-verdict">Too few trials to tell the modalities'
+          + ' apart &mdash; ' + answered + ' scored response'
+          + (answered === 1 ? '' : 's') + ' in total.</div>';
+      } else if (modalityStats.length > 1) {
         const ranked = modalityStats.slice().sort((a, b) => b.d - a.d);
         const best = ranked[0], worst = ranked[ranked.length - 1];
         const misses = modalityStats.reduce((n, m) => n + m.miss, 0);
