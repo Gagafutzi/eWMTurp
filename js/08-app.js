@@ -1345,6 +1345,7 @@ const App = {
       else if (type === 'col') isTarget = current.col === previous.col;
     }
     this.flashIndicator(type, isTarget ? 'correct' : 'wrong');
+    this.updateAccuracyHUD();
   },
 
   showMissedFeedback() {
@@ -1367,6 +1368,7 @@ const App = {
       }
     });
     if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
+    this.updateAccuracyHUD();
   },
 
   flashIndicator(type, status) {
@@ -1443,9 +1445,63 @@ const App = {
   updateHUD() {
     const trial = document.getElementById('hud-trial');
     const dprime = document.getElementById('hud-dprime');
+    const acc = document.getElementById('hud-acc');
     if (trial) trial.textContent = '0 / ' + this.engine.blockTrials;
     if (dprime) dprime.textContent = '0.00';
+    if (acc) acc.textContent = '\u2014';
     this.updateLevelHUD();
+  },
+
+  /**
+   * Accuracy so far, live, rather than only at the end of a block.
+   *
+   * D' is the honest measure and it is what the HUD had, but it only lands when
+   * a block closes — so for the length of a block there was nothing to say how
+   * it was going. Accuracy is coarser and available every trial, which is the
+   * trade worth making for a number you glance at rather than analyse.
+   *
+   * Recomputed from the trials, the responses and the k for each one rather
+   * than accumulated in counters, so it cannot drift from the block scoring:
+   * it is the same definition applied to the same data, and there is only one
+   * place the definition lives. A run is 240 trials, so the cost of doing it
+   * from scratch each time is nothing.
+   *
+   * `hits / (hits + misses + false alarms)` — the formula the results screen
+   * uses, so the number you watched during the run is the number you are shown
+   * after it. Correct rejections are left out on purpose: with matches rare,
+   * counting every trial you correctly said nothing about would sit the figure
+   * near 90% and never move.
+   */
+  updateAccuracyHUD() {
+    const el = document.getElementById('hud-acc');
+    if (!el) return;
+
+    let hits = 0, misses = 0, falseAlarms = 0;
+    const upto = Math.min(this.engine.currentTrial + 1, this.engine.trials.length);
+
+    for (let i = 0; i < upto; i++) {
+      const k = this.engine.kSeq[i];
+      if (i < k) continue;
+      const current = this.engine.trials[i];
+      const previous = this.engine.trials[i - k];
+      if (!current || !previous) continue;
+
+      this.engine.activeStimuli.forEach(type => {
+        let isTarget = false;
+        if (type === 'aud') isTarget = current.audWord === previous.audWord;
+        else if (type === 'pos') isTarget = current.pos === previous.pos;
+        else if (type === 'shp') isTarget = current.shp === previous.shp;
+        else if (type === 'col') isTarget = current.col === previous.col;
+
+        const responded = !!(this.engine.responses[type] && this.engine.responses[type][i]);
+        if (isTarget && responded) hits++;
+        else if (isTarget) misses++;
+        else if (responded) falseAlarms++;
+      });
+    }
+
+    const answered = hits + misses + falseAlarms;
+    el.textContent = answered ? Math.round((100 * hits) / answered) + '%' : '\u2014';
   },
 
   togglePause() {
