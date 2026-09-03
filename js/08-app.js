@@ -226,6 +226,9 @@ const App = {
 
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
+    this.bindCustomStimuli();
+    // Loaded before the type is applied, so the card can show its count at once.
+    CustomStimuli.load().then(() => this.updateCustomCount());
     this.setStimulusType(this._savedStimulusType || 'human_faces', false, { skipAgeGate: true });
     this.setAnimeMode(this._savedAnimeMode || 'standard', false);
     this.refreshSettingDisplays();
@@ -309,7 +312,9 @@ const App = {
         });
       }
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
-      this._savedStimulusType = saved?.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces';
+      this._savedStimulusType = ['anime_faces', 'mix', 'custom'].includes(saved?.stimulusType)
+        ? saved.stimulusType
+        : 'human_faces';
       this._savedAnimeMode = ['standard', 'waifu', 'hentai', 'gore', 'porn'].includes(saved?.animeMode)
         ? saved.animeMode
         : 'standard';
@@ -410,12 +415,64 @@ const App = {
     if (persist) this.saveSettings();
   },
 
+  /** How many of the player's own pictures are loaded, on the card itself. */
+  updateCustomCount() {
+    const el = document.getElementById('custom-count');
+    if (!el) return;
+    const n = CustomStimuli.images.length;
+    el.textContent = n
+      ? n + (n === 1 ? ' image loaded' : ' images loaded')
+      : 'Pictures you supply yourself';
+  },
+
+  /*
+   * Reading files is slow enough to need saying so, and the count is the only
+   * confirmation there is that anything happened — nothing else on the screen
+   * changes when a set is chosen.
+   */
+  bindCustomStimuli() {
+    const input = document.getElementById('custom-file');
+    const clear = document.getElementById('custom-clear');
+    const note = document.getElementById('custom-note');
+
+    if (input) {
+      input.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (!files || !files.length) return;
+        if (note) note.textContent = 'Reading ' + files.length + ' file(s)…';
+        const added = await CustomStimuli.fromFiles(files);
+        e.target.value = '';
+        if (!added.length) {
+          if (note) note.textContent = 'None of those could be read as images.';
+          return;
+        }
+        const saved = await CustomStimuli.save(CustomStimuli.images.concat(added));
+        this.updateCustomCount();
+        if (note) {
+          note.textContent = saved
+            ? 'Added ' + added.length + '. Kept on this device only — nothing is uploaded.'
+            : 'Added ' + added.length + ' for this session, but they could not be saved.';
+        }
+      });
+    }
+
+    if (clear) {
+      clear.addEventListener('click', async () => {
+        await CustomStimuli.save([]);
+        this.updateCustomCount();
+        if (note) note.textContent = 'Cleared.';
+      });
+    }
+  },
+
   setStimulusType(type, persist = true, options = {}) {
     const normalized = type === 'mix'
       ? 'mix'
-      : (type === 'anime_faces' || type === 'anime_standard'
-        ? 'anime_faces'
-        : 'human_faces');
+      : (type === 'custom'
+        ? 'custom'
+        : (type === 'anime_faces' || type === 'anime_standard'
+          ? 'anime_faces'
+          : 'human_faces'));
 
     // Preserve the selected Anime subtype when switching the visual family.
     if (normalized === 'anime_faces') {
@@ -448,6 +505,17 @@ const App = {
       mix.classList.toggle('active', mixActive);
       mix.setAttribute('aria-pressed', mixActive ? 'true' : 'false');
     }
+
+    const custom = document.getElementById('stimulus-custom-card');
+    const customPanel = document.getElementById('custom-panel');
+    const customActive = normalized === 'custom';
+    if (custom) {
+      custom.classList.toggle('active', customActive);
+      custom.setAttribute('aria-pressed', customActive ? 'true' : 'false');
+    }
+    // The picker is only relevant while that set is the chosen one.
+    if (customPanel) customPanel.hidden = !customActive;
+    this.updateCustomCount();
     if (panel) panel.hidden = humanActive || mixActive;
 
     this.setAnimeMode(this.animeMode || 'standard', false);
@@ -1397,7 +1465,7 @@ const App = {
 
     setTimeout(() => {
       controls.forEach(el => el.classList.remove('correct', 'wrong', 'neutral', 'missed'));
-    }, 350);
+    }, 560);
   },
 
   evaluateBlock() {

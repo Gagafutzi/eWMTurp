@@ -200,9 +200,11 @@ class GameEngine {
     return {
       gridType: safeVal('sel-grid-type', '2d'),
       gridSize: safeInt('sel-grid-size', 3),
-      stimulusType: this.stimulusType === 'mix'
-        ? 'mix'
-        : (this.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces'),
+      // Kept as chosen rather than collapsed to two, so a session saved under
+      // "Your Images" comes back as that and not as human faces.
+      stimulusType: ['mix', 'custom', 'anime_faces'].includes(this.stimulusType)
+        ? this.stimulusType
+        : 'human_faces',
       animeMode: this.animeMode || 'standard',
       speed3d: safeInt('rng-3d-speed', 40),
       startN: safeInt('rng-start-n', 2),
@@ -268,6 +270,19 @@ class GameEngine {
   }
 
   pickVisualStimulus(emoLoad) {
+    /*
+     * The player's own pictures, when they have supplied any.
+     *
+     * Falls through to faces if the set is empty rather than showing blank
+     * cells — an option with nothing in it should be inert, not broken.
+     */
+    if (this.stimulusType === 'custom') {
+      const own = CustomStimuli.pick();
+      if (own) return {type:'custom', path:own, emotion:'custom', animeMode:null, fallbackFromAnime:false};
+      const face = this.pickFace(emoLoad);
+      return {type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null, fallbackFromAnime:false};
+    }
+
     if (this.stimulusType === 'mix') {
       const pool = [
         ...FACES.map(face => ({type:'standard_faces', path:face.file, emotion:face.emotion, animeMode:null})),

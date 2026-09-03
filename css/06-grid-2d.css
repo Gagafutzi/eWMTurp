@@ -157,6 +157,17 @@
   filter: drop-shadow(0 0 7px rgba(0,0,0,0.9));
 }
 
-/* An empty cell: the shape is the whole stimulus there, so it may take more. */
-.cell-2d:not(.active) .cell-shape { height:34%; bottom:8%; }
-.cell-2d:not(.active) .cell-shape svg { max-width:75%; }
+/*
+ * A cell that is not showing a stimulus shows no shape either.
+ *
+ * `clearGrid` empties these, but relying on that means the shape outlives the
+ * picture the moment any path forgets to call it — and one did, which is how it
+ * came to sit on an empty grid through the inter-stimulus interval. Hanging it
+ * off `.active`, the class the cell already uses to mean "the stimulus is up",
+ * makes the two impossible to separate: whatever hides the picture hides this.
+ *
+ * The empty-cell case this replaces could not happen anyway. With position
+ * switched off there is no active cell, and the shape is drawn in the strip
+ * above the grid instead.
+ */
+.cell-2d:not(.active) .cell-shape { display:none; }

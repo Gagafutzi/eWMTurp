@@ -475,3 +475,125 @@ function createPreloadedFaceImage(path, altText, cache) {
 
 // Expanded High-Arousal Affective Word Bank for eWMT Engine
 // Used specifically for the spoken affective-word stimulus.
+
+/* ------------------------------------------------------------------ *
+ * Your own pictures                                                   *
+ * ------------------------------------------------------------------ */
+
+/*
+ * A stimulus set the player supplies, kept in IndexedDB.
+ *
+ * **Not localStorage.** Images as data URLs run to hundreds of kilobytes each
+ * and localStorage caps out around five megabytes for the whole origin — which
+ * this page shares with everything else served from it, so a dozen pictures
+ * would evict somebody's training history to make room. IndexedDB has no such
+ * ceiling and is the right place for blobs.
+ *
+ * Stored as data URLs rather than as object URLs, because an object URL dies
+ * with the page that made it: a set chosen today would be a list of broken
+ * links tomorrow, which is the one thing a *saved* set must not be.
+ */
+const CustomStimuli = {
+  DB: 'ewmturp',
+  STORE: 'custom-images',
+  KEY: 'images',
+
+  /** In memory for the session; the database is the durable copy. */
+  images: [],
+
+  _open() {
+    return new Promise((resolve, reject) => {
+      if (typeof indexedDB === 'undefined') { reject(new Error('no indexedDB')); return; }
+      const req = indexedDB.open(this.DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  },
+
+  async load() {
+    try {
+      const db = await this._open();
+      const list = await new Promise((resolve, reject) => {
+        const req = db.transaction(this.STORE, 'readonly').objectStore(this.STORE).get(this.KEY);
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+      this.images = Array.isArray(list) ? list : [];
+    } catch (e) {
+      // No database is not an error worth stopping for: the option simply has
+      // nothing in it, and every other stimulus set still works.
+      this.images = [];
+    }
+    return this.images;
+  },
+
+  async save(list) {
+    this.images = list;
+    try {
+      const db = await this._open();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(this.STORE, 'readwrite');
+        tx.objectStore(this.STORE).put(list, this.KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      return true;
+    } catch (e) {
+      console.warn('[CustomStimuli] Could not save:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Read files the player picked, downscaled.
+   *
+   * A phone photo is four thousand pixels wide and is about to be drawn into a
+   * grid cell a couple of hundred across, so storing it whole would cost
+   * megabytes per image to display none of them. Longest edge capped at 640,
+   * re-encoded as JPEG — which is also what keeps a large set inside a
+   * reasonable database.
+   */
+  async fromFiles(fileList, max = 640) {
+    const out = [];
+    for (const file of Array.from(fileList || [])) {
+      if (!/^image\//.test(file.type)) continue;
+      try {
+        out.push(await this._downscale(file, max));
+      } catch (e) {
+        console.warn('[CustomStimuli] Skipped a file that could not be read:', file.name, e);
+      }
+    }
+    return out;
+  },
+
+  _downscale(file, max) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('decode failed'));
+        img.onload = () => {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  },
+
+  pick() {
+    if (!this.images.length) return null;
+    return this.images[Math.floor(Math.random() * this.images.length)];
+  }
+};
