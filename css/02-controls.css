@@ -1,0 +1,63 @@
+/* Refactor safety/responsiveness */
+button, input, select { position:relative; z-index:1; }
+.modal-overlay, .modal-panel { isolation:isolate; }
+@media (max-width:480px) {
+  .setup-header { padding-top:8px; }
+  .primary-panel { padding:14px; }
+  .control-row { align-items:flex-start; }
+  .control-row > :last-child { flex-shrink:0; }
+  .btn-row { flex-direction:column; }
+  .btn-row .btn { width:100% !important; flex:1 !important; }
+  .game-stage { gap:6px; padding:5px; }
+  .side-controls { width:52px; min-width:46px; }
+  .grid-2d { gap:4px; max-width:calc(100vw - 118px); max-height:calc(100vh - 150px); }
+  .scene-3d { max-width:none; max-height:none; width:100%; height:100%; }
+
+  .hud-stat .hud-lbl { display:none; }
+  .hud-btn { padding:5px 8px; }
+}
+
+/* 3D viewport: centered, uncapped, and symmetric. */
+.scene-3d {
+  position:relative;
+  display:flex;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  max-width:none;
+  max-height:none;
+  margin:auto;
+  padding:0;
+  overflow:hidden;
+  align-items:center;
+  justify-content:center;
+  place-items:center;
+}
+
+.scene-3d canvas {
+  position:relative !important;
+  inset:auto !important;
+  top:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+  left:auto !important;
+  display:block !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  margin:0 !important;
+  padding:0;
+  flex:1 1 auto;
+}
+
+@media (max-width:700px) {
+  .scene-3d {
+    width:100%;
+    height:100%;
+    max-width:none;
+    max-height:none;
+    margin:auto;
+  }
+}

@@ -1,0 +1,11 @@
+#grid-2d {
+  box-sizing: border-box;
+}
+
+#grid-2d.active {
+  display: grid !important;
+}
+
+#grid-2d:not(.active) {
+  display: none !important;
+}
