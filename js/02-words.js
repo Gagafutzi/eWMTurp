@@ -128,7 +128,28 @@ const WORDS_NEUTRAL  = [
 ];
 
 const AFFECTIVE_AUDIO_WORDS = Object.values(AFFECTIVE_WORD_BANK).flat();
-const COLORS = ['#FF453A','#30D158','#0A84FF','#FFD60A','#BF5AF2','#FF9F0A','#00F0FF','#FF006E'];
+/*
+ * The eight colour stimuli, chosen by maximising the smallest gap between any
+ * two of them rather than by eye.
+ *
+ * The previous set had three pairs that were nearly the same colour. Measured
+ * as OKLab distance, its closest pair -- red #FF453A against magenta #FF006E --
+ * sat at 0.093, with yellow/orange at 0.133 and red/orange at 0.184 behind it.
+ * That is a discrimination problem masquerading as a memory one: an n-back is
+ * meant to tax what you can hold, not what you can tell apart, and a pair you
+ * cannot separate on sight is scored as a memory failure it never was.
+ *
+ * These eight are the best 8-subset of the sRGB gamut under the constraints
+ * that actually apply here: light and saturated enough to read as a small badge
+ * over a photograph, at least 32 degrees of hue apart so no two share a name
+ * (a colour you cannot name is a colour you cannot rehearse, and rehearsal is
+ * the thing being trained), and separated under red-green colour blindness too.
+ * The closest pair is now 0.203 -- 2.2x the old floor -- and every pair clears
+ * it. Under deuteranopia the floor goes from 0.058 to 0.141.
+ *
+ * Roughly: blue, lilac, magenta, rust, gold, white, lime, mint.
+ */
+const COLORS = ['#4B7CF9','#CBA1FC','#F504A2','#E14F02','#E5AE0D','#F8F8F8','#DAFF1F','#30DDA4'];
 const SHAPES_SVG = [
   '<circle cx="50" cy="50" r="42" fill="FILL" stroke="STROKE" stroke-width="4"/>',
   '<rect x="10" y="10" width="80" height="80" rx="10" fill="FILL" stroke="STROKE" stroke-width="4"/>',

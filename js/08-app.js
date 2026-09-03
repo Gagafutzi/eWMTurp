@@ -61,6 +61,7 @@ const App = {
     bindInput('rng-emo-load', 'input', e => { setText('disp-emo-load', e.target.value + '%'); });
     bindInput('sel-grid-type', 'change', () => this.onGridTypeChange());
     bindInput('rng-3d-speed', 'input', () => this.update3DSpeedDisplay());
+    bindInput('rng-stim-size', 'input', () => this.applyStimulusSize());
     bindInput('chk-variable-n', 'change', () => this.onVariableNToggle());
     bindInput('rng-var-min', 'input', e => { setText('disp-var-min', e.target.value); });
     bindInput('sel-isi-mode', 'change', () => this.onISIModeChange());
@@ -238,6 +239,7 @@ const App = {
     this.onVariableNToggle();
     this.onGridTypeChange();
     this.update3DSpeedDisplay();
+    this.applyStimulusSize();
     this.onISIModeChange();
     this.saveSettings();
 
@@ -253,7 +255,7 @@ const App = {
 
   getPersistentControlIds() {
     return [
-      'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed',
+      'rng-start-n','rng-emo-load','sel-grid-type','sel-grid-size','rng-3d-speed','rng-stim-size',
       'chk-variable-n','rng-var-min','inp-var-max','chk-adaptive','sel-isi-mode',
       'rng-isi-fixed','rng-isi-min','rng-isi-max','rng-stim-dur','rng-session-duration',
       'chk-tally','chk-buzzer','chk-feedback','chk-word-interference','chk-dichotic','rng-interference','rng-match-rate','sel-voice',
@@ -339,6 +341,7 @@ const App = {
     const map = {
       'disp-start-n':['rng-start-n',v=>v], 'disp-emo-load':['rng-emo-load',v=>v+'%'],
       'disp-3d-speed':['rng-3d-speed',v=>v<30?'Slow':v<70?'Normal':'Fast'], 'disp-var-min':['rng-var-min',v=>v],
+      'disp-stim-size':['rng-stim-size',v=>v+'%'],
       'disp-isi-fixed':['rng-isi-fixed',v=>v+'ms'], 'disp-isi-min':['rng-isi-min',v=>v+'ms'],
       'disp-isi-max':['rng-isi-max',v=>v+'ms'], 'disp-stim-dur':['rng-stim-dur',v=>v+'ms'],
       'disp-session-duration':['rng-session-duration',v=>v+' min'], 'disp-interference':['rng-interference',v=>v+'%'],
@@ -591,6 +594,22 @@ const App = {
     const r3d = document.getElementById('row-3d-speed');
     if (r2d) r2d.style.display = is3d ? 'none' : 'flex';
     if (r3d) r3d.style.display = is3d ? 'flex' : 'none';
+  },
+
+  /*
+   * Stimulus Size -> a CSS variable, not a per-element style.
+   *
+   * The badge is drawn into whichever cell is active and into the strip above
+   * the grid when position is switched off, and those elements are created and
+   * destroyed every trial. Sizing them individually would mean re-applying the
+   * setting on every redraw and losing it wherever a path forgot to. One
+   * variable on the root, and both places inherit it for as long as it is set.
+   */
+  applyStimulusSize() {
+    const rng = document.getElementById('rng-stim-size');
+    const pct = Math.min(200, Math.max(60, Number(rng?.value) || 100));
+    document.documentElement.style.setProperty('--shape-scale', String(pct / 100));
+    setText('disp-stim-size', pct + '%');
   },
 
   update3DSpeedDisplay() {

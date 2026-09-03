@@ -149,10 +149,19 @@
   pointer-events:none;
 }
 
+/*
+ * Scaled by --shape-scale, which the Stimulus Size slider sets on :root.
+ *
+ * The *box* keeps its geometry and the drawing grows inside it, anchored to the
+ * box's bottom edge by the flex alignment above. So turning the size up makes
+ * the badge taller without dragging it off the bottom of the cell -- which is
+ * what moving `height` on .cell-shape would have done, since that edge is what
+ * `bottom` positions.
+ */
 .cell-2d .cell-shape svg {
   width:auto;
-  height:100%;
-  max-width:70%;
+  height:calc(100% * var(--shape-scale, 1));
+  max-width:calc(70% * var(--shape-scale, 1));
   /* Enough separation from whatever it is lying over, at any brightness. */
   filter: drop-shadow(0 0 7px rgba(0,0,0,0.9));
 }
