@@ -221,13 +221,23 @@ select:focus, input:focus { border-color:var(--cyan); }
   text-align:center;
 }
 
-/* A keycap, so it reads as "the key" rather than as more label. */
+/*
+ * A keycap, sized to be read from the corner of an eye.
+ *
+ * It was .62rem under a name in caps, which made the key the smallest thing on
+ * the button — and the key is the part you need mid-trial, when the name has
+ * already been learned. Bigger than the label it sits under, in the monospace
+ * face, with a bottom edge so it reads as a key rather than as more text.
+ */
 .modality-btn .mod-key {
-  font-family:var(--font-mono); font-size:.62rem; font-weight:700;
+  font-family:var(--font-mono);
+  font-size:clamp(.85rem, 1.6vw, 1.05rem);
+  font-weight:800;
   color:var(--text); background:var(--bg-elevated);
-  padding:2px 7px 3px; border-radius:4px;
-  border:1px solid var(--border); border-bottom-width:2px;
-  pointer-events:none; line-height:1.2;
+  min-width:1.9em; text-align:center;
+  padding:3px 9px 4px; border-radius:5px;
+  border:1px solid var(--border-hover); border-bottom-width:3px;
+  pointer-events:none; line-height:1.15;
 }
 
 /*
@@ -368,7 +378,7 @@ select:focus, input:focus { border-color:var(--cyan); }
 .modality-breakdown .break-row .mod-fa { color:var(--red); font-family:var(--font-mono); }
 @media (max-width:640px) {
   .side-controls { width:55px; min-width:50px; gap:6px; }
-  .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-name { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
+  .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-name { font-size:.58rem; } .modality-btn .mod-key { font-size:.8rem; padding:2px 7px 3px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
   .scene-3d { max-width:none; max-height:none; width:100%; height:100%; }

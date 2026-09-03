@@ -980,7 +980,19 @@ const App = {
       const overlay = document.createElement('div');
       overlay.className = 'cell-overlay';
 
-      cell.append(img, fallback, overlay);
+      /*
+       * The shape and colour, drawn inside the cell that holds the picture.
+       *
+       * They used to be a strip above the grid, which made every trial two
+       * places to look: the face in one square and its shape somewhere over the
+       * top of everything. Same square means one fixation instead of a saccade,
+       * and it is the arrangement the modalities are meant to be bound in — a
+       * shape *of* this trial rather than beside it.
+       */
+      const shape = document.createElement('div');
+      shape.className = 'cell-shape';
+
+      cell.append(img, fallback, overlay, shape);
       fragment.appendChild(cell);
     }
 
@@ -1202,19 +1214,47 @@ const App = {
       );
     }
 
-    // Top stimulus (shape/color). No random word is rendered above the grid.
+    /*
+     * Shape and colour, in the cell the picture is in.
+     *
+     * The strip above the grid stays as the fallback and is still needed: with
+     * position switched off there is no active cell to draw into, and the 3D
+     * grid is a WebGL scene with no DOM cell to hold an SVG. Both fall back
+     * rather than losing the stimulus.
+     */
     const shapeDisp = document.getElementById('shape-display');
-    if (this.engine.activeStimuli.includes('col') || this.engine.activeStimuli.includes('shp') || this.engine.activeStimuli.includes('aud')) {
-      if (shapeDisp) shapeDisp.style.visibility = 'visible';
+    const wantsShape = this.engine.activeStimuli.includes('col')
+      || this.engine.activeStimuli.includes('shp')
+      || this.engine.activeStimuli.includes('aud');
+
+    const inCell = s.gridType !== '3d'
+      && this.engine.activeStimuli.includes('pos')
+      && document.getElementById('pos-' + trial.pos);
+
+    // Whatever was drawn last trial, wherever it was drawn.
+    document.querySelectorAll('.cell-shape').forEach(el => { el.innerHTML = ''; });
+
+    if (wantsShape) {
       const fillColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : 'rgba(255,255,255,0.06)';
       const strokeColor = this.engine.activeStimuli.includes('col') ? COLORS[trial.col] : '#4b5563';
-      const svg = document.getElementById('shape-svg');
+
+      let markup = '';
       if (this.engine.activeStimuli.includes('shp')) {
-        if (svg) svg.innerHTML = SHAPES_SVG[trial.shp].replace(/FILL/g, fillColor).replace(/STROKE/g, strokeColor);
+        markup = SHAPES_SVG[trial.shp].replace(/FILL/g, fillColor).replace(/STROKE/g, strokeColor);
       } else if (this.engine.activeStimuli.includes('col')) {
-        if (svg) svg.innerHTML = '<rect x="10" y="10" width="80" height="80" rx="14" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="4"/>';
+        markup = '<rect x="10" y="10" width="80" height="80" rx="14" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="4"/>';
+      }
+
+      const host = inCell ? inCell.querySelector('.cell-shape') : null;
+      if (host) {
+        host.innerHTML = markup
+          ? '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">' + markup + '</svg>'
+          : '';
+        if (shapeDisp) shapeDisp.style.visibility = 'hidden';
       } else {
-        if (svg) svg.innerHTML = '';
+        const svg = document.getElementById('shape-svg');
+        if (svg) svg.innerHTML = markup;
+        if (shapeDisp) shapeDisp.style.visibility = 'visible';
       }
     } else {
       if (shapeDisp) shapeDisp.style.visibility = 'hidden';
