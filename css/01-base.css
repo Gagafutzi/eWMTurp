@@ -1,4 +1,14 @@
 :root {
+  /*
+   * One shell width, widened on a desktop.
+   *
+   * Every panel on the setup screen carried its own `max-width:600px`, so the
+   * page was a 600px ribbon down the middle of a 1920px monitor and changing
+   * that meant finding six numbers. It is one number now, and a desktop gets a
+   * wider one — 600px is a phone measurement being applied to everything.
+   */
+  --shell:600px;
+
   --bg:#06070a; --bg-panel:#0c0e14; --bg-elevated:#13161f; --border:#1e2330;
   --border-hover:#2a3144; --text:#e8ecf1; --text-muted:#6b7280; --text-dim:#4b5563;
   --cyan:#00f0ff; --cyan-dim:rgba(0,240,255,0.12); --cyan-glow:rgba(0,240,255,0.25);
@@ -15,18 +25,20 @@ html,body { width:100%; height:100%; background:var(--bg); color:var(--text); fo
 .screen.active { display:flex; }
 .setup-wrap { width:100%; height:100%; display:flex; flex-direction:column; overflow-y:auto; padding:20px; }
 .setup-header { text-align:center; padding:16px 0 6px; }
-.setup-header h1 { font-family:var(--font-mono); font-size:clamp(1.4rem,4vw,2rem); font-weight:800; letter-spacing:2px; background:linear-gradient(135deg,var(--cyan),var(--magenta)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+/* Solid, not a two-colour gradient. The title was the loudest thing on a screen
+   whose job is to be configured and then left. */
+.setup-header h1 { font-family:var(--font-mono); font-size:clamp(1.4rem,4vw,2rem); font-weight:800; letter-spacing:2px; color:var(--cyan); }
 .setup-header .subtitle { font-family:var(--font-mono); font-size:0.6rem; color:var(--text-muted); letter-spacing:4px; text-transform:uppercase; margin-top:4px; }
-.discord-community { max-width:600px; width:100%; margin:0 auto 16px; padding:14px 18px; border:1px solid rgba(88,101,242,0.45); border-radius:10px; background:rgba(88,101,242,0.10); text-align:center; box-shadow:0 0 18px rgba(88,101,242,0.08); }
+.discord-community { max-width:var(--shell); width:100%; margin:0 auto 16px; padding:14px 18px; border:1px solid rgba(88,101,242,0.45); border-radius:10px; background:rgba(88,101,242,0.10); text-align:center; box-shadow:0 0 18px rgba(88,101,242,0.08); }
 .discord-community a { color:#9aa7ff; font-weight:800; text-decoration:none; }
 .discord-community a:hover { text-decoration:underline; color:#c1c8ff; }
 .discord-community strong { font-weight:800; }
 
-.stats-bar { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; padding:10px 14px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; max-width:600px; margin:0 auto 16px; width:100%; }
+.stats-bar { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; padding:10px 14px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; max-width:var(--shell); margin:0 auto 16px; width:100%; }
 .stat-chip { display:flex; flex-direction:column; align-items:center; gap:2px; }
 .stat-chip .val { font-family:var(--font-mono); font-size:1.1rem; font-weight:700; color:var(--cyan); }
 .stat-chip .lbl { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); }
-.primary-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:20px; max-width:600px; margin:0 auto 12px; width:100%; }
+.primary-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:20px; max-width:var(--shell); margin:0 auto 12px; width:100%; }
 .panel-title { font-family:var(--font-mono); font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--text-muted); margin-bottom:14px; display:flex; align-items:center; gap:6px; }
 .panel-title::before { content:''; display:block; width:6px; height:6px; background:var(--cyan); border-radius:1px; }
 .panel-title.magenta::before { background:var(--magenta); }
@@ -60,16 +72,36 @@ select:focus, input:focus { border-color:var(--cyan); }
 .anime-submode-btn:disabled:hover { border-color:rgba(255,255,255,.10); transform:none; }
 .anime-coming-soon { display:inline-block; margin-left:6px; padding:2px 5px; border-radius:999px; font-size:.46rem; letter-spacing:.6px; color:var(--text-dim); border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.035); }
 @media (max-width:720px) { .stimulus-primary-grid,.anime-submode-grid { grid-template-columns:1fr 1fr; } }
-.stimulus-feature-card { position:relative; display:flex; align-items:center; justify-content:space-between; gap:14px; margin:12px 0 14px; padding:14px 16px; border:1px solid rgba(255,0,110,0.55); border-radius:10px; background:linear-gradient(135deg,rgba(255,0,110,0.10),rgba(0,240,255,0.06)); cursor:pointer; transition:all .2s ease; box-shadow:0 0 18px rgba(255,0,110,0.06); }
-.stimulus-feature-card:hover { border-color:var(--magenta); box-shadow:0 0 24px rgba(255,0,110,0.14); transform:translateY(-1px); }
-.stimulus-feature-card.active { border-color:var(--cyan); background:linear-gradient(135deg,rgba(0,240,255,0.13),rgba(255,0,110,0.09)); box-shadow:0 0 22px rgba(0,240,255,0.13), inset 0 0 18px rgba(255,0,110,0.04); }
+/*
+ * One accent for the whole screen.
+ *
+ * These cards were magenta, their badges were a magenta gradient, the panels
+ * were cyan and the primary button was a cyan-to-blue gradient — four
+ * treatments competing on one screen, none of which meant anything in
+ * particular. Cyan is the accent everywhere now, and *selected* is the only
+ * thing it marks. A card that is merely available is a card with a border.
+ */
+.stimulus-feature-card { position:relative; display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin:0; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:var(--bg-elevated); cursor:pointer; transition:border-color .18s ease, background .18s ease; }
+.stimulus-feature-card:hover { border-color:var(--border-hover); }
+.stimulus-feature-card.active { border-color:var(--cyan); background:var(--cyan-dim); }
 .stimulus-feature-main { display:flex; align-items:center; gap:12px; min-width:0; }
-.stimulus-feature-icon { width:42px; height:42px; flex:0 0 42px; border-radius:8px; display:grid; place-items:center; font-size:1.25rem; background:rgba(0,240,255,0.10); border:1px solid rgba(0,240,255,0.32); }
-.stimulus-feature-title { font-family:var(--font-mono); font-size:.78rem; font-weight:800; letter-spacing:.4px; }
-.stimulus-feature-desc { font-size:.62rem; color:var(--text-muted); margin-top:3px; line-height:1.35; }
-.stimulus-feature-badge { align-self:flex-start; flex:0 0 auto; padding:3px 7px; border-radius:999px; font-family:var(--font-mono); font-size:.55rem; font-weight:800; letter-spacing:1px; color:#fff; background:linear-gradient(90deg,var(--magenta),#ff3b9d); box-shadow:0 0 12px rgba(255,0,110,.22); }
+.stimulus-feature-icon { width:38px; height:38px; flex:0 0 38px; border-radius:8px; display:grid; place-items:center; font-size:1.1rem; color:var(--text-muted); background:transparent; border:1px solid var(--border); }
+.stimulus-feature-card.active .stimulus-feature-icon { color:var(--cyan); border-color:rgba(0,240,255,.4); }
+/*
+ * Block, not inline.
+ *
+ * Both were spans inside a bare span, so they laid out side by side and the
+ * card read "Human FacesStandard affective face stimuli" with the description
+ * overflowing its own border. The `margin-top` below never applied either —
+ * vertical margins do nothing on an inline box.
+ */
+.stimulus-feature-title { display:block; font-family:var(--font-mono); font-size:.78rem; font-weight:800; letter-spacing:.4px; }
+.stimulus-feature-desc { display:block; font-size:.62rem; color:var(--text-muted); margin-top:4px; line-height:1.35; overflow-wrap:anywhere; }
+.stimulus-feature-main > span:last-child { min-width:0; }
+/* An outline, not a lozenge that shouts louder than the option it labels. */
+.stimulus-feature-badge { align-self:flex-start; flex:0 0 auto; padding:2px 7px; border-radius:999px; font-family:var(--font-mono); font-size:.55rem; font-weight:700; letter-spacing:1px; color:var(--text-muted); background:transparent; border:1px solid var(--border-hover); }
 .stimulus-type-status { font-family:var(--font-mono); font-size:.58rem; color:var(--text-dim); margin:-6px 0 12px; }
-.accordion { max-width:600px; margin:0 auto 12px; width:100%; }
+.accordion { max-width:var(--shell); margin:0 auto 12px; width:100%; }
 .accordion-header { background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; padding:12px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; }
 .accordion-header:hover { border-color:var(--border-hover); }
 .accordion-header span { font-family:var(--font-mono); font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); }
@@ -99,11 +131,13 @@ select:focus, input:focus { border-color:var(--cyan); }
 .keybind-btn.listening { border-color:var(--magenta); color:var(--magenta); animation:pulse 1s infinite alternate; }
 @keyframes pulse { from{opacity:1;} to{opacity:0.4;} }
 .btn { padding:12px 20px; border-radius:8px; font-family:var(--font-sans); font-size:0.9rem; font-weight:700; border:none; cursor:pointer; transition:all 0.2s; letter-spacing:0.5px; }
-.btn-primary { background:linear-gradient(135deg,var(--cyan),#0088ff); color:var(--bg); box-shadow:0 4px 16px rgba(0,240,255,0.25); width:100%; }
-.btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,240,255,0.35); }
+/* Flat, and the one saturated thing on the screen — which is what makes it read
+   as the thing to press. A gradient plus a glow was competing with the cards. */
+.btn-primary { background:var(--cyan); color:var(--bg); width:100%; }
+.btn-primary:hover { transform:translateY(-1px); background:#4df5ff; }
 .btn-secondary { background:var(--bg-elevated); color:var(--text); border:1px solid var(--border); }
 .btn-secondary:hover { border-color:var(--text-muted); }
-.btn-row { display:flex; gap:10px; max-width:600px; margin:0 auto 30px; width:100%; }
+.btn-row { display:flex; gap:10px; max-width:var(--shell); margin:0 auto 30px; width:100%; }
 .modal-overlay { display:none; pointer-events:none; position:fixed; inset:0; background:rgba(6,7,10,0.85); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center; padding:20px; }
 .modal-overlay.active { display:flex; pointer-events:auto; }
 .modal-panel { background:var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:700px; width:100%; max-height:90vh; overflow-y:auto; position:relative; }
@@ -524,3 +558,27 @@ select:focus, input:focus { border-color:var(--cyan); }
    wrap into a ragged last row on a narrow window. */
 .results-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); }
 .result-card { text-align:center; }
+
+/* ------------------------------------------------------------------ *
+ * Desktop                                                             *
+ * ------------------------------------------------------------------ */
+
+/*
+ * A phone-width column on a monitor is the complaint, and it was literal: every
+ * panel said 600px. Wider from a laptop up, and the stimulus cards get room to
+ * be three readable cards rather than three clipped ones.
+ */
+@media (min-width:1100px) {
+  :root { --shell:900px; }
+  .primary-panel { padding:26px 28px; }
+  .stimulus-primary-grid { gap:12px; }
+}
+
+@media (min-width:1500px) {
+  :root { --shell:1040px; }
+}
+
+/* Below that, one card per row beats three that cannot hold their own text. */
+@media (max-width:820px) {
+  .stimulus-primary-grid { grid-template-columns:1fr; }
+}
