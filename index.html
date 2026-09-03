@@ -2095,6 +2095,69 @@ const AudioEngine = {
    * 3. Runtime alias
    * 4. Conventional generated filename
    */
+  /*
+   * The voice the player picked, if they picked one.
+   *
+   * `speak()` used to call `getVoices()` itself and take the first English
+   * entry it found, which meant the voice selector on the settings screen
+   * changed nothing at all in normal (non-dichotic) play. On most Linux
+   * installs that first entry is eSpeak, which is where "robotic" comes from —
+   * the good voices are further down the list, and the player had already
+   * chosen one.
+   */
+  preferredVoice: null,
+
+  setVoice(voice) {
+    this.preferredVoice = voice || null;
+  },
+
+  /**
+   * How good a voice is likely to sound, without hearing it.
+   *
+   * Browsers expose no quality field, but they do expose `localService`, and it
+   * is a strong proxy: the network voices are the neural ones. Beyond that the
+   * names are the evidence — "Natural" and "Neural" say so outright, Google and
+   * the Apple voices are known-good, and eSpeak is the formant synthesiser that
+   * everything else here is trying not to sound like.
+   *
+   * Only ever used to *order* the list and to pick an opening default. The
+   * player's choice always wins.
+   */
+  voiceScore(voice) {
+    if (!voice) return -Infinity;
+    const name = (voice.name || '').toLowerCase();
+    let score = 0;
+
+    /*
+     * `+male1` and `+female2` are eSpeak's variant syntax, and on most Linux
+     * installs the voice is named "English (America)+male1" rather than
+     * anything containing "espeak" — so the obvious pattern misses the one
+     * voice this is most trying to avoid.
+     */
+    if (/espeak|mbrola|festival|pico|robosoft|flite/.test(name)) score -= 100;
+    if (/\+(male|female)\d?/.test(name)) score -= 100;
+    if (/natural|neural|premium|enhanced|wavenet|studio/.test(name)) score += 40;
+    if (/google/.test(name)) score += 30;
+    if (/samantha|siri|ava|allison|serena|daniel|karen|moira/.test(name)) score += 25;
+    if (/microsoft/.test(name) && /online/.test(name)) score += 30;
+    if (voice.localService === false) score += 20;
+    if ((voice.lang || '').toLowerCase().startsWith('en')) score += 10;
+    if (voice.default) score += 2;
+
+    return score;
+  },
+
+  /** Every usable voice, best first. */
+  rankedVoices() {
+    if (typeof speechSynthesis === 'undefined') return [];
+    let all = [];
+    try { all = speechSynthesis.getVoices() || []; } catch (e) { return []; }
+    const english = all.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+    return (english.length ? english : all)
+      .slice()
+      .sort((a, b) => this.voiceScore(b) - this.voiceScore(a));
+  },
+
   getAudioUrl(word) {
     const normalized = this.normalizeWord(word);
 
@@ -2521,40 +2584,69 @@ const AudioEngine = {
     }
 
     /*
-     * Normal non-dichotic mode retains native speech synthesis.
+     * The recording, in normal mode too.
+     *
+     * There are 294 word MP3s in the repository and only dichotic play was
+     * using them; everything else went to the synthesiser. A recording of a
+     * person saying "abyss" is better than any voice a browser ships, so the
+     * file is tried first and speech synthesis is what happens when there is no
+     * file — which is the way round it should have been.
+     *
+     * Centred rather than panned: the ear alternation is the dichotic
+     * condition's whole point, and doing it here would quietly turn it on for
+     * everybody.
      */
-    if (
-      typeof speechSynthesis !==
-      'undefined'
-    ) {
+    const normalized = this.normalizeWord(word);
+    if (normalized) {
+      const url = this.getAudioUrl(normalized);
+      if (url) {
+        const buffer = await this.loadAudioBuffer(url);
+        if (buffer) {
+          if (requestId !== this._speechRequestId) return null;
+          return this.playBuffer(buffer, 0, { volume: 0.72 });
+        }
+      }
+    }
+
+    /*
+     * No recording for this word, so synthesise it.
+     */
+    if (typeof speechSynthesis !== 'undefined') {
       try {
-        const voices =
-          speechSynthesis.getVoices();
+        const chosen = this.preferredVoice || this.rankedVoices()[0] || null;
 
-        if (
-          voices &&
-          voices.length > 0
-        ) {
-          const msg =
-            new SpeechSynthesisUtterance(
-              word
-            );
+        if (chosen || (speechSynthesis.getVoices() || []).length) {
+          const msg = new SpeechSynthesisUtterance(word);
+          if (chosen) msg.voice = chosen;
 
-          const preferred =
-            voices.find(
-              voice =>
-                voice.lang &&
-                voice.lang.startsWith('en')
-            ) || voices[0];
+          /*
+           * Set explicitly, and the same every time.
+           *
+           * This is a memory task: the voice is a stimulus, so anything that
+           * varies between trials is noise the player has to see past. Slightly
+           * slower than the 1.1 it was — the words are single and the first
+           * syllable was being swallowed at speed — and pitch and volume are
+           * stated rather than left to whatever the last utterance used.
+           */
+          msg.rate = 1.0;
+          msg.pitch = 1.0;
+          msg.volume = 1.0;
+          msg.lang = (chosen && chosen.lang) || 'en-US';
 
-          if (preferred) {
-            msg.voice = preferred;
-          }
-
-          msg.rate = 1.1;
-
+          /*
+           * Cancel, yield, then speak.
+           *
+           * `cancel()` immediately followed by `speak()` is a known Chrome
+           * fault: the queue is still tearing down when the new utterance
+           * arrives and the first phoneme is clipped, which on single words is
+           * most of the difference between "robotic" and "muffled". One turn of
+           * the event loop is enough.
+           */
           speechSynthesis.cancel();
-          speechSynthesis.speak(msg);
+          setTimeout(() => {
+            if (requestId !== this._speechRequestId) return;
+            try { speechSynthesis.speak(msg); } catch (e) {}
+          }, 0);
 
           return null;
         }
@@ -3847,7 +3939,16 @@ class GameEngine {
     try {
       const raw = speechSynthesis.getVoices();
       if (!raw || raw.length === 0) return;
-      this.voices = raw.filter(v => v.lang && v.lang.startsWith('en'));
+      /*
+       * Best first, rather than whatever order the platform hands them over.
+       *
+       * The list used to be presented as-is and the default fell to the first
+       * entry flagged `default` or named Google or Samantha — so on a machine
+       * with neither, the opening voice was position one, which on Linux is
+       * eSpeak. Ordering by likely quality makes the top of the list the right
+       * answer and the default the top of the list.
+       */
+      this.voices = AudioEngine.rankedVoices();
       if (!this.voices.length) this.voices = raw;
       const sel = document.getElementById('sel-voice');
       if (!sel) return;
@@ -3856,7 +3957,7 @@ class GameEngine {
         const opt = document.createElement('option');
         opt.value = i;
         opt.textContent = v.name + ' (' + v.lang + ')';
-        if (v.default || v.name.includes('Google') || v.name.includes('Samantha')) opt.selected = true;
+        if (i === 0) opt.selected = true;
         sel.appendChild(opt);
       });
       if (this._savedVoiceName) {
@@ -3864,6 +3965,8 @@ class GameEngine {
         if (savedIndex >= 0) sel.value = String(savedIndex);
       }
       this.selectedVoice = this.voices[sel.value];
+      // The synthesiser reads this, not the <select>.
+      AudioEngine.setVoice(this.selectedVoice);
     } catch(e) {}
   }
 
@@ -4126,7 +4229,10 @@ const App = {
     const voiceSel = document.getElementById('sel-voice');
     if (voiceSel) {
       voiceSel.addEventListener('change', (e) => {
-        if (this.engine.voices[e.target.value]) this.engine.selectedVoice = this.engine.voices[e.target.value];
+        if (this.engine.voices[e.target.value]) {
+          this.engine.selectedVoice = this.engine.voices[e.target.value];
+          AudioEngine.setVoice(this.engine.selectedVoice);
+        }
         this.saveSettings();
       });
     }
