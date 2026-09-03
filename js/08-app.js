@@ -1005,7 +1005,13 @@ const App = {
       d.dataset.type = type;
       d.setAttribute('role', 'button');
       d.setAttribute('aria-label', MOD_LABELS[type] + ' response');
-      d.innerHTML = '<span class="mod-initial">' + MOD_INITIALS[type] + '</span><span class="mod-key">' + formatKey(this.engine.keys[type]) + '</span>';
+      d.style.setProperty('--mod', MOD_COLORS[type] || 'var(--cyan)');
+      d.innerHTML =
+        '<svg class="mod-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+          + (MOD_ICONS[type] || '') + '</svg>'
+        + '<span class="mod-name">' + MOD_LABELS[type] + '</span>'
+        + '<kbd class="mod-key">' + formatKey(this.engine.keys[type]) + '</kbd>'
+        + '<span class="mod-mark" aria-hidden="true"></span>';
       d.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1315,7 +1321,9 @@ const App = {
       else if (type === 'col') isTarget = current.col === previous.col;
       if (isTarget && !this.engine.responses[type][this.engine.currentTrial]) {
         missedTarget = true;
-        this.flashIndicator(type, 'wrong');
+        // Its own status: a missed target and a false alarm are different
+        // mistakes, and the button now says which one happened.
+        this.flashIndicator(type, 'missed');
       }
     });
     if (missedTarget && this.engine.getSettings().buzzerOnMiss) AudioEngine.buzzMiss();
@@ -1330,13 +1338,13 @@ const App = {
     if (!controls.length) return;
 
     controls.forEach(el => {
-      el.classList.remove('correct', 'wrong', 'neutral');
+      el.classList.remove('correct', 'wrong', 'neutral', 'missed');
       void el.offsetWidth;
       el.classList.add(status);
     });
 
     setTimeout(() => {
-      controls.forEach(el => el.classList.remove('correct', 'wrong', 'neutral'));
+      controls.forEach(el => el.classList.remove('correct', 'wrong', 'neutral', 'missed'));
     }, 350);
   },
 
@@ -1448,7 +1456,7 @@ const App = {
       const d = calculateDPrime(st.hits, st.misses, st.falseAlarms, st.correctRejects);
       const targets = st.hits + st.misses;
       const acc = targets > 0 ? (st.hits / (st.hits + st.falseAlarms + st.misses)) * 100 : 0;
-      modalityStats.push({type: type, d: d, acc: acc, hits: st.hits, fa: st.falseAlarms});
+      modalityStats.push({type: type, d: d, acc: acc, hits: st.hits, fa: st.falseAlarms, miss: st.misses});
     });
 
     const overallD = calculateDPrime(totalHits, totalMisses, totalFA, totalCR);
@@ -1477,10 +1485,62 @@ const App = {
 
     const breakdown = document.getElementById('modality-breakdown');
     if (breakdown) {
-      let html = `<div class="break-header"><span>Modality</span><span>D'</span><span>Acc%</span><span>Hits</span><span>FA</span></div>`;
+      /*
+       * Misses get a column of their own.
+       *
+       * The table showed hits and false alarms, so a target you never answered
+       * simply vanished from it — and that is the error worth seeing, because
+       * it is the one that says the memory did not reach back far enough. A
+       * false alarm says something different: the trigger was too light.
+       */
+      let html = `<div class="break-header"><span>Modality</span><span>D'</span><span>Acc%</span><span>Hits</span><span>Miss</span><span>FA</span></div>`;
       modalityStats.forEach(m => {
-        html += '<div class="break-row"><span class="mod-name">' + MOD_LABELS[m.type] + '</span><span class="mod-dp">' + m.d.toFixed(2) + '</span><span class="mod-acc">' + Math.round(m.acc) + '%</span><span class="mod-hits">' + m.hits + '</span><span class="mod-fa">' + m.fa + '</span></div>';
+        /*
+         * The same colour and glyph the button wore during the run, so a row
+         * here is recognisably the thing you were pressing rather than a word
+         * you have to map back onto it.
+         */
+        html += '<div class="break-row" style="--mod:' + (MOD_COLORS[m.type] || 'var(--cyan)') + '">'
+          + '<span class="mod-name">'
+            + '<svg class="mod-icon" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+            + (MOD_ICONS[m.type] || '') + '</svg>'
+            + MOD_LABELS[m.type]
+          + '</span>'
+          + '<span class="mod-dp">' + m.d.toFixed(2) + '</span>'
+          + '<span class="mod-acc">' + Math.round(m.acc) + '%</span>'
+          + '<span class="mod-hits">' + m.hits + '</span>'
+          + '<span class="mod-miss">' + m.miss + '</span>'
+          + '<span class="mod-fa">' + m.fa + '</span></div>';
       });
+      /*
+       * What to do about it, in a sentence.
+       *
+       * Four numbers per modality is a table you have to read across before it
+       * says anything, and after a session nobody does. The strongest and
+       * weakest by d' — which is the measure that already accounts for how
+       * trigger-happy you were — plus which kind of error dominated, is the
+       * part somebody would act on.
+       */
+      if (modalityStats.length > 1) {
+        const ranked = modalityStats.slice().sort((a, b) => b.d - a.d);
+        const best = ranked[0], worst = ranked[ranked.length - 1];
+        const misses = modalityStats.reduce((n, m) => n + m.miss, 0);
+        const fas = modalityStats.reduce((n, m) => n + m.fa, 0);
+
+        let lean = '';
+        if (misses + fas >= 4) {
+          if (misses > fas * 1.6) lean = ' Most of your errors were <b>missed targets</b> — the reach back, not the trigger.';
+          else if (fas > misses * 1.6) lean = ' Most of your errors were <b>false alarms</b> — the trigger, not the reach back.';
+          else lean = ' Misses and false alarms were about even.';
+        }
+
+        html += '<div class="break-verdict">'
+          + '<b style="color:' + (MOD_COLORS[best.type] || 'inherit') + '">' + MOD_LABELS[best.type] + '</b>'
+          + " held up best (d' " + best.d.toFixed(2) + '), '
+          + '<b style="color:' + (MOD_COLORS[worst.type] || 'inherit') + '">' + MOD_LABELS[worst.type] + '</b>'
+          + " weakest (d' " + worst.d.toFixed(2) + ').' + lean + '</div>';
+      }
+
       breakdown.innerHTML = html;
     }
 

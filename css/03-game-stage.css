@@ -63,7 +63,7 @@
 @media (max-width:480px) {
   .response-controls { gap:5px; min-height:60px; }
   .response-controls .modality-btn { min-height:46px; border-radius:8px; }
-  .response-controls .modality-btn .mod-initial { font-size:1.15rem; }
+  .response-controls .modality-btn .mod-name { font-size:1.15rem; }
   .response-controls .modality-btn .mod-key { font-size:.43rem; padding:1px 4px; }
   .word-interference { font-size:.52rem; padding:3px 5px; letter-spacing:.5px; }
 }

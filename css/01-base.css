@@ -146,16 +146,101 @@ select:focus, input:focus { border-color:var(--cyan); }
   overflow:hidden;
 }
 .side-controls { display:flex; flex-direction:column; gap:10px; width:80px; min-width:65px; height:100%; justify-content:center; z-index:10; }
-.modality-btn { flex:1; max-height:130px; min-height:60px; background:var(--bg-panel); border:1px solid var(--border); border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; transition:all 0.15s ease; user-select:none; touch-action:manipulation; position:relative; overflow:hidden; }
+/* ------------------------------------------------------------------ *
+ * Response buttons                                                    *
+ * ------------------------------------------------------------------ */
+
+/*
+ * Each modality is one colour and one glyph, and it wears them everywhere: on
+ * this button, on the flash when it is answered, and in the results breakdown
+ * afterwards. The button used to be a single letter over a keycap, which is a
+ * thing you decode rather than recognise — and decoding is the one thing there
+ * is no spare attention for while a trial is running.
+ *
+ * `--mod` is set per button in `buildSideControls`, so everything below is
+ * written once rather than four times.
+ */
+.modality-btn {
+  flex:1; max-height:130px; min-height:64px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--mod, var(--cyan)) 12%, transparent), transparent 70%),
+    var(--bg-panel);
+  border:1px solid color-mix(in srgb, var(--mod, var(--cyan)) 45%, var(--border));
+  border-left:3px solid var(--mod, var(--cyan));
+  border-radius:10px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+  cursor:pointer; transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  user-select:none; touch-action:manipulation; position:relative; overflow:hidden;
+  padding:6px;
+}
+.modality-btn:hover { box-shadow:0 0 0 1px color-mix(in srgb, var(--mod, var(--cyan)) 40%, transparent); }
 .modality-btn:active { transform:scale(0.96); }
-.modality-btn .mod-initial { font-family:var(--font-mono); font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:var(--text); line-height:1; pointer-events:none; }
-.modality-btn .mod-key { font-family:var(--font-mono); font-size:0.55rem; color:var(--text-dim); background:var(--bg-elevated); padding:2px 6px; border-radius:3px; border:1px solid var(--border); pointer-events:none; }
+
+.modality-btn .mod-icon {
+  width:clamp(18px, 2.6vw, 26px); height:clamp(18px, 2.6vw, 26px);
+  color:var(--mod, var(--cyan)); pointer-events:none; flex:0 0 auto;
+}
+
+.modality-btn .mod-name {
+  font-size:clamp(.6rem, 1.2vw, .74rem); font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--text); line-height:1; pointer-events:none;
+  text-align:center;
+}
+
+/* A keycap, so it reads as "the key" rather than as more label. */
+.modality-btn .mod-key {
+  font-family:var(--font-mono); font-size:.62rem; font-weight:700;
+  color:var(--text); background:var(--bg-elevated);
+  padding:2px 7px 3px; border-radius:4px;
+  border:1px solid var(--border); border-bottom-width:2px;
+  pointer-events:none; line-height:1.2;
+}
+
+/*
+ * The verdict, as a mark rather than only a tint.
+ *
+ * A border colour changing is easy to miss in peripheral vision, which is where
+ * these buttons are while the grid is being watched. A ✓ or ✗ over the button
+ * is legible without looking straight at it, and it leaves as fast as it came
+ * so it never sits over the next trial.
+ */
+.modality-btn .mod-mark {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:clamp(1.6rem, 4vw, 2.6rem); font-weight:800; line-height:1;
+  opacity:0; pointer-events:none;
+}
+.modality-btn.correct .mod-mark { content:''; }
+.modality-btn.correct .mod-mark::after { content:'\2713'; color:var(--green); }
+.modality-btn.wrong  .mod-mark::after { content:'\2717'; color:var(--red); }
+
+/*
+ * A miss is not a false alarm, and they were shown identically.
+ *
+ * Pressing when there was no target and failing to press when there was are
+ * different mistakes with different fixes — one is a trigger too light, the
+ * other is a memory that did not reach back far enough. The same red cross for
+ * both told you that you were wrong and not which way, which is the half worth
+ * knowing.
+ */
+.modality-btn.missed { border-color:var(--amber); background:rgba(255,176,32,.10); }
+.modality-btn.missed .mod-mark::after { content:'\21BA'; color:var(--amber); }
+
+.modality-btn.correct .mod-mark,
+.modality-btn.wrong .mod-mark,
+.modality-btn.missed .mod-mark { animation:mod-verdict .45s ease-out; }
+
+@keyframes mod-verdict {
+  0%   { opacity:0; transform:scale(.7); }
+  25%  { opacity:1; transform:scale(1.05); }
+  70%  { opacity:1; transform:scale(1); }
+  100% { opacity:0; transform:scale(1); }
+}
 .modality-btn.correct { border-color:var(--green); background:var(--green-dim); box-shadow:0 0 16px rgba(0,255,136,0.15); }
-.modality-btn.correct .mod-initial { color:var(--green); }
+.modality-btn.correct .mod-name { color:var(--green); }
 .modality-btn.wrong { border-color:var(--red); background:var(--red-dim); box-shadow:0 0 16px rgba(255,51,51,0.15); }
-.modality-btn.wrong .mod-initial { color:var(--red); }
+.modality-btn.wrong .mod-name { color:var(--red); }
 .modality-btn.neutral { border-color:var(--text-dim); background:rgba(255,255,255,0.03); }
-.modality-btn.neutral .mod-initial { color:var(--text-dim); }
+.modality-btn.neutral .mod-name { color:var(--text-dim); }
  .center-display {
   flex:1 1 auto;
   display:flex;
@@ -240,14 +325,16 @@ select:focus, input:focus { border-color:var(--cyan); }
 .result-card .res-val { font-family:var(--font-mono); font-size:1.4rem; font-weight:700; margin-bottom:3px; }
 .result-card .res-lbl { font-size:0.6rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); }
 .modality-breakdown { text-align:left; margin-bottom:18px; background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border); overflow:hidden; }
-.modality-breakdown .break-header { display:grid; grid-template-columns:1fr 55px 55px 55px 55px; gap:6px; padding:8px 12px; background:rgba(255,255,255,0.02); font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:600; }
-.modality-breakdown .break-row { display:grid; grid-template-columns:1fr 55px 55px 55px 55px; gap:6px; padding:8px 12px; border-top:1px solid var(--border); font-size:0.75rem; align-items:center; }
-.modality-breakdown .break-row .mod-name { font-weight:600; } .modality-breakdown .break-row .mod-dp { font-family:var(--font-mono); color:var(--cyan); font-weight:700; }
+.modality-breakdown .break-header { display:grid; grid-template-columns:1fr 52px 52px 46px 46px 46px; gap:6px; padding:8px 12px; background:rgba(255,255,255,0.02); font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:600; }
+.modality-breakdown .break-row { display:grid; grid-template-columns:1fr 52px 52px 46px 46px 46px; gap:6px; padding:8px 12px; border-top:1px solid var(--border); font-size:0.75rem; align-items:center; }
+.modality-breakdown .break-row { border-left:3px solid var(--mod, transparent); }
+.modality-breakdown .break-row .mod-name { font-weight:600; display:flex; align-items:center; gap:7px; }
+.modality-breakdown .break-row .mod-icon { width:15px; height:15px; color:var(--mod, var(--cyan)); flex:0 0 auto; } .modality-breakdown .break-row .mod-dp { font-family:var(--font-mono); color:var(--cyan); font-weight:700; }
 .modality-breakdown .break-row .mod-acc { font-family:var(--font-mono); } .modality-breakdown .break-row .mod-hits { color:var(--green); font-family:var(--font-mono); }
 .modality-breakdown .break-row .mod-fa { color:var(--red); font-family:var(--font-mono); }
 @media (max-width:640px) {
   .side-controls { width:55px; min-width:50px; gap:6px; }
-  .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-initial { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
+  .modality-btn { min-height:50px; border-radius:8px; } .modality-btn .mod-name { font-size:1.2rem; } .modality-btn .mod-key { font-size:0.45rem; padding:1px 4px; }
   .game-hud { padding:0 10px; height:50px; } .hud-left,.hud-right { gap:8px; } .hud-stat .hud-val { font-size:0.85rem; }
   .grid-2d { max-width:min(calc(100vw - 130px),calc(100vh - 170px)); max-height:min(calc(100vw - 130px),calc(100vh - 170px)); }
   .scene-3d { max-width:none; max-height:none; width:100%; height:100%; }
@@ -411,3 +498,29 @@ select:focus, input:focus { border-color:var(--cyan); }
   font-family:var(--font-mono);
   font-size:.62rem;
 }
+
+/* ------------------------------------------------------------------ *
+ * What the run came to                                                *
+ * ------------------------------------------------------------------ */
+
+/*
+ * A sentence under the table, because the table is four numbers per row and
+ * after a session nobody reads across it. This says which modality held up,
+ * which did not, and which kind of error dominated — the part somebody would
+ * actually change something because of.
+ */
+.modality-breakdown .break-verdict {
+  padding:10px 12px;
+  border-top:1px solid var(--border);
+  background:rgba(255,255,255,0.02);
+  font-size:0.72rem;
+  line-height:1.5;
+  color:var(--text-dim);
+}
+
+.modality-breakdown .break-row .mod-miss { color:var(--amber); font-family:var(--font-mono); }
+
+/* Cards that fit whatever they are given, rather than four fixed columns that
+   wrap into a ragged last row on a narrow window. */
+.results-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); }
+.result-card { text-align:center; }

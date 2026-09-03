@@ -139,3 +139,33 @@ const SHAPES_SVG = [
 ];
 const MOD_LABELS = {pos:'Position', col:'Color', aud:'Audio', shp:'Shape'};
 const MOD_INITIALS = {pos:'P', col:'C', aud:'A', shp:'S'};
+
+/*
+ * A colour and a picture per modality, used everywhere that modality appears.
+ *
+ * The response buttons said "P" and "S" over a keycap, which is two letters to
+ * decode while a trial is running — and under time pressure the thing you need
+ * is not a label you read but a target you recognise. One colour and one glyph,
+ * repeated on the button, on the feedback flash and in the results breakdown,
+ * means the same modality is the same object everywhere it is mentioned.
+ *
+ * Kept clear of the correct/wrong greens and reds, which have to stay
+ * unambiguous on top of these.
+ */
+const MOD_COLORS = {
+  pos: '#4da3ff',
+  aud: '#c07cff',
+  shp: '#ffb020',
+  col: '#28d9c5'
+};
+
+/* Drawn rather than written: a glyph is recognised, a letter is read. */
+const MOD_ICONS = {
+  pos: '<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/>'
+     + '<rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1" opacity=".35"/>',
+  aud: '<path d="M4 9h4l5-4v14l-5-4H4z"/>'
+     + '<path d="M17 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+     + '<path d="M19.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".5"/>',
+  shp: '<path d="M12 3l9 16H3z"/>',
+  col: '<circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6" opacity=".45"/>'
+};
