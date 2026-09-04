@@ -228,8 +228,16 @@ const App = {
     // Initial UI state
     this.setMode(this._savedMode || 'dual', false);
     this.bindCustomStimuli();
-    // Loaded before the type is applied, so the card can show its count at once.
-    CustomStimuli.load().then(() => this.updateCustomCount());
+    /*
+     * Kept as a promise, not fired and forgotten.
+     *
+     * Reading IndexedDB is asynchronous, and `pick()` on a set that has not
+     * arrived yet returns nothing — which the engine reads as "no pictures
+     * supplied" and quietly falls through to faces. Pressing start quickly
+     * enough was a whole session of the wrong stimuli, with the card already
+     * showing the right count by the time you noticed.
+     */
+    this.customReady = CustomStimuli.load().then(() => this.updateCustomCount());
     this.setStimulusType(this._savedStimulusType || 'human_faces', false, { skipAgeGate: true });
     this.setAnimeMode(this._savedAnimeMode || 'standard', false);
     this.refreshSettingDisplays();
@@ -825,6 +833,17 @@ const App = {
       return;
     }
 
+    /*
+     * The player's own set has to be in memory before the first trial is built,
+     * or `pick()` returns nothing and the engine falls through to faces for the
+     * whole session. Awaited rather than raced: this resolves in milliseconds
+     * from a database that is already open, and it is the difference between
+     * the session using your pictures and silently not.
+     */
+    if (this.engine.stimulusType === 'custom') {
+      try { await this.customReady; } catch (e) { /* the fall-through still applies */ }
+    }
+
     const s = this.engine.getSettings();
     const loading = document.getElementById('asset-loading-overlay');
     const startButton = document.getElementById('btn-init-session');
@@ -1249,6 +1268,18 @@ const App = {
     if (this.engine.activeStimuli.includes('pos')) {
       const targetEl = document.getElementById('pos-' + trial.pos);
       const isAnime = trial.visualType === 'anime_faces';
+      /*
+       * A picture the player supplied is already in the page.
+       *
+       * It is a data URL held in IndexedDB, so nothing preloads it and nothing
+       * can: the preload caches are keyed by asset path and filled from the
+       * bundled files at startup. The guard below insists on a cache hit before
+       * it will draw anything, so every custom image failed it and every cell
+       * rendered the fallback text instead of the picture. There is nothing to
+       * wait for here — the bytes are in the string — so it is set directly and
+       * `onerror` catches a corrupt one.
+       */
+      const isCustom = trial.visualType === 'custom';
       const animeMode = isAnime && ANIME_MODES.includes(trial.animeMode) ? trial.animeMode : 'standard';
       const imageCache = isAnime ? (ANIME_IMAGE_CACHE[animeMode] || {}) : this.engine.imageCache;
       const imagePath = trial.face;
@@ -1267,9 +1298,12 @@ const App = {
         targetEl.classList.add('active');
       };
 
-      if (imagePath && !(preloadedImage instanceof HTMLImageElement && preloadedImage.naturalWidth > 0)) {
-        console.error('Failed to load anime face path:', imagePath);
-        showFallback('ANIME');
+      if (imagePath && !isCustom
+          && !(preloadedImage instanceof HTMLImageElement && preloadedImage.naturalWidth > 0)) {
+        console.error('Failed to load stimulus:', imagePath);
+        // The label said ANIME whatever the set was, which is a second thing
+        // that made a broken custom set look like a broken anime one.
+        showFallback(isAnime ? 'ANIME' : 'FACE');
       } else if (s.gridType === '3d') {
         ThreeDGrid.setActiveCell(trial.pos, preloadedImage || imagePath || null);
       } else if (targetEl) {
@@ -1277,13 +1311,20 @@ const App = {
         const fb = targetEl.querySelector('.face-fallback');
         if (imagePath && img) {
           img.className = 'face-img stimulus-image';
-          img.alt = isAnime ? 'Anime face visual stimulus' : trial.faceEmotion + ' emotional face';
+          img.alt = isAnime ? 'Anime face visual stimulus'
+            : isCustom ? 'Your own picture, used as the visual stimulus'
+            : trial.faceEmotion + ' emotional face';
           img.decoding = 'async'; img.loading = 'eager';
           img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
           img.onerror = () => {
-            if (isAnime) console.error('Failed to load anime face path:', imagePath);
+            if (isAnime || isCustom) console.error('Failed to load stimulus:', imagePath);
             img.style.display = 'none';
-            if (fb) { fb.textContent = isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase(); fb.style.display = 'flex'; }
+            if (fb) {
+              fb.textContent = isAnime ? 'ANIME'
+                : isCustom ? 'IMG'
+                : String(trial.faceEmotion || 'FACE')[0].toUpperCase();
+              fb.style.display = 'flex';
+            }
           };
           img.src = preloadedImage instanceof HTMLImageElement
             ? (preloadedImage.currentSrc || preloadedImage.src)
