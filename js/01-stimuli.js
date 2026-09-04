@@ -565,7 +565,17 @@ const CustomStimuli = {
         req.onerror = () => reject(req.error);
       });
       this.images = Array.isArray(list) ? list : [];
-      await this.warm();
+      /*
+       * Decoding is started, not waited for.
+       *
+       * `preloadImage` resolves from an image event, and a document the browser
+       * has throttled — a hidden tab, a backgrounded window — may not fire one
+       * for a long time or at all. Awaiting it here put that stall directly in
+       * front of the session, which then sat on "LOADING ASSETS..." forever.
+       * The renderer copes with a picture that has not decoded yet; it cannot
+       * cope with never being allowed to start.
+       */
+      this.warm();
     } catch (e) {
       // No database is not an error worth stopping for: the option simply has
       // nothing in it, and every other stimulus set still works.
@@ -574,18 +584,27 @@ const CustomStimuli = {
     return this.images;
   },
 
-  /** Decode every picture in the set, so none of them decodes mid-trial. */
-  async warm() {
+  /**
+   * Decode every picture in the set, so none of them decodes mid-trial.
+   *
+   * Each one is bounded: an image event that never arrives must not leave this
+   * pending, because anything awaiting it would wait with it.
+   */
+  async warm(timeoutMs = 4000) {
     for (const key of Object.keys(this.cache)) {
       if (!this.images.includes(key)) delete this.cache[key];
     }
-    await Promise.all(this.images.map(src => preloadImage(src, this.cache)));
+    const bounded = src => Promise.race([
+      preloadImage(src, this.cache),
+      new Promise(resolve => setTimeout(() => resolve(false), timeoutMs)),
+    ]);
+    await Promise.all(this.images.map(bounded));
     return this.cache;
   },
 
   async save(list) {
     this.images = list;
-    await this.warm();
+    this.warm();
     try {
       const db = await this._open();
       await new Promise((resolve, reject) => {

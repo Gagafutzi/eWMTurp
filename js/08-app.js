@@ -847,7 +847,18 @@ const App = {
      * the session using your pictures and silently not.
      */
     if (this.engine.stimulusType === 'custom') {
-      try { await this.customReady; } catch (e) { /* the fall-through still applies */ }
+      /*
+       * Bounded, like every other wait in front of a session. `customReady` is
+       * a database read and settles in milliseconds; if it somehow does not,
+       * starting on the fall-back faces is a far better outcome than a start
+       * button that never does anything.
+       */
+      try {
+        await Promise.race([
+          this.customReady,
+          new Promise(resolve => setTimeout(resolve, 3000)),
+        ]);
+      } catch (e) { /* the fall-through to faces still applies */ }
     }
 
     const s = this.engine.getSettings();
