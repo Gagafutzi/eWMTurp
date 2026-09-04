@@ -1338,20 +1338,6 @@ const App = {
             : isCustom ? 'Your own picture, used as the visual stimulus'
             : trial.faceEmotion + ' emotional face';
           img.decoding = 'async'; img.loading = 'eager';
-          /*
-           * Source first, then reveal. Not the other way round.
-           *
-           * `display:block` was being set before the source, so for the frames
-           * between the two the element was visible with whatever it last
-           * held — the previous trial's picture, or nothing at all while the
-           * new one decoded. Both were reported: "loading text, the old image,
-           * then the new one".
-           *
-           * Every set is decoded before a session starts, so by the time this
-           * runs the assignment is a cache hit and the reveal on the next line
-           * paints the right picture on the same frame.
-           */
-          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'none'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
           img.onerror = () => {
             if (isAnime || isCustom) console.error('Failed to load stimulus:', imagePath);
             img.style.display = 'none';
@@ -1362,21 +1348,25 @@ const App = {
               fb.style.display = 'flex';
             }
           };
+          /*
+           * Source first, then the styles that reveal it — in one task, so the
+           * browser commits both at the same paint and there is no frame that
+           * shows the element with the wrong content in it.
+           *
+           * It was the other way round: `display:block` was applied while the
+           * element still held the previous trial's source, which is the "old
+           * image" in the report. `clearGrid` now drops that source, so the
+           * remaining question was only whether the gap could ever be painted
+           * empty; keeping the two changes in one task means it cannot.
+           *
+           * Deliberately not waiting for `onload` to reveal: that would push
+           * every stimulus a task later than the timer that scheduled it, on a
+           * screen where the presentation time is the difficulty.
+           */
           img.src = preloadedImage instanceof HTMLImageElement
             ? (preloadedImage.currentSrc || preloadedImage.src)
             : imagePath;
-          /*
-           * Shown once it has something to show. `complete` is true straight
-           * away for a decoded source, which is the normal path; anything that
-           * still has to decode is revealed by `onload` rather than displayed
-           * empty in the meantime.
-           */
-          if (img.complete && img.naturalWidth > 0) {
-            img.onload = null;
-            img.style.display = 'block';
-          } else {
-            img.onload = () => { img.onload = null; img.style.display = 'block'; };
-          }
+          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
           if (fb) fb.style.display = 'none';
         } else {
           showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
