@@ -20,6 +20,26 @@
  * second IIFE *after* the main one rather than part of it.
  */
 
+/*
+ * The visual sets, and the one place that decides what counts as one.
+ *
+ * There were four separate three-way normalisers -- the card click handler,
+ * `setStimulusType`, `startSession`, and the preloader -- each written when
+ * there were three sets and each silently collapsing anything else to faces.
+ * Adding "custom" therefore had to be remembered in four places and was
+ * remembered in one, so the mode was unreachable from the card and, once
+ * reached, was thrown away again at the moment a session began.
+ *
+ * A list and a function, so the next set is one edit.
+ */
+const STIMULUS_TYPES = Object.freeze(['human_faces', 'anime_faces', 'mix', 'custom']);
+
+function normalizeStimulusType(type) {
+  // The old alias, kept because saved settings may still carry it.
+  if (type === 'anime_standard') return 'anime_faces';
+  return STIMULUS_TYPES.includes(type) ? type : 'human_faces';
+}
+
 const FACES = Object.freeze([
   {file:'assets/stimuli/human_faces/face_0.jpg', emotion:'neutral', valence:0},
   {file:'assets/stimuli/human_faces/face_1.jpg', emotion:'positive', valence:1},
@@ -247,6 +267,12 @@ function getCachedAnimePaths(mode = 'standard') {
 // Three.js, so the game never starts by racing the first stimulus against a
 // network request. Individual failures remain non-fatal.
 async function preloadAssets(options = {}) {
+  /*
+   * "custom" deliberately preloads the face set and not the player's pictures.
+   * Those are data URLs already held in memory -- there is no network fetch to
+   * warm -- and the faces are what the engine falls back to when the custom set
+   * is empty, so they are the ones worth having ready.
+   */
   const stimulusType = options.stimulusType === 'mix'
     ? 'mix'
     : (options.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces');

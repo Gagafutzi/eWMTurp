@@ -202,9 +202,7 @@ class GameEngine {
       gridSize: safeInt('sel-grid-size', 3),
       // Kept as chosen rather than collapsed to two, so a session saved under
       // "Your Images" comes back as that and not as human faces.
-      stimulusType: ['mix', 'custom', 'anime_faces'].includes(this.stimulusType)
-        ? this.stimulusType
-        : 'human_faces',
+      stimulusType: normalizeStimulusType(this.stimulusType),
       animeMode: this.animeMode || 'standard',
       speed3d: safeInt('rng-3d-speed', 40),
       startN: safeInt('rng-start-n', 2),

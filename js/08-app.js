@@ -109,7 +109,7 @@ const App = {
          * `setStimulusType` normalises the value anyway, so anything it accepts
          * belongs here.
          */
-        if (!['human_faces', 'anime_faces', 'mix', 'custom'].includes(stimulusType)) {
+        if (!STIMULUS_TYPES.includes(stimulusType)) {
           console.warn('[ATTENTIONAL SHIELD] Unknown stimulus type:', stimulusType);
           return;
         }
@@ -334,9 +334,7 @@ const App = {
         });
       }
       this._savedMode = saved?.mode === 'quad' ? 'quad' : 'dual';
-      this._savedStimulusType = ['anime_faces', 'mix', 'custom'].includes(saved?.stimulusType)
-        ? saved.stimulusType
-        : 'human_faces';
+      this._savedStimulusType = normalizeStimulusType(saved?.stimulusType);
       this._savedAnimeMode = ['standard', 'waifu', 'hentai', 'gore', 'porn'].includes(saved?.animeMode)
         ? saved.animeMode
         : 'standard';
@@ -489,13 +487,7 @@ const App = {
   },
 
   setStimulusType(type, persist = true, options = {}) {
-    const normalized = type === 'mix'
-      ? 'mix'
-      : (type === 'custom'
-        ? 'custom'
-        : (type === 'anime_faces' || type === 'anime_standard'
-          ? 'anime_faces'
-          : 'human_faces'));
+    const normalized = normalizeStimulusType(type);
 
     // Preserve the selected Anime subtype when switching the visual family.
     if (normalized === 'anime_faces') {
@@ -901,9 +893,12 @@ const App = {
     try {
       this.engine.reset();
       this.engine.mode = document.querySelector('.mode-card.active')?.dataset.mode || 'dual';
-      this.engine.stimulusType = s.stimulusType === 'mix'
-        ? 'mix'
-        : (s.stimulusType === 'anime_faces' ? 'anime_faces' : 'human_faces');
+      /*
+       * This collapsed "custom" to faces, so a session started on the player's
+       * own pictures ran on the bundled ones instead -- the selection survived
+       * every earlier step and was discarded here, at the last one.
+       */
+      this.engine.stimulusType = normalizeStimulusType(s.stimulusType);
       this.engine.animeMode = ['standard', 'waifu', 'hentai', 'gore', 'porn'].includes(s.animeMode) ? s.animeMode : 'standard';
 
       const preloadResult = await preloadWithTimeout(8000);
