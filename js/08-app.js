@@ -1419,14 +1419,14 @@ const App = {
         host.innerHTML = markup
           ? '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">' + markup + '</svg>'
           : '';
-        if (shapeDisp) shapeDisp.style.visibility = 'hidden';
+        if (shapeDisp) shapeDisp.style.display = 'none';
       } else {
         const svg = document.getElementById('shape-svg');
         if (svg) svg.innerHTML = markup;
-        if (shapeDisp) shapeDisp.style.visibility = 'visible';
+        if (shapeDisp) shapeDisp.style.display = 'flex';
       }
     } else {
-      if (shapeDisp) shapeDisp.style.visibility = 'hidden';
+      if (shapeDisp) shapeDisp.style.display = 'none';
     }
 
     // Audio: terminate any previous trial's audio before presenting the next stimulus.
@@ -1524,7 +1524,7 @@ const App = {
       });
     }
     const shapeDisp = document.getElementById('shape-display');
-    if (shapeDisp) shapeDisp.style.visibility = 'hidden';
+    if (shapeDisp) shapeDisp.style.display = 'none';
   },
 
   processFeedback(type) {

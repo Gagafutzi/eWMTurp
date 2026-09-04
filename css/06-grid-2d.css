@@ -141,7 +141,24 @@
 .cell-2d .cell-shape {
   position:absolute;
   left:0; right:0; bottom:3%;
-  height:32%;
+  /*
+   * The box scales, not the drawing inside it.
+   *
+   * `bottom` pins the bottom edge, so growing `height` extends the box upward
+   * and the badge stays where it was put — which is the opposite of what the
+   * comment here used to claim, and the reason the scaling was on the drawing
+   * instead. Scaling the drawing inside a box that stayed 32% tall meant
+   * anything above 100% was taller than its own container.
+   */
+  height:calc(32% * var(--shape-scale, 1));
+  /*
+   * And that container clips. `.grid-2d [class*="cell"]` is a substring match,
+   * so it catches `cell-shape` as well as the cells it was written for and
+   * hands it `overflow:hidden` — which is what cut the top off every enlarged
+   * badge. Overridden here rather than by narrowing that selector, which is
+   * load-bearing for the cells themselves.
+   */
+  overflow:visible;
   z-index:3;
   display:flex;
   align-items:flex-end;
@@ -150,18 +167,16 @@
 }
 
 /*
- * Scaled by --shape-scale, which the Stimulus Size slider sets on :root.
+ * The drawing simply fills its box, which is the thing the slider scales.
  *
- * The *box* keeps its geometry and the drawing grows inside it, anchored to the
- * box's bottom edge by the flex alignment above. So turning the size up makes
- * the badge taller without dragging it off the bottom of the cell -- which is
- * what moving `height` on .cell-shape would have done, since that edge is what
- * `bottom` positions.
+ * `max-width` is a guard against a very wide, very short cell letterboxing the
+ * badge out sideways; it is a share of the cell, so it never re-introduces the
+ * clipping that scaling it alongside the height did.
  */
 .cell-2d .cell-shape svg {
   width:auto;
-  height:calc(100% * var(--shape-scale, 1));
-  max-width:calc(70% * var(--shape-scale, 1));
+  height:100%;
+  max-width:92%;
   /* Enough separation from whatever it is lying over, at any brightness. */
   filter: drop-shadow(0 0 7px rgba(0,0,0,0.9));
 }
