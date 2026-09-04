@@ -405,6 +405,10 @@ async function preloadAssets(options = {}) {
 
 function getPreloadedImage(path, stimulusType = 'human_faces', animeMode = 'standard') {
   if (!path) return null;
+  if (stimulusType === 'custom') {
+    const image = CustomStimuli.cache[path];
+    return image instanceof HTMLImageElement && image.naturalWidth > 0 ? image : null;
+  }
   if (stimulusType === 'anime_faces') {
     const mode = ANIME_MODES.includes(animeMode) ? animeMode : 'standard';
     const image = ANIME_IMAGE_CACHE[mode]?.[path];
@@ -527,6 +531,18 @@ const CustomStimuli = {
   /** In memory for the session; the database is the durable copy. */
   images: [],
 
+  /*
+   * Decoded, so a trial can paint on the frame it is asked for.
+   *
+   * Every bundled set is decoded into a cache before a session starts, which is
+   * why assigning one paints immediately. The player's own pictures had no such
+   * cache, so each trial assigned an undecoded data URL to an <img> that was
+   * still holding the previous trial's bitmap — and you saw the fallback text,
+   * then the *old* picture, then the new one. A data URL still has to be
+   * decoded; it just does not have to be fetched.
+   */
+  cache: Object.create(null),
+
   _open() {
     return new Promise((resolve, reject) => {
       if (typeof indexedDB === 'undefined') { reject(new Error('no indexedDB')); return; }
@@ -549,6 +565,7 @@ const CustomStimuli = {
         req.onerror = () => reject(req.error);
       });
       this.images = Array.isArray(list) ? list : [];
+      await this.warm();
     } catch (e) {
       // No database is not an error worth stopping for: the option simply has
       // nothing in it, and every other stimulus set still works.
@@ -557,8 +574,18 @@ const CustomStimuli = {
     return this.images;
   },
 
+  /** Decode every picture in the set, so none of them decodes mid-trial. */
+  async warm() {
+    for (const key of Object.keys(this.cache)) {
+      if (!this.images.includes(key)) delete this.cache[key];
+    }
+    await Promise.all(this.images.map(src => preloadImage(src, this.cache)));
+    return this.cache;
+  },
+
   async save(list) {
     this.images = list;
+    await this.warm();
     try {
       const db = await this._open();
       await new Promise((resolve, reject) => {

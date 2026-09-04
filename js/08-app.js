@@ -249,6 +249,8 @@ const App = {
      * enough was a whole session of the wrong stimuli, with the card already
      * showing the right count by the time you noticed.
      */
+    // `load()` decodes the set on its way through, so awaiting this means the
+    // pictures are both present and ready to paint.
     this.customReady = CustomStimuli.load().then(() => this.updateCustomCount());
     this.setStimulusType(this._savedStimulusType || 'human_faces', false, { skipAgeGate: true });
     this.setAnimeMode(this._savedAnimeMode || 'standard', false);
@@ -1290,7 +1292,10 @@ const App = {
       const animeMode = isAnime && ANIME_MODES.includes(trial.animeMode) ? trial.animeMode : 'standard';
       const imageCache = isAnime ? (ANIME_IMAGE_CACHE[animeMode] || {}) : this.engine.imageCache;
       const imagePath = trial.face;
-      const preloadedImage = getPreloadedImage(imagePath, isAnime ? 'anime_faces' : 'human_faces', animeMode);
+      const preloadedImage = getPreloadedImage(
+        imagePath,
+        isCustom ? 'custom' : isAnime ? 'anime_faces' : 'human_faces',
+        animeMode);
 
       const showFallback = (label) => {
         if (s.gridType === '3d') {
@@ -1322,7 +1327,20 @@ const App = {
             : isCustom ? 'Your own picture, used as the visual stimulus'
             : trial.faceEmotion + ' emotional face';
           img.decoding = 'async'; img.loading = 'eager';
-          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'block'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
+          /*
+           * Source first, then reveal. Not the other way round.
+           *
+           * `display:block` was being set before the source, so for the frames
+           * between the two the element was visible with whatever it last
+           * held — the previous trial's picture, or nothing at all while the
+           * new one decoded. Both were reported: "loading text, the old image,
+           * then the new one".
+           *
+           * Every set is decoded before a session starts, so by the time this
+           * runs the assignment is a cache hit and the reveal on the next line
+           * paints the right picture on the same frame.
+           */
+          img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; img.style.display = 'none'; img.style.maxWidth = '100%'; img.style.maxHeight = '100%'; img.style.pointerEvents = 'none';
           img.onerror = () => {
             if (isAnime || isCustom) console.error('Failed to load stimulus:', imagePath);
             img.style.display = 'none';
@@ -1336,6 +1354,18 @@ const App = {
           img.src = preloadedImage instanceof HTMLImageElement
             ? (preloadedImage.currentSrc || preloadedImage.src)
             : imagePath;
+          /*
+           * Shown once it has something to show. `complete` is true straight
+           * away for a decoded source, which is the normal path; anything that
+           * still has to decode is revealed by `onload` rather than displayed
+           * empty in the meantime.
+           */
+          if (img.complete && img.naturalWidth > 0) {
+            img.onload = null;
+            img.style.display = 'block';
+          } else {
+            img.onload = () => { img.onload = null; img.style.display = 'block'; };
+          }
           if (fb) fb.style.display = 'none';
         } else {
           showFallback(isAnime ? 'ANIME' : String(trial.faceEmotion || 'FACE')[0].toUpperCase());
@@ -1463,7 +1493,23 @@ const App = {
         const img = c.querySelector('.face-img');
         const fb = c.querySelector('.face-fallback');
         const shape = c.querySelector('.cell-shape');
-        if (img) { img.style.display = 'none'; }
+        if (img) {
+          img.style.display = 'none';
+          /*
+           * The source goes with it, not just the visibility.
+           *
+           * Hiding the element leaves the previous trial's bitmap decoded and
+           * attached, so the next trial — which sets `display:block` before its
+           * own source has decoded — showed the *old* picture first and then
+           * swapped. Reported as "loading text, the old image, then the new
+           * one", which is exactly those three states in order.
+           *
+           * `onerror` is dropped first: clearing the attribute would otherwise
+           * fire the stale handler and paint the fallback text.
+           */
+          img.onerror = null;
+          img.removeAttribute('src');
+        }
         if (fb) fb.style.display = 'none';
         /*
          * The shape goes when the picture does.
