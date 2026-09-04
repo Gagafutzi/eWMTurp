@@ -97,7 +97,19 @@ const App = {
 
         const stimulusType = card.dataset.stimulusType;
 
-        if (stimulusType !== 'human_faces' && stimulusType !== 'anime_faces' && stimulusType !== 'mix') {
+        /*
+         * The list of sets a card may select, and the reason this is a list of
+         * names rather than a check that the card exists.
+         *
+         * "Your Images" was added as a card, a panel, a database and an engine
+         * branch, and not here — so clicking it logged "Unknown stimulus type"
+         * and returned, and the mode could not be reached at all from the
+         * screen. Everything behind it worked; nothing could get to it.
+         *
+         * `setStimulusType` normalises the value anyway, so anything it accepts
+         * belongs here.
+         */
+        if (!['human_faces', 'anime_faces', 'mix', 'custom'].includes(stimulusType)) {
           console.warn('[ATTENTIONAL SHIELD] Unknown stimulus type:', stimulusType);
           return;
         }
