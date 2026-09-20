@@ -284,9 +284,9 @@ class ThreeDGridEngine {
         fallbackCanvas.height = 256;
         const ctx = fallbackCanvas.getContext('2d');
         if (ctx) {
-          ctx.fillStyle = '#00f0ff';
+          ctx.fillStyle = '#8fbda4';
           ctx.fillRect(0, 0, 256, 256);
-          ctx.fillStyle = '#06070a';
+          ctx.fillStyle = '#080d0b';
           ctx.fillRect(16, 16, 224, 224);
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 8;

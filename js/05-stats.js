@@ -135,7 +135,7 @@ const ChartRenderer = {
       ? values.map(v => Number.isFinite(Number(v)) ? Number(v) : 0)
       : [];
     const safeLabels = Array.isArray(labels) ? labels : [];
-    const safeColors = Array.isArray(colors) && colors.length ? colors : ['#00f0ff'];
+    const safeColors = Array.isArray(colors) && colors.length ? colors : ['#8fbda4'];
 
     if (!safeValues.length) {
       ctx.fillStyle = '#4b5563';

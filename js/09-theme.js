@@ -10,10 +10,14 @@
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'light' || saved === 'dark') return saved;
 
-    return window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: light)').matches
-      ? 'light'
-      : 'dark';
+    /* Dark by default, rather than following the desktop.
+     *
+     * This app is launched from the mindbuild hub, which is dark and has no
+     * light counterpart — so on a machine set to light the trainer opened in a
+     * white page inside a near-black frame. The toggle is untouched and the
+     * choice is still remembered; it is only the first visit that no longer
+     * asks the operating system a question the hub cannot answer. */
+    return 'dark';
   };
 
   const applyTheme = theme => {

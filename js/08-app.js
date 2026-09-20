@@ -1913,7 +1913,7 @@ const App = {
     requestAnimationFrame(() => {
       const sessions = StatsManager.data.sessions;
       const dprimeData = sessions.slice(-20).map((s, i) => ({x: (i+1).toString(), y: s.overallDPrime || 0}));
-      ChartRenderer.drawLine(document.getElementById('chart-dprime'), dprimeData, '#00f0ff', true);
+      ChartRenderer.drawLine(document.getElementById('chart-dprime'), dprimeData, '#8fbda4', true);
 
       const modTotals = {pos:{hits:0, fa:0}, col:{hits:0, fa:0}, aud:{hits:0, fa:0}, shp:{hits:0, fa:0}};
       sessions.forEach(s => {
