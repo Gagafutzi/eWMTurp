@@ -172,6 +172,36 @@ const App = {
     if (btnInit) btnInit.addEventListener('click', () => this.startSession());
     if (btnDash) btnDash.addEventListener('click', () => this.showStatsFull());
     if (btnPause) btnPause.addEventListener('click', () => this.togglePause());
+
+    /* ---- Pausing when the page goes hidden ----
+       A hidden page is not being trained in front of. The shell hides this
+       trainer in a frame when you go back to the hub menu and delivers the
+       browser's own `visibilitychange`, which is the same signal a real tab
+       switch sends — so both are served here and neither needs to know the
+       other exists.
+
+       Routed through `togglePause` rather than reaching into the engine,
+       because the pause this mode wants already exists and does more than stop
+       a clock: it clears the trial timeouts, cancels the speech queue, stops
+       the audio and puts the PAUSED overlay up. A second, quieter pause beside
+       it would be the one that forgets the sound.
+
+       **Only resumed if the hiding is what paused it.** The same button is on
+       screen, so a session can already be paused by hand — and auto-resuming
+       on the way back would restart a session the player deliberately stopped
+       before they had looked away. The flag is what tells the two apart. */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (this.engine.isRunning && !this.engine.isPaused) {
+          this._pausedByHiding = true;
+          this.togglePause();
+        }
+        return;
+      }
+      if (!this._pausedByHiding) return;
+      this._pausedByHiding = false;
+      if (this.engine.isRunning && this.engine.isPaused) this.togglePause();
+    });
     if (btnEnd) btnEnd.addEventListener('click', () => this.endSession());
     if (btnResMenu) btnResMenu.addEventListener('click', () => this.switchScreen('setup'));
     if (btnResAgain) btnResAgain.addEventListener('click', () => this.startSession());
@@ -1738,6 +1768,10 @@ const App = {
   },
 
   endSession(reason = 'manual') {
+    /* Cleared here too: a session ended while the page was hidden would leave
+       the flag armed, and coming back would toggle a pause onto the next
+       session's first trial. */
+    this._pausedByHiding = false;
     // Stop WebGL immediately, not after the results screen appears.
     cleanupRenderers();
 
